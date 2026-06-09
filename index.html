@@ -299,6 +299,11 @@
 
   /* ===== extraordinary optics ===== */
   #space{position:fixed;inset:0;z-index:0;pointer-events:none}
+  /* time-of-day color grade — drifts cool at midday, golden by evening */
+  .grade{position:fixed;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;opacity:.6;transition:background 2.5s ease}
+  .tod{font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;color:var(--gold);border-left:1px solid var(--line);
+    padding-left:14px;display:flex;align-items:center;gap:6px;text-transform:uppercase;transition:color .6s}
+  .tod span{font-size:13px;line-height:1}
   .scanbeam{position:fixed;left:0;right:0;height:150px;z-index:2;pointer-events:none;mix-blend-mode:screen;
     background:linear-gradient(transparent,rgba(47,230,255,0.05) 44%,rgba(47,230,255,0.12) 50%,rgba(47,230,255,0.05) 56%,transparent);
     animation:beam 9s linear infinite}
@@ -407,6 +412,7 @@
 </head>
 <body>
 <div class="vign"></div>
+<div class="grade" id="grade"></div>
 <div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 <canvas id="space"></canvas>
 <div class="scanbeam"></div>
@@ -439,6 +445,7 @@
     <div class="status"><span class="dot"></span><span>ONLINE</span></div>
     <div class="sess">SESSION<br><b id="sess">00:00:00</b></div>
     <div class="clock"><div class="t" id="clk">--:--:--</div><div class="d" id="dte">—</div></div>
+    <div class="tod" id="tod" title="Ambient palette follows the time of day"></div>
     <button class="vtoggle" id="syncBtn" style="color:var(--cyan);border-color:var(--cyan-dim)">⇅ SYNC</button>
     <button class="vtoggle on" id="vtoggle">AUDIO ON</button>
   </header>
@@ -1224,6 +1231,39 @@ function initNodes(){
   })();
 }
 
+/* ---------- time-of-day color grade ----------
+   A single warmth value (0 cool → 1 warm) drives the ambient overlay, the
+   nebula tint, and a phase chip in the topbar. Cool & crisp at midday; golden
+   through dusk; dim and cool overnight. Recomputed every few minutes; the
+   2.5s CSS transition makes the change imperceptible in the moment. */
+let spaceWarm=0.3;
+function todInfo(d){
+  const h=d.getHours()+d.getMinutes()/60;
+  const pts=[[0,.34],[5,.34],[7,.72],[11,.12],[15,.12],[18,.55],[20,.82],[22,.55],[24,.34]];
+  let warm=.34;
+  for(let i=0;i<pts.length-1;i++){ const a=pts[i],b=pts[i+1]; if(h>=a[0]&&h<=b[0]){ warm=a[1]+(b[1]-a[1])*((h-a[0])/(b[0]-a[0])); break; } }
+  let label,icon;
+  if(h<5){label='NIGHT';icon='☾';}
+  else if(h<8){label='DAWN';icon='☼';}
+  else if(h<12){label='MORNING';icon='◔';}
+  else if(h<17){label='MIDDAY';icon='○';}
+  else if(h<20){label='DUSK';icon='◑';}
+  else {label='EVENING';icon='☾';}
+  return {warm,label,icon};
+}
+function mix(a,b,t){ return a.map((v,i)=>Math.round(v+(b[i]-v)*t)); }
+function applyTimeTheme(){
+  const info=todInfo(new Date()), w=info.warm; spaceWarm=w;
+  const top=mix([54,150,255],[255,148,60],w), bot=mix([40,90,200],[120,42,96],w);
+  const grade=document.getElementById('grade');
+  if(grade) grade.style.background=
+    `radial-gradient(130% 90% at 50% -8%, rgba(${top[0]},${top[1]},${top[2]},.10), transparent 56%),`+
+    `radial-gradient(130% 90% at 50% 108%, rgba(${bot[0]},${bot[1]},${bot[2]},.07), transparent 56%)`;
+  const tod=document.getElementById('tod');
+  if(tod){ tod.innerHTML=`<span>${info.icon}</span>${info.label}`;
+    tod.style.color = w>0.5 ? 'var(--gold)' : 'var(--cyan)'; }
+}
+
 /* ---------- ambient deep-space backdrop ----------
    Living parallax field: drifting nebula clouds, three depth layers of stars
    that shift against the cursor, constellation lines that knit themselves
@@ -1253,14 +1293,17 @@ function initSpace(){
     ctx.clearRect(0,0,W,H);
     px+=(tx-px)*0.04; py+=(ty-py)*0.04;
     const ox=px-0.5, oy=py-0.42;
-    // nebula — additive, drawn only within each blob's box to limit overdraw
+    // nebula — additive, drawn only within each blob's box to limit overdraw.
+    // Each cloud is nudged toward the time-of-day tint (cool midday → warm dusk).
     ctx.globalCompositeOperation='lighter';
+    const w0=spaceWarm, tint=[47+208*w0, 160+10*w0, 255-185*w0];
     neb.forEach(n=>{
       const nx=(n.x+(still?0:Math.sin(t*0.00006+n.ph)*0.02)-ox*0.07)*W;
       const ny=(n.y+(still?0:Math.cos(t*0.00005+n.ph)*0.02)-oy*0.07)*H;
       const rad=n.r*Math.min(W,H), pulse=still?1:0.82+0.18*Math.sin(t*0.0004+n.ph);
+      const c0=n.c[0]+(tint[0]-n.c[0])*0.33|0, c1=n.c[1]+(tint[1]-n.c[1])*0.33|0, c2=n.c[2]+(tint[2]-n.c[2])*0.33|0;
       const g=ctx.createRadialGradient(nx,ny,0,nx,ny,rad);
-      g.addColorStop(0,`rgba(${n.c[0]},${n.c[1]},${n.c[2]},${(n.a*pulse).toFixed(3)})`);
+      g.addColorStop(0,`rgba(${c0},${c1},${c2},${(n.a*pulse).toFixed(3)})`);
       g.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=g; ctx.fillRect(nx-rad,ny-rad,rad*2,rad*2);
     });
@@ -1516,6 +1559,7 @@ function closeSync(){ $('#syncOverlay').classList.remove('show'); }
 /* ---------- wire ---------- */
 function init(){
   initSpace();
+  applyTimeTheme(); setInterval(applyTimeTheme, 5*60*1000);
   renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker(); renderTasks(); renderHot();
   tick(); setInterval(tick,1000);
   window.addEventListener('resize', drawChart);
