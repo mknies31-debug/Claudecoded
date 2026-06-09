@@ -1,0 +1,14 @@
+# CARVIS — Netlify deploy config.
+#
+# Drag the carvis/ folder onto Netlify (or point a site at it). Static files are
+# served from the folder root; the Anthropic proxy runs as a serverless function.
+# There is NO local build step — Netlify bundles the function automatically.
+#
+# Before it works: Site settings → Environment variables → add ANTHROPIC_API_KEY.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"

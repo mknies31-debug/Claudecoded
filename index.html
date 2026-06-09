@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#02060e">
+<title>CARVIS — North Star Command</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='30' fill='%2302060e'/><circle cx='90' cy='90' r='56' fill='none' stroke='%232fe6ff' stroke-width='8'/><text x='90' y='120' font-size='84' font-family='Arial' font-weight='bold' text-anchor='middle' fill='%232fe6ff'>C</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#02060e;
+    --bg2:#061320;
+    --cyan:#2fe6ff;
+    --cyan-dim:#1a8aa0;
+    --gold:#ffb648;
+    --green:#38f08a;
+    --red:#ff4d5e;
+    --text:#cfe9f2;
+    --dim:#5d7a86;
+    --panel:rgba(8,18,30,0.62);
+    --line:rgba(47,230,255,0.18);
+    --line-strong:rgba(47,230,255,0.4);
+    --mono:'Share Tech Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(circle at 50% 38%, #0a1b2c 0%, var(--bg) 68%);
+    color:var(--text);font-family:'Rajdhani',sans-serif;height:100vh;overflow:hidden;position:relative;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* HUD backdrops */
+  body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(rgba(47,230,255,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(47,230,255,0.045) 1px,transparent 1px);
+    background-size:46px 46px;mask-image:radial-gradient(circle at 50% 42%,#000 26%,transparent 78%)}
+  body::after{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0.16) 0 1px,transparent 1px 3px);mix-blend-mode:multiply;opacity:.5}
+  .vign{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 220px 40px rgba(0,0,0,.85)}
+  /* corner brackets */
+  .frame{position:fixed;inset:14px;z-index:2;pointer-events:none}
+  .frame i{position:absolute;width:34px;height:34px;border:2px solid var(--line-strong);opacity:.7}
+  .frame .tl{top:0;left:0;border-right:none;border-bottom:none}
+  .frame .tr{top:0;right:0;border-left:none;border-bottom:none}
+  .frame .bl{bottom:0;left:0;border-right:none;border-top:none}
+  .frame .br{bottom:0;right:0;border-left:none;border-top:none}
+
+  .app{position:relative;z-index:3;height:100vh;display:grid;grid-template-rows:auto 1fr auto;opacity:0;transition:opacity .8s .1s}
+  .app.live{opacity:1}
+
+  /* ============ TOPBAR ============ */
+  .top{display:flex;align-items:center;gap:18px;padding:14px 26px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{width:34px;height:34px;border:2px solid var(--cyan);border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'Orbitron';font-weight:900;color:var(--cyan);font-size:15px;box-shadow:0 0 14px rgba(47,230,255,.45),inset 0 0 10px rgba(47,230,255,.25)}
+  .brand h1{font-family:'Orbitron';font-weight:700;font-size:17px;letter-spacing:4px;color:#eafbff}
+  .brand h1 b{color:var(--cyan)}
+  .brand .sub{font-size:10px;letter-spacing:2.5px;color:var(--dim);text-transform:uppercase}
+  .top .spacer{flex:1}
+  .clock{font-family:var(--mono);text-align:right;line-height:1.2}
+  .clock .t{font-size:20px;color:var(--cyan);letter-spacing:2px}
+  .clock .d{font-size:11px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase}
+  .sess{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:1px;text-align:right;border-left:1px solid var(--line);padding-left:16px}
+  .sess b{color:var(--gold)}
+  .status{display:flex;align-items:center;gap:8px;font-family:'Orbitron';font-size:11px;letter-spacing:2px;color:var(--green)}
+  .status .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .vtoggle{font-family:'Orbitron';font-size:9.5px;letter-spacing:2px;color:var(--dim);border:1px solid var(--line);padding:6px 11px;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:.2s}
+  .vtoggle.on{color:var(--gold);border-color:var(--gold)}
+
+  /* ============ MAIN GRID ============ */
+  .main{display:grid;grid-template-columns:300px 1fr 348px;gap:18px;padding:18px 26px;min-height:0;overflow:hidden}
+  .col{display:flex;flex-direction:column;gap:16px;min-height:0}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(4px);position:relative;overflow:hidden}
+  .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.5}
+  .ph{display:flex;align-items:center;gap:9px;padding:13px 16px 0}
+  .ph h3{font-family:'Orbitron';font-size:11px;letter-spacing:2.5px;color:var(--cyan);text-transform:uppercase}
+  .ph .hbar{width:4px;height:13px;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+  .ph .meta{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:1px}
+  .pbody{padding:12px 16px 16px}
+
+  /* SYSTEM panel */
+  .sys-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(47,230,255,.07);font-family:var(--mono);font-size:12px}
+  .sys-row:last-child{border-bottom:none}
+  .sys-row .nm{color:var(--text);letter-spacing:.5px;flex:1}
+  .sys-row .sd{width:7px;height:7px;border-radius:50%}
+  .sd.online{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .sd.standby{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+  .sd.offline{background:var(--red);box-shadow:0 0 8px var(--red);animation:none}
+  .sys-row .st{font-size:10px;letter-spacing:1px}
+  .st.online{color:var(--green)} .st.standby{color:var(--gold)} .st.offline{color:var(--red)}
+  .readouts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
+  .ro{background:rgba(47,230,255,.04);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  .ro .v{font-family:var(--mono);font-size:17px;color:var(--cyan)}
+  .ro .l{font-size:9.5px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-top:2px}
+
+  /* MARKET pulse */
+  .mk{flex:1;min-height:0}
+  .mk .pbody{overflow-y:auto;max-height:100%}
+  .mk-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid rgba(47,230,255,.07)}
+  .mk-item:last-child{border-bottom:none}
+  .mk-item .n{font-family:var(--mono);color:var(--gold);font-size:12px;flex:0 0 auto}
+  .mk-item p{font-size:13px;line-height:1.42;color:var(--text)}
+  .mk-item p .est{color:var(--gold);font-weight:700}
+  .verify{margin-top:11px;font-size:10.5px;color:var(--gold);letter-spacing:.5px;display:flex;gap:7px;align-items:flex-start;line-height:1.4;
+    background:rgba(255,182,72,.07);border:1px solid rgba(255,182,72,.22);border-radius:8px;padding:8px 10px}
+
+  /* ============ CENTER STAGE ============ */
+  .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:0;overflow:hidden}
+  .reactor-wrap{position:relative;width:340px;height:340px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .goal-ring{position:absolute;inset:0;transform:rotate(-90deg)}
+  .goal-ring circle{fill:none;stroke-width:5;stroke-linecap:round}
+  .goal-ring .track{stroke:rgba(47,230,255,.1)}
+  .goal-ring .prog{stroke:var(--gold);filter:drop-shadow(0 0 6px rgba(255,182,72,.7));transition:stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1)}
+  .reactor{position:relative;width:248px;height:248px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .ring{position:absolute;border-radius:50%;border:1.5px solid var(--cyan)}
+  .ring.a{inset:0;border-color:rgba(47,230,255,.5);animation:spin 9s linear infinite}
+  .ring.b{inset:22px;border-style:dashed;border-color:rgba(47,230,255,.3);animation:spin 16s linear infinite reverse}
+  .ring.c{inset:44px;border-color:rgba(255,182,72,.28);animation:spin 24s linear infinite}
+  .ring.tick{inset:8px;border:none;background:
+    conic-gradient(from 0deg, transparent 0 86deg, rgba(47,230,255,.5) 88deg 90deg, transparent 92deg 176deg, rgba(47,230,255,.5) 178deg 180deg, transparent 182deg 266deg, rgba(47,230,255,.5) 268deg 270deg, transparent 272deg 356deg, rgba(47,230,255,.5) 358deg 360deg);
+    -webkit-mask:radial-gradient(circle, transparent 60%, #000 61% 63%, transparent 64%);mask:radial-gradient(circle, transparent 60%, #000 61% 63%, transparent 64%);animation:spin 40s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .sweep{position:absolute;inset:14px;border-radius:50%;background:conic-gradient(from 0deg, rgba(47,230,255,.22), transparent 38%);animation:spin 4s linear infinite}
+  .core{width:128px;height:128px;border-radius:50%;overflow:hidden;
+    background:radial-gradient(circle at 42% 36%, rgba(154,246,255,.30), rgba(47,230,255,.14) 44%, rgba(11,85,103,.45) 78%, rgba(4,22,30,.72) 100%);
+    box-shadow:0 0 55px rgba(47,230,255,.55),0 0 110px rgba(47,230,255,.28),inset 0 0 30px rgba(47,230,255,.25);
+    display:flex;align-items:center;justify-content:center;position:relative;transition:.3s}
+  .core::after{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.35);z-index:2}
+  .core .nodes{position:absolute;inset:0;width:100%;height:100%}
+  .core .cdot{position:absolute;width:22px;height:22px;border-radius:50%;z-index:1;
+    background:radial-gradient(circle,#eafbff,rgba(47,230,255,.6) 50%,transparent 72%);filter:blur(.5px);animation:cdot 2.4s ease-in-out infinite}
+  @keyframes cdot{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.28);opacity:1}}
+  .reactor.idle .core{animation:breathe 3s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  .reactor.listening .core{background:radial-gradient(circle at 42% 36%, rgba(201,255,217,.32), rgba(56,240,138,.16) 44%, rgba(12,110,62,.5) 100%);box-shadow:0 0 66px rgba(56,240,138,.6),inset 0 0 30px rgba(56,240,138,.25);animation:breathe 1s ease-in-out infinite}
+  .reactor.listening .ring{border-color:rgba(56,240,138,.5)}
+
+  .hero{text-align:center}
+  .hero .v{font-family:'Orbitron';font-weight:800;font-size:46px;letter-spacing:1px;color:#eafbff;text-shadow:0 0 26px rgba(47,230,255,.5);line-height:1}
+  .hero .l{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--cyan);margin-top:8px}
+  .hero .g{font-size:12.5px;color:var(--dim);margin-top:6px;letter-spacing:.5px}
+  .hero .g b{color:var(--gold)}
+
+  .gauges{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+  .gauge{display:flex;flex-direction:column;align-items:center;gap:7px;width:96px}
+  .gauge svg{transform:rotate(-90deg)}
+  .gauge .track2{fill:none;stroke:rgba(47,230,255,.1);stroke-width:7}
+  .gauge .prog2{fill:none;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1)}
+  .gauge .gv{position:absolute;font-family:'Orbitron';font-weight:700;font-size:18px}
+  .gauge .gwrap{position:relative;display:flex;align-items:center;justify-content:center}
+  .gauge .gl{font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;text-align:center}
+
+  /* ============ DIRECTIVES (right) ============ */
+  .dir{flex:1;min-height:0;display:flex;flex-direction:column}
+  .dir .pbody{overflow-y:auto;flex:1;min-height:0}
+  .di{border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:10px;background:rgba(47,230,255,.03);transition:.2s;border-left:3px solid var(--ac,var(--cyan))}
+  .di:hover{border-color:var(--line-strong);background:rgba(47,230,255,.06)}
+  .di .dtop{display:flex;align-items:center;gap:9px}
+  .di .nm{font-weight:700;font-size:14px;letter-spacing:.3px}
+  .di .tag{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:3px 8px;border-radius:20px;white-space:nowrap}
+  .di .tag.quiet{background:rgba(255,77,94,.14);color:var(--red)}
+  .di .tag.appt{background:rgba(56,240,138,.14);color:var(--green)}
+  .di .veh{font-size:12px;color:var(--dim);margin-top:3px;font-family:var(--mono);letter-spacing:.3px}
+  .di .acts{display:flex;gap:7px;margin-top:10px}
+  .di .act{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Orbitron';font-size:10px;letter-spacing:1.5px;
+    padding:8px 0;border-radius:8px;border:1px solid var(--line);color:var(--dim);transition:.18s;cursor:pointer}
+  .di .act:hover{color:var(--text);border-color:var(--line-strong)}
+  .di .act.go{background:rgba(47,230,255,.12);border-color:var(--cyan-dim);color:var(--cyan)}
+  .di .act.go:hover{background:rgba(47,230,255,.2)}
+
+  /* ============ TICKER + COMMAND ============ */
+  .ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;background:rgba(2,10,18,.6)}
+  .ticker .run{display:inline-block;padding:7px 0;font-family:var(--mono);font-size:12px;color:var(--cyan);letter-spacing:1px;animation:marq 38s linear infinite}
+  .ticker .run span{margin:0 26px;color:var(--dim)}
+  .ticker .run b{color:var(--gold)}
+  @keyframes marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  .cmd{display:flex;align-items:center;gap:12px;padding:14px 26px 18px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-right:4px}
+  .chip{font-family:'Orbitron';font-size:9.5px;letter-spacing:1px;color:var(--dim);border:1px solid var(--line);padding:8px 11px;border-radius:7px;cursor:pointer;transition:.18s;text-transform:uppercase}
+  .chip:hover{color:var(--cyan);border-color:var(--cyan)}
+  .mic{width:50px;height:50px;flex:0 0 auto;border-radius:12px;border:1.5px solid var(--cyan);background:rgba(47,230,255,.08);color:var(--cyan);
+    font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+  .mic:hover{background:rgba(47,230,255,.16)}
+  .mic.on{background:var(--green);border-color:var(--green);color:#02140a;box-shadow:0 0 22px rgba(56,240,138,.55)}
+  .cmd input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text);font-family:'Rajdhani';
+    font-size:16px;padding:14px 16px;outline:none;transition:.2s}
+  .cmd input::placeholder{color:var(--dim)}
+  .cmd input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(47,230,255,.1)}
+  .send{width:50px;height:50px;flex:0 0 auto;border-radius:12px;border:none;background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));
+    color:#02141a;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+  .send:hover{filter:brightness(1.12)}
+
+  /* ============ BOOT ============ */
+  .boot{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 45%,#071726,#02060e 70%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;transition:opacity .7s,visibility .7s}
+  .boot.gone{opacity:0;visibility:hidden}
+  .boot .mini{position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center}
+  .boot .mini .ring{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(47,230,255,.4)}
+  .boot .mini .core{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#1a3a44,#06303b);box-shadow:none;transition:1.2s}
+  .boot.powering .mini .core{background:radial-gradient(circle at 40% 34%,#d7fbff,var(--cyan) 40%,#0b5567 100%);box-shadow:0 0 50px rgba(47,230,255,.7),inset 0 0 24px rgba(255,255,255,.35)}
+  .boot.powering .mini .ring{animation:spin 6s linear infinite;border-color:rgba(47,230,255,.6)}
+  .wake{text-align:center}
+  .wake .t{font-family:'Orbitron';font-weight:700;font-size:26px;letter-spacing:5px;color:#eafbff;text-shadow:0 0 22px rgba(47,230,255,.5)}
+  .wake .s{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--dim);margin-top:10px}
+  .wakebtn{margin-top:6px;font-family:'Orbitron';font-size:12px;letter-spacing:3px;color:var(--cyan);border:1.5px solid var(--cyan);
+    background:rgba(47,230,255,.06);padding:14px 30px;border-radius:10px;cursor:pointer;text-transform:uppercase;transition:.2s;animation:wakepulse 1.8s infinite}
+  .wakebtn:hover{background:rgba(47,230,255,.16)}
+  @keyframes wakepulse{0%,100%{box-shadow:0 0 0 0 rgba(47,230,255,.3)}50%{box-shadow:0 0 26px 2px rgba(47,230,255,.35)}}
+  .bootlog{font-family:var(--mono);font-size:13px;line-height:1.9;color:var(--cyan);min-height:200px;width:min(440px,86vw);text-align:left;letter-spacing:.5px}
+  .bootlog .ok{color:var(--green)} .bootlog .def{color:var(--gold)} .bootlog .dim{color:var(--dim)}
+  .bootlog .cur{display:inline-block;width:9px;height:15px;background:var(--cyan);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+  .hidden{display:none!important}
+
+  /* ============ MODAL ============ */
+  .overlay{position:fixed;inset:0;z-index:90;background:rgba(2,6,14,.78);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;
+    padding:24px;opacity:0;pointer-events:none;transition:.22s}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .modal{background:var(--bg2);border:1px solid var(--line-strong);border-radius:16px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
+    box-shadow:0 0 60px rgba(47,230,255,.18),0 40px 100px -30px #000;transform:translateY(14px);transition:transform .22s}
+  .overlay.show .modal{transform:none}
+  .mh{display:flex;align-items:center;gap:13px;padding:18px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg2)}
+  .mh .av{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#d7fbff,var(--cyan) 40%,#0b5567 100%);
+    display:flex;align-items:center;justify-content:center;font-family:'Orbitron';font-weight:700;color:#04222a;flex:0 0 auto}
+  .mh .mt{font-family:'Orbitron';font-size:14px;letter-spacing:1px;color:#eafbff}
+  .mh .ms{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:3px;letter-spacing:.5px}
+  .mh .x{margin-left:auto;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+  .mh .x:hover{color:var(--text);border-color:var(--line-strong)}
+  .mb{padding:18px 20px 22px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;padding:3px;margin-bottom:15px}
+  .seg button{font-family:'Orbitron';font-size:11px;letter-spacing:1.5px;padding:8px 16px;border-radius:6px;color:var(--dim);cursor:pointer;transition:.2s}
+  .seg button.on{background:var(--cyan);color:#02141a}
+  .draft{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px}
+  .draft .dh{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .draft .lab{font-family:'Orbitron';font-size:11px;letter-spacing:1.5px}
+  .draft.a .lab{color:var(--cyan)} .draft.b .lab{color:var(--gold)} .draft.c .lab{color:var(--red)}
+  .draft .tg{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.5px}
+  .draft .cp{margin-left:auto;font-family:'Orbitron';font-size:10px;letter-spacing:1px;color:var(--dim);border:1px solid var(--line);
+    padding:6px 11px;border-radius:7px;cursor:pointer;transition:.2s}
+  .draft .cp:hover{color:var(--text);border-color:var(--line-strong)}
+  .draft .cp.done{color:var(--green);border-color:rgba(56,240,138,.4)}
+  .draft p{font-size:14px;line-height:1.55}
+  .mnote{margin-top:8px;font-size:11px;color:var(--dim);line-height:1.5;display:flex;gap:8px}
+  .mnote .soon{color:var(--cyan)}
+
+  .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(16px);z-index:95;background:var(--bg2);border:1px solid var(--line-strong);
+    border-radius:11px;padding:12px 18px;font-family:var(--mono);font-size:13px;letter-spacing:.5px;color:var(--text);
+    box-shadow:0 0 30px rgba(47,230,255,.16);opacity:0;pointer-events:none;transition:.25s;display:flex;align-items:center;gap:10px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .tc{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+
+  @media(max-width:1100px){ .main{display:block;overflow-y:auto} .col{min-height:auto;margin-bottom:16px} .stage{justify-content:flex-start;padding:10px 0} .reactor-wrap{width:300px;height:300px;margin:0 auto} }
+  @media(max-width:560px){ .top{flex-wrap:wrap;gap:10px;padding:12px 16px} .sess{display:none} .main{padding:14px} .cmd{padding:12px 14px 16px} .chips{display:none} .hero .v{font-size:38px} }
+
+  /* ===== fun & cool layer ===== */
+  .cglow{position:fixed;width:520px;height:520px;border-radius:50%;left:50%;top:42%;z-index:1;pointer-events:none;
+    background:radial-gradient(circle, rgba(47,230,255,.10), transparent 62%);transform:translate(-50%,-50%);opacity:0;transition:opacity .4s}
+  .stage,.reactor-wrap{transition:transform .18s ease-out}
+  .spark{width:200px;height:34px;margin-top:12px;display:block}
+  .spark #sparkLine{fill:none;stroke:var(--cyan);stroke-width:2;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 5px rgba(47,230,255,.6))}
+  .spark #sparkFill{fill:url(#sg);stroke:none;opacity:.22}
+  @keyframes diflash{0%{box-shadow:0 0 0 2px rgba(47,230,255,.5);background:rgba(47,230,255,.16)}100%{box-shadow:0 0 0 0 rgba(47,230,255,0)}}
+  .di.fresh{animation:diflash 1.6s ease-out}
+  @media(prefers-reduced-motion:reduce){ .stage,.reactor-wrap{transform:none!important}
+    .ring,.sweep,.ticker .run,.core .cdot,.scanbeam,.surge,.bloom,.orbit,.panel::before,.brand .logo,
+    .app.live .top,.app.live .main>.col,.app.live .ticker,.app.live .cmd{animation:none!important} }
+
+  /* ===== buyer reply assistant ===== */
+  .rta,.rin{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:11px;color:var(--text);
+    font-family:'Rajdhani';font-size:15px;padding:13px 14px;outline:none;transition:.2s}
+  .rta{resize:vertical;min-height:80px;line-height:1.45}
+  .rin{margin-top:10px}
+  .rta:focus,.rin:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(47,230,255,.1)}
+  .rta::placeholder,.rin::placeholder{color:var(--dim)}
+  .rgen{width:100%;margin-top:12px;font-family:'Orbitron';font-size:12px;letter-spacing:2px;padding:13px;border-radius:11px;
+    background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:#02141a;cursor:pointer;transition:.2s}
+  .rgen:hover{filter:brightness(1.1)}
+  .rintent{margin:15px 0 2px;font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--gold);display:flex;align-items:center;gap:8px}
+  .rintent .pd{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+
+  /* ===== outreach email ===== */
+  .rsel{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:11px;color:var(--text);font-family:'Rajdhani';font-size:15px;padding:12px 14px;outline:none}
+  .rsel:focus{border-color:var(--cyan)}
+  .orow{display:flex;gap:10px;margin-top:10px}
+  .olabel{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin:14px 0 5px;display:block}
+  .otpl{display:flex;gap:8px;flex-wrap:wrap}
+  .otpl button{font-family:'Orbitron';font-size:9.5px;letter-spacing:1px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:.18s}
+  .otpl button.on{background:var(--cyan);color:#02141a;border-color:var(--cyan)}
+  .ostat{margin-top:11px;font-family:var(--mono);font-size:12px;letter-spacing:.5px;min-height:18px}
+  .ostat.ok{color:var(--green)} .ostat.err{color:var(--red)} .ostat.send{color:var(--cyan)}
+  .omanage{margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--cyan);background:none;cursor:pointer;border:none;padding:0}
+  .omanage:hover{text-decoration:underline}
+  .omg{margin-top:10px;padding:12px;border:1px dashed var(--line-strong);border-radius:11px}
+
+  /* ===== extraordinary optics ===== */
+  #space{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .scanbeam{position:fixed;left:0;right:0;height:150px;z-index:2;pointer-events:none;mix-blend-mode:screen;
+    background:linear-gradient(transparent,rgba(47,230,255,0.05) 44%,rgba(47,230,255,0.12) 50%,rgba(47,230,255,0.05) 56%,transparent);
+    animation:beam 9s linear infinite}
+  @keyframes beam{0%{transform:translateY(-170px);opacity:0}10%{opacity:1}88%{opacity:1}100%{transform:translateY(102vh);opacity:0}}
+  .surge{position:fixed;inset:0;z-index:70;pointer-events:none;opacity:0;
+    background:radial-gradient(circle at 50% 44%,rgba(154,246,255,.55),rgba(47,230,255,.16) 34%,transparent 62%)}
+  .surge.go{animation:surge .85s ease-out}
+  @keyframes surge{0%{opacity:0;transform:scale(.5)}28%{opacity:.95}100%{opacity:0;transform:scale(1.4)}}
+  .bloom{position:absolute;width:270px;height:270px;border-radius:50%;z-index:-1;
+    background:radial-gradient(circle,rgba(47,230,255,.30),transparent 62%);filter:blur(9px);animation:bloom 4.5s ease-in-out infinite}
+  .reactor.listening~.bloom,.listening .bloom{background:radial-gradient(circle,rgba(56,240,138,.32),transparent 62%)}
+  @keyframes bloom{0%,100%{opacity:.5;transform:scale(.95)}50%{opacity:.95;transform:scale(1.07)}}
+  .orbit{position:absolute;inset:0;border-radius:50%}
+  .orbit.o1{animation:spin 7s linear infinite}
+  .orbit.o2{animation:spin 11s linear infinite reverse}
+  .orbit .packet{position:absolute;top:-3px;left:50%;width:7px;height:7px;margin-left:-3px;border-radius:50%;background:#eafbff;box-shadow:0 0 12px 2px var(--cyan)}
+  .orbit .packet.g{background:#fff3df;box-shadow:0 0 12px 2px var(--gold)}
+  @keyframes hudslide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes hudpop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+  .app.live .top{animation:hudslide .55s .05s both}
+  .app.live .main>.col:nth-child(1){animation:hudslide .6s .18s both}
+  .app.live .main>.col:nth-child(2){animation:hudpop .7s .08s both}
+  .app.live .main>.col:nth-child(3){animation:hudslide .6s .28s both}
+  .app.live .ticker,.app.live .cmd{animation:hudslide .55s .32s both}
+  .panel::before{background:linear-gradient(90deg,transparent,var(--cyan),transparent)!important;background-size:220% 100%!important;animation:bordersweep 7s linear infinite;opacity:.7}
+  @keyframes bordersweep{from{background-position:220% 0}to{background-position:-120% 0}}
+  .brand .logo{animation:logoglow 3.6s ease-in-out infinite}
+  @keyframes logoglow{0%,100%{box-shadow:0 0 14px rgba(47,230,255,.45),inset 0 0 10px rgba(47,230,255,.25)}50%{box-shadow:0 0 26px rgba(47,230,255,.85),inset 0 0 15px rgba(47,230,255,.4)}}
+
+  /* ===== vehicle lookup ===== */
+  .vphoto{width:100%;height:172px;border-radius:12px;object-fit:cover;border:1px solid var(--line);background:rgba(47,230,255,.05);margin-bottom:12px;display:block}
+  .vprice{font-family:'Orbitron';font-weight:800;font-size:26px;color:#eafbff;margin:2px 0 13px;text-shadow:0 0 20px rgba(47,230,255,.4)}
+  .vprice small{font-family:'Rajdhani';font-size:13px;color:var(--gold);font-weight:600;margin-left:9px;letter-spacing:.3px}
+  .vspecs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .vspec{background:rgba(47,230,255,.04);border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+  .vspec .k{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;color:var(--dim);text-transform:uppercase}
+  .vspec .v2{font-size:14px;color:var(--text);margin-top:2px;font-weight:600}
+  .vpick{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;margin-bottom:8px;cursor:pointer;transition:.15s}
+  .vpick:hover{border-color:var(--line-strong);background:rgba(47,230,255,.05)}
+  .vpick .pn{flex:1}.vpick .pt{font-weight:700;font-size:14px}.vpick .ps{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:2px}
+  .vpick .pp{font-family:'Orbitron';font-weight:700;font-size:16px;color:var(--cyan)}
+  #vQ{width:100%;margin-top:4px}
+  #vA{margin-top:11px;font-size:14px;line-height:1.55;color:var(--text);white-space:pre-wrap;min-height:20px}
+  #vA:empty{display:none}
+</style>
+</head>
+<body>
+<div class="vign"></div>
+<div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+<canvas id="space"></canvas>
+<div class="scanbeam"></div>
+<div class="surge" id="surge"></div>
+<div class="cglow" id="cglow"></div>
+
+<!-- ============ BOOT ============ -->
+<div class="boot" id="boot">
+  <div class="mini"><div class="ring"></div><div class="core"></div></div>
+  <div class="wake" id="wakeBlock">
+    <div class="t">HEY CARVIS, WAKE UP</div>
+    <div class="s">CARVIS · NORTH STAR COMMAND · STANDBY</div>
+  </div>
+  <button class="wakebtn" id="wakeBtn">◉ WAKE CARVIS</button>
+  <div class="bootlog hidden" id="bootlog"></div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app" id="app">
+  <!-- TOPBAR -->
+  <header class="top">
+    <div class="brand">
+      <div class="logo">C</div>
+      <div>
+        <h1>CAR<b>VIS</b></h1>
+        <div class="sub">North Star Command</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="status"><span class="dot"></span><span>ONLINE</span></div>
+    <div class="sess">SESSION<br><b id="sess">00:00:00</b></div>
+    <div class="clock"><div class="t" id="clk">--:--:--</div><div class="d" id="dte">—</div></div>
+    <button class="vtoggle on" id="vtoggle">AUDIO ON</button>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- LEFT -->
+    <div class="col">
+      <div class="panel">
+        <div class="ph"><span class="hbar"></span><h3>System Status</h3><span class="meta" id="sysMeta">4 MODULES</span></div>
+        <div class="pbody" id="sysBody"></div>
+        <div class="pbody" style="padding-top:0">
+          <div class="readouts">
+            <div class="ro"><div class="v" id="roLeads">0</div><div class="l">Pipeline</div></div>
+            <div class="ro"><div class="v" id="roInv">0</div><div class="l">Inventory</div></div>
+            <div class="ro"><div class="v">9d</div><div class="l">Avg to sale</div></div>
+            <div class="ro"><div class="v" id="roUp">100%</div><div class="l">Uptime</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel mk">
+        <div class="ph"><span class="hbar"></span><h3>Market Pulse</h3><span class="meta">WEEKLY</span></div>
+        <div class="pbody">
+          <div id="mkList"></div>
+          <div class="verify">⚠ ESTIMATES — verify on Perplexity / KBB before quoting a customer.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER STAGE -->
+    <div class="col stage">
+      <div class="reactor-wrap">
+        <div class="bloom"></div>
+        <svg class="goal-ring" viewBox="0 0 340 340"><circle class="track" cx="170" cy="170" r="166"/><circle class="prog" id="goalProg" cx="170" cy="170" r="166"/></svg>
+        <div class="orbit o1"><span class="packet"></span></div>
+        <div class="orbit o2"><span class="packet g"></span></div>
+        <div class="reactor idle" id="reactor">
+          <div class="ring a"></div><div class="ring b"></div><div class="ring c"></div>
+          <div class="tick ring"></div><div class="sweep"></div>
+          <div class="core"><canvas class="nodes" id="nodes"></canvas><div class="cdot"></div></div>
+        </div>
+      </div>
+      <div class="hero">
+        <div class="v" id="heroV">$0</div>
+        <div class="l" id="heroL">GROSS · MONTH TO DATE</div>
+        <div class="g" id="heroG">—</div>
+        <svg class="spark" id="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2fe6ff"/><stop offset="1" stop-color="#2fe6ff" stop-opacity="0"/></linearGradient></defs><path id="sparkFill"/><path id="sparkLine"/></svg>
+      </div>
+      <div class="gauges" id="gauges"></div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col">
+      <div class="panel dir">
+        <div class="ph"><span class="hbar"></span><h3>Directives</h3><span class="meta" id="dirMeta">TODAY</span></div>
+        <div class="pbody" id="dirBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker"><div class="run" id="ticker"></div></div>
+
+  <!-- COMMAND -->
+  <div class="cmd">
+    <button class="mic" id="mic" title="Voice — talkback coming soon">🎙</button>
+    <button class="mic" id="replyBtn" title="Reply to a buyer's Marketplace message" style="font-size:18px">✉</button>
+    <button class="mic" id="outreachBtn" title="Send a referral / sold-customer email" style="font-size:17px">📧</button>
+    <button class="mic" id="carBtn" title="Find a car / ask about inventory" style="font-size:18px">🚗</button>
+    <div class="chips">
+      <div class="chip" data-cmd="findcar">🚗 Find a car</div>
+      <div class="chip" data-cmd="reply">✉ Buyer reply</div>
+      <div class="chip" data-cmd="outreach">📧 Outreach</div>
+      <div class="chip" data-cmd="directives">Directives</div>
+      <div class="chip" data-cmd="market">Market</div>
+      <div class="chip" data-cmd="draft Karla">Draft Karla</div>
+    </div>
+    <input id="cmd" type="text" placeholder="Command CARVIS — type a name to draft, or ask…" autocomplete="off">
+    <button class="send" id="send">➤</button>
+  </div>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av" id="mAv"></div>
+      <div><div class="mt" id="mName">—</div><div class="ms" id="mSub">—</div></div>
+      <button class="x" id="mClose">✕</button>
+    </div>
+    <div class="mb">
+      <div class="seg" id="mSeg"><button class="on" data-ch="text">TEXT</button><button data-ch="email">EMAIL</button></div>
+      <div id="mDrafts"></div>
+      <div class="mnote"><span>✦</span><span>Three options, every time — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>, in Mick's voice. <span class="soon">CARVIS generates these live once talkback ships;</span> templated previews for now.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BUYER REPLY MODAL ============ -->
+<div class="overlay" id="rOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">✉</div>
+      <div><div class="mt">BUYER REPLY</div><div class="ms">Paste a Marketplace message → 3 replies in your voice</div></div>
+      <button class="x" id="rClose">✕</button>
+    </div>
+    <div class="mb">
+      <textarea id="rMsg" class="rta" rows="3" placeholder="Paste the buyer's message…  e.g. “Is this still available? What's your best price?”"></textarea>
+      <input id="rVeh" class="rin" type="text" placeholder="Vehicle (optional) — e.g. 2019 F-150 XLT">
+      <button class="rgen" id="rGen">◉ GENERATE REPLIES</button>
+      <div id="rIntent"></div>
+      <div id="rDrafts"></div>
+      <div class="mnote"><span>✦</span><span>Three options in your voice — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>. <span class="soon">Templated for your common Marketplace asks; live, fully-contextual replies arrive with talkback.</span> CARVIS never touches your Messenger — you copy the one you like and paste it.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ OUTREACH EMAIL MODAL ============ -->
+<div class="overlay" id="oOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">📧</div>
+      <div><div class="mt">OUTREACH EMAIL</div><div class="ms">Referral &amp; past-customer follow-ups — sent in your voice</div></div>
+      <button class="x" id="oClose">✕</button>
+    </div>
+    <div class="mb">
+      <span class="olabel">Recipient</span>
+      <select class="rsel" id="oContact"></select>
+      <div class="orow"><input class="rin" id="oName" placeholder="Name" style="flex:1;margin-top:0"><input class="rin" id="oTo" placeholder="email@address.com" style="flex:2;margin-top:0"></div>
+      <button class="omanage" id="oManageToggle" type="button">＋ Manage / import contacts</button>
+      <div class="omg hidden" id="oManage">
+        <textarea class="rta" id="oImport" rows="3" placeholder="Paste your customers — one per line:
+Cory Bjork, cory@email.com, Sierra 2500, sold
+Janelle Aas, janelle@email.com, referral"></textarea>
+        <button class="rgen" id="oImportBtn" style="margin-top:8px">＋ IMPORT PASTED</button>
+        <div class="orow" style="margin-top:10px;justify-content:space-between">
+          <button class="omanage" id="oExportBtn" type="button" style="margin:0">⬇ Export backup (for your other desktop)</button>
+          <label class="omanage" style="margin:0;cursor:pointer">⬆ Import file<input type="file" id="oFile" accept=".csv,.json,.txt" style="display:none"></label>
+        </div>
+      </div>
+      <span class="olabel">Template</span>
+      <div class="otpl" id="oTpl">
+        <button data-tpl="review" class="on">Review + referral</button>
+        <button data-tpl="referral">Referral ask</button>
+        <button data-tpl="checkin">Sold check-in</button>
+      </div>
+      <span class="olabel">Subject</span>
+      <input class="rin" id="oSubj" style="margin-top:0" placeholder="Subject">
+      <span class="olabel">Message</span>
+      <textarea class="rta" id="oBody" rows="7"></textarea>
+      <button class="rgen" id="oSend">◉ SEND EMAIL</button>
+      <div class="ostat" id="oStat"></div>
+      <div class="mnote"><span>✦</span><span>CARVIS sends on your behalf; replies land in your inbox. A North Star footer + opt-out line is added automatically. <span class="soon">Goes live once RESEND_API_KEY + your sending domain are set in Netlify.</span></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VEHICLE LOOKUP MODAL ============ -->
+<div class="overlay" id="vOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">🚗</div>
+      <div><div class="mt" id="vName">Vehicle</div><div class="ms" id="vSub"></div></div>
+      <button class="x" id="vClose">✕</button>
+    </div>
+    <div class="mb">
+      <div id="vList"></div>
+      <div id="vDetail"></div>
+      <div id="vQAWrap" class="hidden">
+        <input class="rin" id="vQ" placeholder="Ask about this car — price, payment, miles, mpg, color, location…">
+        <div id="vA"></div>
+        <div class="orow" style="margin-top:12px;justify-content:space-between">
+          <button class="omanage" id="vDraft" type="button" style="margin:0">✉ Draft a reply about this car</button>
+          <a class="omanage" id="vLink" target="_blank" rel="noopener" style="margin:0">↗ View listing</a>
+        </div>
+        <div class="mnote"><span>✦</span><span>Answers come straight from inventory data. <span class="soon">Open-ended back-and-forth arrives with talkback;</span> for the full writeup use the listing link.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="tc"></span><span id="toastMsg">—</span></div>
+
+<script>
+/* ============================================================
+   CARVIS — Jarvis HUD command center.
+   Cinematic "wake up" boot → functional HUD wired to real
+   metrics + the follow-up / 3-option draft flow.
+   TALKBACK (voice reply / live AI conversation) is DEFERRED:
+   the boot log reports it OFFLINE, the mic & command bar are
+   visual/local-only, and nothing calls the proxy or speaks.
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+const SRC = { fb:'FB MKTPLACE', ref:'REFERRAL', app:'NORTHSTAR APP', text:'SHORTCODE', mc:'MANYCHAT' };
+const DATA = {
+  hero:{ value:41200, goal:55000 },
+  gauges:[
+    {key:'units', label:'UNITS SOLD', val:7, max:12, color:'var(--gold)', fmt:v=>v},
+    {key:'leads', label:'ACTIVE LEADS', val:9, max:20, color:'var(--cyan)', fmt:v=>v},
+    {key:'follow', label:'FOLLOW-UPS', val:4, max:10, color:'var(--red)', fmt:v=>v},
+    {key:'conv', label:'CLOSE RATE', val:38, max:100, color:'var(--green)', fmt:v=>v+'%'},
+  ],
+  system:[
+    {nm:'MARKET INTEL AGENT', status:'online'},
+    {nm:'PIPELINE SYNC', status:'online'},
+    {nm:'FOLLOW-UP SEQUENCER', status:'standby'},
+    {nm:'TALKBACK / VOICE', status:'offline'},
+  ],
+  market:[
+    {n:'01', html:'Half-ton pickups up <span class="est">~3%</span> regionally — tighten Silverado &amp; F-150 asks.'},
+    {n:'02', html:'Compact SUV demand strong — RAV4 / CR-V moving fast. Hold firm on the 22k-mi RAV4.'},
+    {n:'03', html:'Wrangler days-on-lot climbing — consider a <span class="est">~$500</span> trim.'},
+    {n:'04', html:'Diesel 2500s thin regionally — Denali sold above comps.'},
+  ],
+  leads:[
+    {id:2, name:'Karla Boe', vehicle:'Equinox', src:'ref', phone:'5075550178', quiet:4},
+    {id:5, name:'Roger Vetsch', vehicle:'Wrangler Unltd', src:'text', phone:'5075550161', quiet:2},
+    {id:3, name:'Travis Lund', vehicle:'F-150 XLT', src:'app', phone:'5075550199', appt:'SAT 10:00'},
+    {id:7, name:'Pat Niedermayer', vehicle:'Highlander', src:'app', phone:'5075550188', appt:'THU 17:30'},
+  ],
+};
+const initials = n => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const phoneFmt = p => `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
+const kMoney = n => '$'+(n/1000).toFixed(1).replace(/\.0$/,'')+'K';
+
+/* ---------- BOOT ---------- */
+const BOOT_LINES = [
+  {t:'> BOOTING CARVIS v2 ...', d:90},
+  {t:'> LINK: NORTH STAR COMMAND ......... <span class="ok">OK</span>', d:140},
+  {t:'> SYNC: PIPELINE (10 leads) ........ <span class="ok">OK</span>', d:130},
+  {t:'> SYNC: INVENTORY (6 units) ........ <span class="ok">OK</span>', d:120},
+  {t:'> AGENT: MARKET INTEL .............. <span class="ok">ONLINE</span>', d:140},
+  {t:'> MODULE: TALKBACK / VOICE ......... <span class="def">DEFERRED</span>', d:150},
+  {t:'> ALL CORE SYSTEMS NOMINAL', d:160},
+  {t:'> <span class="ok">GOOD MORNING, MICK.</span>', d:260},
+];
+function boot(){
+  const b=$('#boot'); b.classList.add('powering');
+  $('#wakeBlock').classList.add('hidden'); $('#wakeBtn').classList.add('hidden');
+  const log=$('#bootlog'); log.classList.remove('hidden');
+  let i=0, html='';
+  (function next(){
+    if(i>=BOOT_LINES.length){
+      setTimeout(()=>{ b.classList.add('gone'); $('#app').classList.add('live');
+        const sg=$('#surge'); if(sg){ sg.classList.add('go'); setTimeout(()=>sg.classList.remove('go'),900); }
+        startHud(); }, 480);
+      return;
+    }
+    html += BOOT_LINES[i].t + '<br>';
+    log.innerHTML = html + '<span class="cur"></span>';
+    blip(430+i*55,0.05,'square',0.1);
+    i++; setTimeout(next, BOOT_LINES[i-1].d);
+  })();
+}
+
+/* ---------- HUD render ---------- */
+function renderSystem(){
+  $('#sysBody').innerHTML = DATA.system.map(s=>`
+    <div class="sys-row"><span class="sd ${s.status}"></span><span class="nm">${s.nm}</span><span class="st ${s.status}">${s.status.toUpperCase()}</span></div>`).join('');
+  $('#sysMeta').textContent = DATA.system.length+' MODULES';
+  $('#roLeads').textContent = '10'; $('#roInv').textContent = '6';
+}
+function renderMarket(){
+  $('#mkList').innerHTML = DATA.market.map(m=>`<div class="mk-item"><span class="n">${m.n}</span><p>${m.html}</p></div>`).join('');
+}
+function renderGauges(){
+  const R=34, C=2*Math.PI*R;
+  $('#gauges').innerHTML = DATA.gauges.map(g=>`
+    <div class="gauge" data-key="${g.key}">
+      <div class="gwrap">
+        <svg width="86" height="86" viewBox="0 0 86 86"><circle class="track2" cx="43" cy="43" r="${R}"/>
+          <circle class="prog2" cx="43" cy="43" r="${R}" style="stroke:${g.color};stroke-dasharray:${C};stroke-dashoffset:${C}"/></svg>
+        <div class="gv" style="color:${g.color}" data-count="${g.val}" data-suffix="${g.key==='conv'?'%':''}">0</div>
+      </div>
+      <div class="gl">${g.label}</div>
+    </div>`).join('');
+}
+function renderDirectives(){
+  const due = DATA.leads.slice().sort((a,b)=>(b.quiet||0)-(a.quiet||0));
+  $('#dirBody').innerHTML = due.map(l=>{
+    const tag = l.quiet?`<span class="tag quiet">QUIET ${l.quiet}D</span>`:`<span class="tag appt">APPT ${l.appt}</span>`;
+    const ac = l.quiet?'var(--red)':'var(--green)';
+    return `<div class="di" data-id="${l.id}" style="--ac:${ac}">
+      <div class="dtop"><span class="nm">${l.name}</span>${tag}</div>
+      <div class="veh">${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}</div>
+      <div class="acts">
+        <a class="act" href="tel:${l.phone}">CALL</a>
+        <button class="act go js-draft" data-id="${l.id}">DRAFT</button>
+        <button class="act js-done" data-id="${l.id}">DONE</button>
+      </div>
+    </div>`;
+  }).join('');
+  $('#dirMeta').textContent = due.length+' TODAY';
+}
+function renderTicker(){
+  const items = DATA.market.map(m=>m.html.replace(/<[^>]+>/g,'')).join('   ◆   ');
+  const line = `GROSS MTD ${kMoney(DATA.hero.value)} / ${kMoney(DATA.hero.goal)}   ◆   ${items}   ◆   `;
+  $('#ticker').innerHTML = `<span>${line}${line}</span>`;
+}
+
+/* ---------- animate on wake ---------- */
+function startHud(){
+  // hero count-up
+  const hv=$('#heroV');
+  countTo(hv, DATA.hero.value, v=>kMoney(v));
+  $('#heroL').textContent='GROSS · MONTH TO DATE';
+  const pct=Math.round(DATA.hero.value/DATA.hero.goal*100);
+  $('#heroG').innerHTML = `${pct}% to <b>${kMoney(DATA.hero.goal)}</b> goal`;
+  // goal ring
+  const gr=$('#goalProg'), C=2*Math.PI*166;
+  gr.style.strokeDasharray=C; gr.style.strokeDashoffset=C;
+  requestAnimationFrame(()=>{ gr.style.strokeDashoffset = C*(1-DATA.hero.value/DATA.hero.goal); });
+  // gauges
+  const R=34, GC=2*Math.PI*R;
+  $$('.gauge').forEach((el,idx)=>{
+    const g=DATA.gauges[idx]; const prog=el.querySelector('.prog2'); const gv=el.querySelector('.gv');
+    requestAnimationFrame(()=>{ prog.style.strokeDashoffset = GC*(1-g.val/g.max); });
+    countTo(gv, g.val, v=>v+(gv.dataset.suffix||''));
+  });
+  startHum(); initNodes(); initSpark(); heartbeat();
+}
+function countTo(el, target, fmt){
+  const dur=1100, t0=performance.now();
+  (function step(now){ const p=Math.min((now-t0)/dur,1); const v=Math.round(target*(1-Math.pow(1-p,3))); el.textContent=fmt?fmt(v):v; if(p<1)requestAnimationFrame(step); })(t0);
+}
+
+/* ---------- clock + session ---------- */
+let sessStart=null;
+function tick(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  $('#clk').textContent=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  $('#dte').textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+  if(sessStart){ const s=Math.floor((d-sessStart)/1000); $('#sess').textContent=`${p(Math.floor(s/3600))}:${p(Math.floor(s/60)%60)}:${p(s%60)}`; }
+}
+
+/* ---------- draft modal ---------- */
+const first = l => (l.name||'').split(' ')[0];
+// Context-aware lead drafts built from Mick's REAL scripts (lifted from Lead
+// Command's SCRIPTS): quiet → ghost recovery, appt → confirm/lock-in, else →
+// opener/discovery. Shortcodes match the Script Playbook.
+function leadDraftSet(l){
+  const v = l.vehicle, n = first(l);
+  if(l.quiet) return [
+    {lab:'OPTION A',tag:'DIRECT',code:';mpGH2c',body:`${n} — one last thing. I've got something set aside for you: a discount voucher with your name on it. Yours if you still want in.`},
+    {lab:'OPTION B',tag:'SOFTER',code:';mpGH1',body:`${n} — still thinking on the ${v}? No rush. I've got 500 vehicles across all brands — want me to send a quick fit guide and pull a few more that match?`},
+    {lab:'OPTION C',tag:'NEPQ',code:';mpGH2a',body:`${n} — ever wonder what your current ride is actually worth? Free same-day appraisal, no obligation. What are you in right now?`},
+  ];
+  if(l.appt) return [
+    {lab:'OPTION A',tag:'CONFIRM',code:';mpA6',body:`${n} — ${l.appt} works. I'll have the ${v} pulled and ready, and I'll send a walkaround video ahead of time so you can see it up close. See you then.`},
+    {lab:'OPTION B',tag:'SOFTER',code:';ph-lockin',body:`${n} — you're all set. We'll pull the ${v} around, take a look and a drive — totally low pressure, 20–30 minutes. If anything changes, just text me directly.`},
+    {lab:'OPTION C',tag:'NEPQ',code:';mpA1',body:`${n} — quick one before you come in: trading something in, or just adding to the fleet? Helps me have the right numbers ready.`},
+  ];
+  return [
+    {lab:'OPTION A',tag:'DIRECT',code:';mpA4',body:`${n} — just a heads up, the ${v} is for sale and moving. Want to make sure you get a look while it's here. Does today work?`},
+    {lab:'OPTION B',tag:'SOFTER',code:';mp0',body:`Hey ${n} — still here. So I can help you the right way: looking for something soon, or still early?`},
+    {lab:'OPTION C',tag:'NEPQ',code:';mpB1',body:`${n} — what's the main reason the ${v} caught your eye, or what would it do for you that you don't have right now?`},
+  ];
+}
+let mLead=null, mCh='text';
+function openDraft(id){
+  const l=DATA.leads.find(x=>x.id===id); if(!l) return;
+  mLead=l; mCh='text';
+  $('#mAv').textContent=initials(l.name);
+  $('#mName').textContent=`DRAFT · ${l.name}`;
+  $('#mSub').textContent=`${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}`;
+  $$('#mSeg button').forEach(b=>b.classList.toggle('on',b.dataset.ch==='text'));
+  renderDrafts(); $('#overlay').classList.add('show');
+}
+function renderDrafts(){
+  const set = leadDraftSet(mLead);
+  $('#mDrafts').innerHTML = set.map((d,i)=>{
+    const body = mCh==='email' ? d.body+'\n\n— Mick, North Star Car Guy' : d.body;
+    return `<div class="draft ${['a','b','c'][i]}">
+      <div class="dh"><span class="lab">${d.lab}</span><span class="tg">${d.tag} · ${d.code}</span>
+        <button class="cp js-copy" data-txt="${body.replace(/"/g,'&quot;')}">COPY</button></div>
+      <p>${body.replace(/\n/g,'<br>')}</p>
+    </div>`;
+  }).join('');
+}
+function closeModal(){ $('#overlay').classList.remove('show'); }
+
+/* ---------- buyer reply assistant (paste a Marketplace message → 3 options) ----------
+   SAFE + manual: CARVIS never touches Messenger (personal Marketplace chats have no
+   API). It reads the buyer's pasted message, detects the common Marketplace intent,
+   and hands back three replies in Mick's voice to copy/paste. Templated today; live
+   contextual replies arrive with talkback. Money guardrail honored on price/trade. */
+const RV = c => (c && c.veh) ? `the ${c.veh}` : 'it';
+function detectIntent(t){
+  t=(t||'').toLowerCase();
+  if(/(see it|look at|test ?drive|come (by|look|see|in|check)|when can|stop by|check it out|swing by|set up a time|today|tomorrow|this (week|weekend)|meet)/.test(t)) return 'schedule';
+  if(/(price|best|lowest|firm|obo|how much|cost|negotiab|come down|cash|deal|drop|out the door|take \$|\$)/.test(t)) return 'price';
+  if(/(trade|trade-in|my (car|truck|vehicle|ride)|take my|on trade)/.test(t)) return 'trade';
+  if(/(mile|mileage|condition|accident|carfax|title|clean|rust|tire|owner|engine|transmission|mpg|year|vin|history|run|drive)/.test(t)) return 'info';
+  if(/(where|location|located|address|how far|direction|what town|city|zip)/.test(t)) return 'location';
+  if(/(still (there|available|have|for sale|got)|available|you still|is this|interested|sold)/.test(t)) return 'availability';
+  return 'default';
+}
+const INTENT_LABEL={schedule:'Wants to see it',price:'Price / negotiation',trade:'Trade-in',info:'Asking details',location:'Location / distance',availability:'Still available?',default:'General inquiry'};
+const RVcap = c => { const s=RV(c); return s.charAt(0).toUpperCase()+s.slice(1); };
+// Buyer-reply options derived from Mick's REAL scripts (Lead Command SCRIPTS:
+// price ;mpP1/;mpoffer, ghost ;mpGH2a, branch ;mpB1, phone playbook Q&A + NEPQ).
+// Money guardrail honored — price/trade never quote a figure.
+const REPLY={
+  availability:[
+    {lab:'OPTION A',tag:'DIRECT',code:';ph-avail',body:c=>`Yep — ${RV(c)}'s here right now. Best way to hold it is to get you in. Does today or tomorrow work?`},
+    {lab:'OPTION B',tag:'SOFTER',code:';mpCON8',body:c=>`Just confirming — that one's still available. Happy to answer anything, or send a quick walkaround video so you can see it closer.`},
+    {lab:'OPTION C',tag:'NEPQ',code:';mp0',body:c=>`Still here. So I can point you the right way — are you looking to move soon, or still early in the search?`},
+  ],
+  price:[
+    {lab:'OPTION A',tag:'DIRECT',code:';mpP1',body:c=>`We don't play games on price — these are priced under market, we do the homework so you don't have to. Reasonable offers get heard. Best thing is to see it in person — today or tomorrow?`},
+    {lab:'OPTION B',tag:'SOFTER',code:';ph-price',body:c=>`There's room to talk depending on your situation — and honestly that conversation's a lot easier in person. Want to come take a look this week?`},
+    {lab:'OPTION C',tag:'NEPQ',code:';mpoffer',body:c=>`Before I talk numbers — help me understand what makes that the right number for you? Want to make sure I take care of you the right way.`},
+  ],
+  schedule:[
+    {lab:'OPTION A',tag:'DIRECT',code:';mpA4',body:c=>`Just a heads up — it is for sale, and I'd hate for you to miss it. Does today work to come see ${RV(c)}? Morning or afternoon?`},
+    {lab:'OPTION B',tag:'SOFTER',code:';ph-lockin',body:c=>`Easy — we'll pull ${RV(c)} around, you take a look and drive it, totally low pressure, 20–30 minutes. What day fits your schedule?`},
+    {lab:'OPTION C',tag:'NEPQ',code:';ph-nepq',body:c=>`Before you make the drive — if you found exactly what you were after, how soon would you want to be in it?`},
+  ],
+  info:[
+    {lab:'OPTION A',tag:'DIRECT',code:';ph-miles',body:c=>`Clean title, solid shape. Happy to run through it all — but pictures never do these justice. Want to come put eyes on ${RV(c)}? Today or tomorrow?`},
+    {lab:'OPTION B',tag:'SOFTER',code:';mpCON3',body:c=>`I can grab whatever details or photos you need — give me a few minutes. Anything specific you want me to check while I'm out there?`},
+    {lab:'OPTION C',tag:'NEPQ',code:';mpB1',body:c=>`What's the main thing that caught your eye on ${RV(c)} — or what would it do for you that you don't have right now? Helps me tell you what matters.`},
+  ],
+  trade:[
+    {lab:'OPTION A',tag:'DIRECT',code:';mpGH2a',body:c=>`Yep, I take trades — free same-day appraisal, no obligation. What are you in right now? I'll check it against the market before we land on a number.`},
+    {lab:'OPTION B',tag:'SOFTER',code:';bs-soft',body:c=>`Happy to look at a trade, no pressure. Send me the year, miles, and a couple photos whenever you're ready and I'll work something up.`},
+    {lab:'OPTION C',tag:'NEPQ',code:';ph-reclose',body:c=>`What are you driving now, and what's got you thinking about moving on from it? Helps me put the right deal together.`},
+  ],
+  location:[
+    {lab:'OPTION A',tag:'DIRECT',code:';loc',body:c=>`We're at Mosaic Auto Group in Zumbrota. Worth the drive — when can you come see ${RV(c)}? Today or tomorrow?`},
+    {lab:'OPTION B',tag:'SOFTER',code:';loc',body:c=>`Zumbrota, MN — Mosaic Auto Group. I know folks drive a bit to see me; happy to make it easy whenever you head this way.`},
+    {lab:'OPTION C',tag:'NEPQ',code:';loc',body:c=>`We're in Zumbrota — how far out are you? Want me to have ${RV(c)} pulled and ready so the trip's worth it?`},
+  ],
+  default:[
+    {lab:'OPTION A',tag:'DIRECT',code:';mp0',body:c=>`Thanks for reaching out! ${RVcap(c)} is here. So I can help the right way — are you looking to buy soon, or still early?`},
+    {lab:'OPTION B',tag:'SOFTER',code:';mpCON1',body:c=>`Hey, thanks for the message! No pressure at all — tell me what you're wondering and I'll help however I can.`},
+    {lab:'OPTION C',tag:'NEPQ',code:';mpB1',body:c=>`Appreciate it! Quick one — what made ${RV(c)} catch your eye? Helps me point you the right direction.`},
+  ],
+};
+function openReply(){ $('#rMsg').value=''; $('#rIntent').innerHTML=''; $('#rDrafts').innerHTML=''; $('#rOverlay').classList.add('show'); setTimeout(()=>{ try{ $('#rMsg').focus(); }catch(e){} },60); }
+function closeReply(){ $('#rOverlay').classList.remove('show'); }
+function genReplies(){
+  const msg=$('#rMsg').value.trim(); if(!msg){ toast("Paste the buyer's message first"); return; }
+  const ctx={veh:$('#rVeh').value.trim()}; const key=detectIntent(msg);
+  $('#rIntent').innerHTML=`<span class="pd"></span>CARVIS read this as — ${INTENT_LABEL[key]}`;
+  $('#rDrafts').innerHTML=REPLY[key].map((d,i)=>`<div class="draft ${['a','b','c'][i]}"><div class="dh"><span class="lab">${d.lab}</span><span class="tg">${d.tag} · ${d.code}</span><button class="cp js-copy" data-txt="${d.body(ctx).replace(/"/g,'&quot;')}">COPY</button></div><p>${d.body(ctx)}</p></div>`).join('');
+  blip(760,0.06,'sine',0.13);
+}
+
+/* ---------- outreach email (referral / sold-customer) ----------
+   CARVIS sends real emails via /.netlify/functions/send-email (Resend).
+   Templates use Mick's real scripts (;mpREV1 review+referral, etc.).
+   Sample contacts stand in until wired to Lead Command's refContacts/sold leads. */
+const first2 = n => (n||'').split(' ')[0];
+const SAMPLE_CONTACTS=[
+  {name:'Cory Bjork', email:'cory.bjork@example.com', vehicle:'Sierra 2500 Denali', type:'sold'},
+  {name:'Janelle Aas', email:'janelle.aas@example.com', vehicle:'RAV4 XLE', type:'referral'},
+  {name:'Dwight Hansen', email:'dwight.hansen@example.com', vehicle:'Silverado 1500 LT', type:'sold'},
+  {name:'Megan Fuglie', email:'megan.fuglie@example.com', vehicle:'Pacifica Touring', type:'referral'},
+];
+// Real contacts persist in localStorage; seeded with samples until Mick imports his own.
+function loadContacts(){ try{ const s=JSON.parse(localStorage.getItem('carvis_contacts')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(e){} return SAMPLE_CONTACTS.slice(); }
+let CONTACTS=loadContacts();
+function saveContacts(){ try{ localStorage.setItem('carvis_contacts',JSON.stringify(CONTACTS)); }catch(e){} }
+function addContacts(list){ let n=0; list.forEach(c=>{ if(!c.email) return; if(CONTACTS.some(x=>(x.email||'').toLowerCase()===c.email.toLowerCase())) return; CONTACTS.push(c); n++; }); if(n) saveContacts(); return n; }
+function parseImport(text){
+  return text.split(/\n+/).map(line=>{
+    const parts=line.split(',').map(s=>s.trim()).filter(Boolean); if(!parts.length) return null;
+    const email=parts.find(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)); if(!email) return null;
+    const type=/referral/i.test(line)?'referral':'sold';
+    const name=(parts[0]&&parts[0]!==email)?parts[0]:email.split('@')[0];
+    const vehicle=parts.find(x=>x!==name&&x!==email&&!/^(sold|referral)$/i.test(x))||'';
+    return {name,email,vehicle,type};
+  }).filter(Boolean);
+}
+function refreshContactDropdown(){
+  $('#oContact').innerHTML=CONTACTS.map((c,i)=>`<option value="${i}">${c.name} — ${c.type==='sold'?'sold · '+(c.vehicle||'—'):'referral'}</option>`).join('');
+}
+function importText(text){
+  text=(text||'').trim(); if(!text){ toast('Nothing to import'); return; }
+  let list;
+  if(text[0]==='['){ try{ list=JSON.parse(text).map(c=>({name:c.name,email:c.email,vehicle:c.vehicle||'',type:c.type||'sold'})); }catch(e){ list=parseImport(text); } }
+  else list=parseImport(text);
+  const n=addContacts(list); refreshContactDropdown();
+  toast(n?`Imported ${n} contact${n>1?'s':''}`:'No new contacts (need valid emails; duplicates skipped)');
+  blip(900,0.07,'triangle',0.13);
+}
+function doImport(){ const t=$('#oImport').value; if(!t.trim()){ toast('Paste at least one contact'); return; } importText(t); $('#oImport').value=''; }
+function importFile(file){ if(!file) return; const r=new FileReader(); r.onload=()=>importText(String(r.result||'')); r.onerror=()=>toast('Could not read that file'); r.readAsText(file); }
+function contactsToCSV(){ return CONTACTS.map(c=>[c.name,c.email,c.vehicle||'',c.type||'sold'].join(', ')).join('\n'); }
+function exportContacts(){
+  if(!CONTACTS.length){ toast('No contacts to export'); return; }
+  const blob=new Blob([contactsToCSV()],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='carvis-contacts.csv'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),500);
+  toast(`Exported ${CONTACTS.length} contacts`); blip(900,0.07,'triangle',0.13);
+}
+const MAILTPL={
+  review:{ subject:c=>`Hope the ${c.vehicle} is treating you well`,
+    body:c=>`Hey ${first2(c.name)},\n\nHope the ${c.vehicle} is treating you well. If you've got 60 seconds, a quick Google review means a lot and helps other folks find someone they can trust:\n[your review link]\n\nAnd if anyone in your circle is car shopping — just send them my way. I'll take care of them the same way I took care of you.\n\nThanks again,\nMick — North Star Car Guy` },
+  referral:{ subject:c=>`Know anyone car shopping, ${first2(c.name)}?`,
+    body:c=>`Hey ${first2(c.name)},\n\nQuick one — anyone in your circle thinking about a different vehicle? I've got 500 across all brands, new and used, and I'll treat them right: no pressure, just straight answers.\n\nSend them my way and I'll take good care of them.\n\nMick — North Star Car Guy` },
+  checkin:{ subject:c=>`Checking in on the ${c.vehicle}`,
+    body:c=>`Hey ${first2(c.name)},\n\nJust checking in — how's the ${c.vehicle} running for you? Anything come up that I can help with?\n\nIf you ever need anything down the road, I'm one message away.\n\nMick — North Star Car Guy` },
+};
+const MAIL_FOOTER='\n\n— North Star Car Guy · Mosaic Auto Group, Zumbrota, MN · Reply "STOP" to opt out.';
+function curContact(){ return CONTACTS[+($('#oContact').value||0)]||CONTACTS[0]; }
+function openOutreach(){
+  refreshContactDropdown();
+  $('#oContact').value='0';
+  $('#oManage') && $('#oManage').classList.add('hidden');
+  $$('#oTpl button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  fillContact(); $('#oStat').textContent=''; $('#oStat').className='ostat';
+  $('#oOverlay').classList.add('show');
+}
+function closeOutreach(){ $('#oOverlay').classList.remove('show'); }
+function fillContact(){ const c=curContact(); $('#oName').value=c.name; $('#oTo').value=c.email; const on=$('#oTpl button.on'); applyTemplate(on?on.dataset.tpl:'review'); }
+function applyTemplate(key){ const t=MAILTPL[key]||MAILTPL.review; const c={name:$('#oName').value||curContact().name, vehicle:curContact().vehicle}; $('#oSubj').value=t.subject(c); $('#oBody').value=t.body(c); }
+async function sendOutreach(){
+  const to=$('#oTo').value.trim(), toName=$('#oName').value.trim(), subject=$('#oSubj').value.trim();
+  const body=$('#oBody').value.trim(), st=$('#oStat');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){ st.className='ostat err'; st.textContent='Enter a valid email address.'; return; }
+  if(!subject||!body){ st.className='ostat err'; st.textContent='Subject and message are required.'; return; }
+  const full=body+MAIL_FOOTER;
+  st.className='ostat send'; st.textContent='◉ Sending…'; blip(680,0.06,'sine',0.12);
+  try{
+    const r=await fetch('/.netlify/functions/send-email',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to,toName,subject,html:full.replace(/\n/g,'<br>'),text:full})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.ok){ st.className='ostat ok'; st.textContent='✓ Sent to '+to; toast('Email sent'); blip(960,0.08,'triangle',0.14); }
+    else { st.className='ostat err'; st.textContent='✕ '+(d.error||('HTTP '+r.status)); }
+  }catch(e){ st.className='ostat err'; st.textContent='✕ Network error — deploy the function (or run netlify dev). '+e.message; }
+}
+
+/* ---------- vehicle lookup + local Q&A ----------
+   "Ask CARVIS about a car" → find it in inventory → pull up the spec card →
+   answer factual questions straight from the data (price, payment estimate,
+   miles, mpg, color, drivetrain, location, availability). Open-ended chat is
+   talkback (deferred). Inventory comes from inventory.json (the desktop crawler);
+   falls back to these samples until the crawl runs. */
+const vmoney = n => '$'+(+n||0).toLocaleString();
+const SAMPLE_VEHICLES=[
+  {vin:'KNDJT2A58D7615703',year:2013,make:'Kia',model:'Soul',trim:'Base',condition:'used',price:8220,msrp:9865,miles:64448,stock:'T160084',color:'Titanium Pearl Metallic',body:'Hatchback',drivetrain:'FWD',transmission:'6-Speed Manual',engine:'1.6L I4',mpg:'25/30',store:'Mosaic CDJR',image:'https://vimg.remora.inc/444039/kndjt2a58d7615703-2013-kia-soul-base-titanium-pearl-metallic-1-111302.avif',url:'https://mosaicautos.com/for-sale/used-kia-soul-base-zumbrota-mn/2013-kia-soul-base-kndjt2a58d7615703'},
+  {vin:'1FT8W3DT3HEE03251',year:2017,make:'Ford',model:'F-350',trim:'Super Duty DRW Lariat',condition:'used',price:41995,msrp:0,miles:98500,stock:'T210090',color:'Oxford White',body:'Truck',drivetrain:'4X4',transmission:'6-Speed Automatic',engine:'6.7L Power Stroke Diesel',mpg:'',store:'Mosaic Ford',image:'',url:'https://mosaicautos.com/for-sale/used-ford-super-duty-f350-drw-lariat-zumbrota-mn/2017-ford-super-duty-f350-drw-lariat-1ft8w3dt3hee03251'},
+  {vin:'3GCUKREC5JG000001',year:2021,make:'Chevrolet',model:'Silverado',trim:'1500 LT',condition:'used',price:34995,msrp:0,miles:48200,stock:'P260253',color:'Black',body:'Truck',drivetrain:'4X4',transmission:'8-Speed Automatic',engine:'5.3L V8',mpg:'16/22',store:'Mosaic Chevrolet',image:'',url:'https://mosaicautos.com/'},
+  {vin:'2T3W1RFV5MC000002',year:2022,make:'Toyota',model:'RAV4',trim:'XLE',condition:'used',price:31200,msrp:0,miles:22100,stock:'P260111',color:'Silver Sky',body:'SUV',drivetrain:'AWD',transmission:'8-Speed Automatic',engine:'2.5L I4',mpg:'27/35',store:'Mosaic CDJR',image:'',url:'https://mosaicautos.com/'},
+];
+const MAKES=['ford','chevrolet','chevy','gmc','ram','dodge','jeep','chrysler','toyota','honda','kia','hyundai','nissan','subaru','mazda','buick','cadillac','lincoln','volkswagen','vw','tesla','lexus','acura','volvo','audi','bmw'];
+let INVENTORY=[], vCur=null, vMatches=[];
+async function loadInventory(){
+  try{ const r=await fetch('inventory.json',{cache:'no-store'}); if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.vehicles)&&d.vehicles.length) INVENTORY=d.vehicles; } }catch(e){}
+  if(!INVENTORY.length) INVENTORY=SAMPLE_VEHICLES;
+}
+const vTitle=v=>`${v.year||''} ${v.make||''} ${v.model||''} ${v.trim||''}`.replace(/\s+/g,' ').trim();
+function isCarQuery(q){
+  const l=q.toLowerCase();
+  return /\b(19|20)\d\d\b/.test(l) || /\b(car|truck|suv|vehicle|pull up|tell me about|find me|show me)\b/.test(l)
+    || MAKES.some(m=>new RegExp('\\b'+m+'\\b').test(l)) || /\b[a-z]\d{4,}\b/i.test(q) || /\b[A-HJ-NPR-Z0-9]{17}\b/i.test(q);
+}
+function findVehicles(q){
+  q=q.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\b(tell me about|what is|whats|show me|pull up|find me|find|info on|about|the|a|an|car|do we have|got)\b/g,' ').replace(/\s+/g,' ').trim();
+  const terms=q.split(' ').filter(Boolean); if(!terms.length) return [];
+  return INVENTORY.map(v=>{
+    const hay=`${v.year} ${v.make} ${v.model} ${v.trim} ${v.color} ${v.body} ${v.stock} ${v.vin}`.toLowerCase();
+    let score=0; terms.forEach(t=>{ if(hay.includes(t)) score+= (t.length>2?2:1); });
+    return {v,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,8).map(x=>x.v);
+}
+function openVehicle(list){ vMatches=list; if(list.length===1) showVehicle(list[0]); else renderVehicleList(list); $('#vOverlay').classList.add('show'); blip(700,0.06,'sine',0.12); }
+function closeVehicle(){ $('#vOverlay').classList.remove('show'); }
+function renderVehicleList(list){
+  vCur=null; $('#vName').textContent=`${list.length} matches`; $('#vSub').textContent='Tap one to pull it up';
+  $('#vDetail').innerHTML=''; $('#vQAWrap').classList.add('hidden');
+  $('#vList').innerHTML=list.map((v,i)=>`<div class="vpick js-vpick" data-i="${i}"><div class="pn"><div class="pt">${vTitle(v)}</div><div class="ps">${(v.miles||0).toLocaleString()} mi · ${v.stock||('VIN '+v.vin.slice(-6))}</div></div><div class="pp">${v.price?vmoney(v.price):'—'}</div></div>`).join('');
+}
+function showVehicle(v){
+  vCur=v; $('#vList').innerHTML='';
+  $('#vName').textContent=vTitle(v);
+  $('#vSub').textContent=`${(v.condition||'').toUpperCase()} · ${v.store||'Mosaic Auto Group'} · ${v.stock?('Stock '+v.stock):('VIN '+(v.vin||'').slice(-6))}`;
+  const specs=[['Mileage',v.miles?(v.miles.toLocaleString()+' mi'):''],['Exterior',v.color],['Drivetrain',v.drivetrain],['Transmission',v.transmission],['Engine',v.engine],['MPG',v.mpg],['Body',v.body],['Condition',v.condition]].filter(s=>s[1]);
+  $('#vDetail').innerHTML=`${v.image?`<img class="vphoto" src="${v.image}" alt="" onerror="this.remove()">`:''}
+    <div class="vprice">${v.price?vmoney(v.price):'Call for price'}${v.msrp&&v.msrp>v.price?`<small>MSRP ${vmoney(v.msrp)} · ${vmoney(v.msrp-v.price)} off</small>`:''}</div>
+    <div class="vspecs">${specs.map(s=>`<div class="vspec"><div class="k">${s[0]}</div><div class="v2">${s[1]}</div></div>`).join('')}</div>`;
+  $('#vQAWrap').classList.remove('hidden'); $('#vA').textContent=''; $('#vQ').value='';
+  const link=$('#vLink'); if(v.url){ link.style.display=''; link.href=v.url; } else link.style.display='none';
+}
+function estPayment(price){ const r=0.079/12, n=72; return Math.round((price*r/(1-Math.pow(1+r,-n)))/5)*5; }
+function vAnswer(v,q){
+  if(!v) return ''; const l=(q||'').toLowerCase(); const T=vTitle(v);
+  if(!l.trim()) return `Ask me anything about the ${T} — price, payment, miles, mpg, color, drivetrain, or where it's at.`;
+  if(/payment|per month|monthly|finance|afford|down/.test(l)){ if(!v.price) return `I'd need a price to estimate — let's get you with our numbers person.`; return `Rough estimate ~${vmoney(estPayment(v.price))}/mo (72 months, ~7.9% APR, $0 down). Ballpark only — your rate and down change it, so run real numbers before counting on it.`; }
+  if(/price|cost|how much|asking|msrp|deal|\boff\b|lowest|best/.test(l)){ if(!v.price) return `No price loaded on that one${v.url?` — here's the listing: ${v.url}`:''}.`; return `Asking ${vmoney(v.price)}${v.msrp&&v.msrp>v.price?` — MSRP ${vmoney(v.msrp)}, about ${vmoney(v.msrp-v.price)} off`:''}. Verify the exact number before quoting a customer.`; }
+  if(/mile|odometer|how far/.test(l)) return v.miles?`${v.miles.toLocaleString()} miles.`:`No mileage loaded — check the listing.`;
+  if(/\bvin\b/.test(l)) return v.vin?`VIN ${v.vin}.`:'No VIN loaded.';
+  if(/stock/.test(l)) return v.stock?`Stock ${v.stock}.`:'No stock number loaded.';
+  if(/color|paint/.test(l)) return v.color?`${v.color}.`:'Color not loaded — see the listing.';
+  if(/mpg|gas|fuel|economy|mileage per/.test(l)) return v.mpg?`${v.mpg} MPG (city/hwy).`:'MPG not loaded.';
+  if(/drive|awd|4wd|4x4|fwd|rwd|4 wheel|all wheel/.test(l)) return v.drivetrain?`${v.drivetrain}.`:'Drivetrain not loaded.';
+  if(/transmission|automatic|manual|\btrans\b|speed/.test(l)) return v.transmission?`${v.transmission}.`:'Transmission not loaded.';
+  if(/engine|motor|cylinder|liter|diesel|v8|v6/.test(l)) return v.engine?`${v.engine}.`:'Engine not loaded.';
+  if(/where|location|store|lot|address|come see|test drive/.test(l)) return `${v.store||'Mosaic Auto Group'} — Zumbrota, MN.${v.url?` Listing: ${v.url}`:''}`;
+  if(/available|still|in stock|sold/.test(l)) return `Yes — the ${T} is in stock${v.store?` at ${v.store}`:''}.`;
+  if(/year|make|model|what is|which|trim|spec/.test(l)) return `It's a ${T}${v.condition?` (${v.condition})`:''}${v.color?`, ${v.color}`:''}.`;
+  if(/link|listing|url|page|photos?|pics?|pictures?|see it/.test(l)) return v.url?`Here's the full listing: ${v.url}`:'No listing link loaded.';
+  return `I've got the specs on the ${T} right here — price, miles, drivetrain, MPG, color. For the full writeup here's the listing${v.url?': '+v.url:''}, or want me to draft a buyer reply about it?`;
+}
+
+/* ---------- toast ---------- */
+let tT;
+function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ---------- command bar (local intent — NOT talkback) ---------- */
+function runCmd(raw){
+  const q=raw.trim(); if(!q) return;
+  const low=q.toLowerCase();
+  if(low==='reply'||low==='buyer reply'){ openReply(); return; }
+  if(low==='outreach'||low==='email'){ openOutreach(); return; }
+  if(low==='findcar'){ $('#cmd').focus(); toast('Ask about a car — type a year, make/model, or stock # (e.g. "2017 F350")'); return; }
+  if(low.startsWith('draft')||low.startsWith('text')||low.startsWith('message')){
+    const name=low.replace(/^(draft|text|message)\s*/,'');
+    const l=DATA.leads.find(x=>x.name.toLowerCase().includes(name));
+    if(l){ openDraft(l.id); $('#cmd').value=''; return; }
+  }
+  const l=DATA.leads.find(x=>low.includes(x.name.split(' ')[0].toLowerCase()));
+  if(l){ openDraft(l.id); $('#cmd').value=''; return; }
+  { const looksMsg=/\?/.test(q)||q.split(/\s+/).length>6; const ms=findVehicles(q);
+    if(ms.length && !looksMsg && (isCarQuery(q)||q.split(/\s+/).length<=4)){ openVehicle(ms); $('#cmd').value=''; return; }
+    if(isCarQuery(q) && !looksMsg && INVENTORY.length){ toast(`No match for "${q}" in inventory`); $('#cmd').value=''; return; } }
+  if(low.includes('market')){ $('#mkList').scrollIntoView({behavior:'smooth'}); toast('Market pulse — see left panel'); $('#cmd').value=''; return; }
+  if(low.includes('directive')||low.includes('follow')){ toast(`${DATA.leads.length} directives queued — see right`); $('#cmd').value=''; return; }
+  // looks like a pasted buyer message → open the reply assistant pre-filled
+  if(q.length>24||/\?/.test(q)){ openReply(); $('#rMsg').value=q; genReplies(); $('#cmd').value=''; return; }
+  toast('Type a name to draft, or paste a buyer message for replies'); $('#cmd').value='';
+}
+
+/* ---------- audio FX (synthesized, no files; muted via AUDIO toggle) ---------- */
+let AC=null, masterGain=null, humOsc=null, audioOn=true;
+function audioInit(){
+  if(AC) return;
+  try{ AC=new (window.AudioContext||window.webkitAudioContext)(); masterGain=AC.createGain();
+    masterGain.gain.value=audioOn?0.5:0; masterGain.connect(AC.destination); }catch(e){ AC=null; }
+}
+function blip(freq=660,dur=0.06,type='sine',vol=0.14){
+  if(!AC||!audioOn) return; const t=AC.currentTime; const o=AC.createOscillator(),g=AC.createGain();
+  o.type=type; o.frequency.value=freq; o.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o.stop(t+dur+0.03);
+}
+function powerUp(){
+  if(!AC||!audioOn) return; const t=AC.currentTime; const o=AC.createOscillator(),g=AC.createGain(),f=AC.createBiquadFilter();
+  o.type='sawtooth'; o.frequency.setValueAtTime(70,t); o.frequency.exponentialRampToValueAtTime(540,t+1.05);
+  f.type='lowpass'; f.frequency.value=1100;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.16,t+0.3); g.gain.exponentialRampToValueAtTime(0.0001,t+1.45);
+  o.connect(f); f.connect(g); g.connect(masterGain); o.start(t); o.stop(t+1.5);
+}
+function startHum(){
+  if(!AC||humOsc||!audioOn) return; const o=AC.createOscillator(),g=AC.createGain(),f=AC.createBiquadFilter();
+  o.type='sine'; o.frequency.value=56; f.type='lowpass'; f.frequency.value=180; g.gain.value=0.045;
+  o.connect(f); f.connect(g); g.connect(masterGain); o.start(); humOsc=o;
+}
+
+/* ---------- node-sphere reactor core ---------- */
+function initNodes(){
+  const cv=$('#nodes'); if(!cv) return; const ctx=cv.getContext('2d');
+  const DPR=Math.min(window.devicePixelRatio||1,2);
+  const size=()=>{ const r=cv.getBoundingClientRect(); cv.width=Math.max(r.width,1)*DPR; cv.height=Math.max(r.height,1)*DPR; };
+  size(); window.addEventListener('resize',size);
+  const N=42, pts=[];
+  for(let i=0;i<N;i++){ const y=1-(i/(N-1))*2, rad=Math.sqrt(Math.max(1-y*y,0)), th=i*2.399963; pts.push({x:Math.cos(th)*rad,y,z:Math.sin(th)*rad,ph:i*0.7}); }
+  let ang=0;
+  (function frame(){
+    const w=cv.width,h=cv.height,cx=w/2,cy=h/2,R=Math.min(w,h)*0.40; ctx.clearRect(0,0,w,h); ang+=0.0045;
+    const ca=Math.cos(ang),sa=Math.sin(ang);
+    const col=$('#reactor').classList.contains('listening')?'56,240,138':'47,230,255';
+    const pr=pts.map(p=>{ const x=p.x*ca-p.z*sa, z=p.x*sa+p.z*ca; return {sx:cx+x*R, sy:cy+p.y*R, z, ph:p.ph}; });
+    for(let i=0;i<pr.length;i++)for(let j=i+1;j<pr.length;j++){ const a=pr[i],b=pr[j],d=Math.hypot(a.sx-b.sx,a.sy-b.sy);
+      if(d<R*0.6){ const al=Math.max((1-d/(R*0.6))*0.22*(((a.z+b.z)/2+1.3)/2.6),0); ctx.strokeStyle=`rgba(${col},${al})`; ctx.lineWidth=DPR; ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke(); } }
+    const tm=performance.now()/600;
+    pr.forEach(q=>{ const depth=(q.z+1)/2, pulse=0.5+0.5*Math.sin(tm+q.ph), r=(1.1+depth*2)*DPR, al=0.22+depth*0.75*pulse;
+      ctx.fillStyle=`rgba(${col},${al})`; ctx.beginPath(); ctx.arc(q.sx,q.sy,r,0,6.2832); ctx.fill(); });
+    requestAnimationFrame(frame);
+  })();
+}
+
+/* ---------- ambient starfield backdrop ---------- */
+function initSpace(){
+  const cv=document.getElementById('space'); if(!cv) return; const ctx=cv.getContext('2d');
+  const DPR=Math.min(window.devicePixelRatio||1,2);
+  const size=()=>{ cv.width=innerWidth*DPR; cv.height=innerHeight*DPR; }; size(); window.addEventListener('resize',size);
+  const N=90, ps=[];
+  for(let i=0;i<N;i++) ps.push({x:Math.random(),y:Math.random(),z:Math.random(),gold:Math.random()>0.86,tw:Math.random()*6.28});
+  const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function draw(){
+    const w=cv.width,h=cv.height,t=performance.now()/1000; ctx.clearRect(0,0,w,h);
+    ps.forEach(p=>{
+      if(!still){ p.y-=(0.00002+p.z*0.00006); if(p.y<-0.02)p.y=1.02; }
+      const x=p.x*w, y=((p.y%1+1)%1)*h, r=(0.4+p.z*1.7)*DPR;
+      const a=(0.14+p.z*0.5)*(still?1:(0.6+0.4*Math.sin(t*1.4+p.tw)));
+      ctx.fillStyle=p.gold?`rgba(255,190,90,${a})`:`rgba(120,225,255,${a})`;
+      ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill();
+    });
+    if(!still) requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+/* ---------- parallax + cursor glow ---------- */
+const reduceMo = matchMedia('(prefers-reduced-motion:reduce)').matches;
+function initParallax(){
+  if(reduceMo) return; const glow=$('#cglow'), stage=$('.stage'), rw=$('.reactor-wrap');
+  window.addEventListener('pointermove', e=>{
+    const dx=(e.clientX-innerWidth/2)/(innerWidth/2), dy=(e.clientY-innerHeight/2)/(innerHeight/2);
+    if(glow){ glow.style.left=e.clientX+'px'; glow.style.top=e.clientY+'px'; glow.style.opacity=.85; }
+    if(stage) stage.style.transform=`translate(${dx*-9}px,${dy*-7}px)`;
+    if(rw) rw.style.transform=`translate(${dx*7}px,${dy*6}px)`;
+  });
+  window.addEventListener('pointerleave', ()=>{ if(glow) glow.style.opacity=0; });
+}
+
+/* ---------- sparkline + live heartbeat ---------- */
+let spark=[];
+function initSpark(){ spark=[]; for(let i=0;i<24;i++) spark.push(0.5+i*0.008+Math.sin(i/3)*0.04); drawSpark(); }
+function pushSpark(v){ spark.push(v); if(spark.length>24) spark.shift(); drawSpark(); }
+function drawSpark(){
+  const w=200,h=34,mn=Math.min(...spark),mx=Math.max(...spark),rng=(mx-mn)||1;
+  const p=spark.map((v,i)=>[ (i/(spark.length-1))*w, h-4-((v-mn)/rng)*(h-8) ]);
+  const d=p.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
+  const ln=$('#sparkLine'), fl=$('#sparkFill'); if(ln) ln.setAttribute('d',d); if(fl) fl.setAttribute('d',d+` L${w} ${h} L0 ${h} Z`);
+}
+const INCOMING=[{name:'Dana Krause',vehicle:'Outback',src:'fb',phone:'5075550174',quiet:1},{name:'Hank Oleson',vehicle:'Tahoe LT',src:'mc',phone:'5075550190',appt:'FRI 14:00'},{name:'Tara Vold',vehicle:'CR-V XSE',src:'app',phone:'5075550155',quiet:1}];
+function heartbeat(){
+  const C=2*Math.PI*166;
+  setInterval(()=>{
+    DATA.hero.value += Math.floor(Math.random()*55+12);
+    $('#heroV').textContent=kMoney(DATA.hero.value);
+    const pct=Math.min(DATA.hero.value/DATA.hero.goal,1);
+    $('#heroG').innerHTML=`${Math.round(pct*100)}% to <b>${kMoney(DATA.hero.goal)}</b> goal`;
+    $('#goalProg').style.strokeDashoffset=C*(1-pct); pushSpark(pct);
+  },6000);
+  let ix=0;
+  setInterval(()=>{
+    if(ix>=INCOMING.length) return; const s=INCOMING[ix++]; const l={...s,id:200+ix}; DATA.leads.push(l);
+    const ac=l.quiet?'var(--red)':'var(--green)';
+    const tag=l.quiet?`<span class="tag quiet">QUIET ${l.quiet}D</span>`:`<span class="tag appt">APPT ${l.appt}</span>`;
+    $('#dirBody').insertAdjacentHTML('afterbegin',`<div class="di fresh" data-id="${l.id}" style="--ac:${ac}"><div class="dtop"><span class="nm">${l.name}</span>${tag}</div><div class="veh">${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}</div><div class="acts"><a class="act" href="tel:${l.phone}">CALL</a><button class="act go js-draft" data-id="${l.id}">DRAFT</button><button class="act js-done" data-id="${l.id}">DONE</button></div></div>`);
+    $('#dirMeta').textContent=$$('.di').length+' TODAY';
+    toast(`◉ Incoming lead — ${l.name}`); blip(880,0.1,'triangle',0.16); setTimeout(()=>blip(1300,0.09,'triangle',0.12),90);
+  },15000);
+}
+
+/* ---------- wire ---------- */
+function init(){
+  initSpace();
+  renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker();
+  tick(); setInterval(tick,1000);
+
+  $('#wakeBtn').addEventListener('click', ()=>{ sessStart=new Date(); audioInit(); powerUp(); boot(); });
+  // allow tap-anywhere on standby to wake
+  $('#boot').addEventListener('click', e=>{ if(e.target===$('#boot')&&!$('#boot').classList.contains('powering')){ sessStart=new Date(); audioInit(); powerUp(); boot(); } });
+
+  document.addEventListener('click', e=>{
+    const dr=e.target.closest('.js-draft'); if(dr){ blip(720,0.06,'sine',0.13); openDraft(+dr.dataset.id); return; }
+    const dn=e.target.closest('.js-done'); if(dn){ blip(300,0.08,'sawtooth',0.12);
+      const di=dn.closest('.di'); di.style.transition='.25s'; di.style.opacity='0'; di.style.transform='translateX(16px)';
+      setTimeout(()=>{ di.remove(); $('#dirMeta').textContent=$$('.di').length+' TODAY'; },250);
+      toast('Directive cleared'); return;
+    }
+    const cp=e.target.closest('.js-copy'); if(cp){ blip(980,0.05,'triangle',0.12);
+      navigator.clipboard?.writeText(cp.dataset.txt).catch(()=>{});
+      cp.classList.add('done'); cp.textContent='✓ COPIED'; toast('Copied to clipboard');
+      setTimeout(()=>{ cp.classList.remove('done'); cp.textContent='COPY'; },1600); return;
+    }
+    if(e.target.closest('#mClose')||e.target===$('#overlay')) closeModal();
+    if(e.target.closest('#rClose')||e.target===$('#rOverlay')) closeReply();
+    if(e.target.closest('#oClose')||e.target===$('#oOverlay')) closeOutreach();
+    if(e.target.closest('#vClose')||e.target===$('#vOverlay')) closeVehicle();
+    const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
+    const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
+    const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
+  });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); } });
+
+  $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
+  $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
+  $('#replyBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); openReply(); });
+  $('#rGen').addEventListener('click', genReplies);
+  $('#rMsg').addEventListener('keydown', e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); genReplies(); } });
+  $('#outreachBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); openOutreach(); });
+  $('#oContact').addEventListener('change', fillContact);
+  $('#oSend').addEventListener('click', sendOutreach);
+  $('#oTpl').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; $$('#oTpl button').forEach(x=>x.classList.toggle('on',x===b)); applyTemplate(b.dataset.tpl); });
+  $('#oManageToggle').addEventListener('click', ()=>$('#oManage').classList.toggle('hidden'));
+  $('#oImportBtn').addEventListener('click', doImport);
+  $('#oExportBtn').addEventListener('click', exportContacts);
+  $('#oFile').addEventListener('change', e=>{ importFile(e.target.files[0]); e.target.value=''; });
+  loadInventory();
+  $('#carBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); $('#cmd').focus(); toast('Ask about a car — type a year, make/model, or stock #'); });
+  $('#vQ').addEventListener('keydown', e=>{ if(e.key==='Enter'){ $('#vA').textContent=vAnswer(vCur,$('#vQ').value); blip(700,0.05,'sine',0.12); } });
+  $('#vDraft').addEventListener('click', ()=>{ if(!vCur) return; closeVehicle(); openReply(); $('#rVeh').value=vTitle(vCur); });
+
+  // mic + voice toggle = cinematic only (talkback deferred)
+  $('#mic').addEventListener('click', function(){
+    const on=this.classList.toggle('on'); $('#reactor').classList.toggle('listening',on);
+    blip(on?520:360,0.07,'sine',0.13);
+    if(on){ toast('Listening… (voice reply ships with talkback)'); setTimeout(()=>{ this.classList.remove('on'); $('#reactor').classList.remove('listening'); },2600); }
+  });
+  $('#vtoggle').addEventListener('click', function(){
+    audioOn=this.classList.toggle('on'); this.textContent=audioOn?'AUDIO ON':'AUDIO OFF';
+    if(masterGain) masterGain.gain.value=audioOn?0.5:0;
+    if(audioOn) blip(700,0.05,'sine',0.12);
+  });
+  initParallax();
+}
+init();
+
+/* PWA shell */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
