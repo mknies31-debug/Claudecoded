@@ -1424,7 +1424,7 @@ async function cloudPush(opts){
     const r=await fetch('/.netlify/functions/sync',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({key, payload:{store:snapshotStore(), ts:new Date().toISOString()}})});
     const d=await r.json().catch(()=>({}));
-    if(r.ok&&d.ok){ if(!quiet) setCloudStat('ok','✓ Pushed to cloud · '+new Date().toLocaleTimeString()); return true; }
+    if(r.ok&&d.ok){ pendingPush=false; if(!quiet) setCloudStat('ok','✓ Pushed to cloud · '+new Date().toLocaleTimeString()); return true; }
     setCloudStat('err','✕ '+(d.error||('HTTP '+r.status))); return false;
   }catch(e){ setCloudStat('err','✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
 }
@@ -1441,8 +1441,8 @@ async function cloudPull(opts){
     if(!quiet) setCloudStat('','Nothing saved under that key yet — push to seed it.'); return false;
   }catch(e){ if(!quiet) setCloudStat('err','✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
 }
-let pushTimer=null;
-function scheduleCloudPush(){ if(!getSyncKey()) return; clearTimeout(pushTimer); pushTimer=setTimeout(()=>cloudPush({quiet:true}), 1500); }
+let pushTimer=null, pendingPush=false, lastPull=0;
+function scheduleCloudPush(){ if(!getSyncKey()) return; pendingPush=true; clearTimeout(pushTimer); pushTimer=setTimeout(()=>cloudPush({quiet:true}), 1500); }
 function saveSyncKey(){
   const k=($('#syncKey').value||'').trim();
   if(k && k.length<6){ setCloudStat('err','Pick a key of at least 6 characters.'); return; }
@@ -1521,6 +1521,13 @@ function init(){
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
   if(getSyncKey()) cloudPull({quiet:true});
+  // refresh when returning to an already-open tab: flush our own pending edits
+  // first (so we never overwrite them with older cloud data), else pull latest.
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState!=='visible' || !getSyncKey()) return;
+    if(pendingPush){ clearTimeout(pushTimer); cloudPush({quiet:true}); return; }
+    if(Date.now()-lastPull < 4000) return; lastPull=Date.now(); cloudPull({quiet:true});
+  });
 
   // mic + voice toggle = cinematic only (talkback deferred)
   $('#mic').addEventListener('click', function(){
