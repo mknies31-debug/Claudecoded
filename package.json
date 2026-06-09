@@ -1,0 +1,9 @@
+{
+  "name": "carvis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CARVIS — North Star Command. Static PWA + Netlify functions (Anthropic proxy, Resend email, cloud sync).",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

@@ -658,7 +658,20 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       <button class="rgen" id="syncExport" style="margin-top:16px">⬇ EXPORT BACKUP</button>
       <label class="rgen" id="syncImportLabel" style="margin-top:10px;display:block;text-align:center;cursor:pointer;background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205">⬆ RESTORE FROM BACKUP<input type="file" id="syncFile" accept=".json,application/json" style="display:none"></label>
       <div class="ostat" id="syncStat" style="margin-top:12px"></div>
-      <div class="mnote"><span>✦</span><span>One file holds everything — hot prospects, today's habit checklist, and your contacts. Email it to yourself or drop it in a shared drive (Google Drive, OneDrive, Dropbox), then Restore on the other machine. <span class="soon">Want hands-off cloud sync instead? CARVIS can add that next.</span></span></div>
+      <div class="mnote"><span>✦</span><span>One file holds everything — hot prospects, today's habit checklist, and your contacts. Email it to yourself or drop it in a shared drive, then Restore on the other machine.</span></div>
+
+      <span class="olabel" style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px;display:block">☁ Cloud sync — automatic between home &amp; work</span>
+      <p style="font-size:13.5px;line-height:1.55;color:var(--text)">Set the <b>same private key</b> on both computers. After that CARVIS syncs on its own — saves push up after every change, and it pulls the latest each time it loads.</p>
+      <div class="orow" style="margin-top:10px">
+        <input class="rin" id="syncKey" placeholder="your private sync key (6+ characters)" style="margin-top:0;flex:2" autocomplete="off">
+        <button class="hadd" id="syncKeySave" style="flex:0 0 auto">SAVE KEY</button>
+      </div>
+      <div class="orow" style="margin-top:10px">
+        <button class="rgen" id="cloudPushBtn" style="margin-top:0;flex:1">⬆ Push now</button>
+        <button class="rgen" id="cloudPullBtn" style="margin-top:0;flex:1;background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205">⬇ Pull now</button>
+      </div>
+      <div class="ostat" id="cloudStat" style="margin-top:10px"></div>
+      <div class="mnote"><span>✦</span><span>Anyone with your key can read your data — keep it private and make it long. <span class="soon">Needs the sync function deployed on Netlify (it self-enables on first use).</span></span></div>
     </div>
   </div>
 </div>
@@ -985,7 +998,7 @@ const SAMPLE_CONTACTS=[
 // Real contacts persist in localStorage; seeded with samples until Mick imports his own.
 function loadContacts(){ try{ const s=JSON.parse(localStorage.getItem('carvis_contacts')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(e){} return SAMPLE_CONTACTS.slice(); }
 let CONTACTS=loadContacts();
-function saveContacts(){ try{ localStorage.setItem('carvis_contacts',JSON.stringify(CONTACTS)); }catch(e){} }
+function saveContacts(){ try{ localStorage.setItem('carvis_contacts',JSON.stringify(CONTACTS)); }catch(e){} scheduleCloudPush(); }
 function addContacts(list){ let n=0; list.forEach(c=>{ if(!c.email) return; if(CONTACTS.some(x=>(x.email||'').toLowerCase()===c.email.toLowerCase())) return; CONTACTS.push(c); n++; }); if(n) saveContacts(); return n; }
 function parseImport(text){
   return text.split(/\n+/).map(line=>{
@@ -1276,7 +1289,7 @@ function heartbeat(){
 const TASK_KEY = () => 'carvis_tasks_'+new Date().toISOString().slice(0,10);
 function loadTaskState(){ try{ return JSON.parse(localStorage.getItem(TASK_KEY())||'{}')||{}; }catch(e){ return {}; } }
 let taskState=loadTaskState();
-function saveTaskState(){ try{ localStorage.setItem(TASK_KEY(), JSON.stringify(taskState)); }catch(e){} }
+function saveTaskState(){ try{ localStorage.setItem(TASK_KEY(), JSON.stringify(taskState)); }catch(e){} scheduleCloudPush(); }
 function renderTasks(){
   const done=DATA.tasks.filter(t=>taskState[t.id]).length;
   $('#hpMeta').textContent=`${done}/${DATA.tasks.length}`;
@@ -1338,7 +1351,7 @@ const HEAT = {
 let hotHeat='hot';
 function loadHot(){ try{ const s=JSON.parse(localStorage.getItem('carvis_hot')||'[]'); return Array.isArray(s)?s:[]; }catch(e){ return []; } }
 let HOT=loadHot();
-function saveHot(){ try{ localStorage.setItem('carvis_hot',JSON.stringify(HOT)); }catch(e){} }
+function saveHot(){ try{ localStorage.setItem('carvis_hot',JSON.stringify(HOT)); }catch(e){} scheduleCloudPush(); }
 function renderHot(){
   HOT.sort((a,b)=>((HEAT[a.heat]||HEAT.warm).rank-(HEAT[b.heat]||HEAT.warm).rank)||(b.id-a.id));
   $('#hotMeta').textContent=HOT.length;
@@ -1363,33 +1376,80 @@ function addHot(){
 function delHot(id){ HOT=HOT.filter(p=>p.id!==id); saveHot(); renderHot(); blip(360,0.06,'sawtooth',0.1); }
 
 /* ---------- data sync (home ↔ work) ----------
-   No backend: snapshot every CARVIS localStorage key into one JSON file the
-   user moves between machines (email / shared drive), then restores. Covers
-   hot prospects, the day's habit checklist, and saved contacts. */
+   Two layers, same snapshot:
+   1. FILE  — export/restore a JSON file by hand (offline safety net).
+   2. CLOUD — set one private "sync key" on both machines; CARVIS then pushes
+              after every change and pulls on load, via /.netlify/functions/sync.
+   Both move the same carvis_* localStorage keys (the sync key itself is excluded
+   so it never leaves the machine it was set on). */
+function snapshotStore(){
+  const s={};
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('carvis_')&&k!=='carvis_synckey') s[k]=localStorage.getItem(k); }
+  return s;
+}
+function applyStore(store){
+  let n=0;
+  Object.entries(store||{}).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&k!=='carvis_synckey'&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
+  CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState();
+  try{ refreshContactDropdown(); }catch(e){}
+  renderHot(); renderTasks();
+  return n;
+}
+function setSyncStat(cls,msg){ const st=$('#syncStat'); if(st){ st.className='ostat '+(cls||''); st.textContent=msg||''; } }
+function setCloudStat(cls,msg){ const st=$('#cloudStat'); if(st){ st.className='ostat '+(cls||''); st.textContent=msg||''; } }
+/* --- file backup --- */
 function exportAll(){
-  const data={_app:'CARVIS', _v:1, _ts:new Date().toISOString(), store:{}};
-  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('carvis_')) data.store[k]=localStorage.getItem(k); }
+  const data={_app:'CARVIS', _v:1, _ts:new Date().toISOString(), store:snapshotStore()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob); const a=document.createElement('a');
   a.href=url; a.download='carvis-backup-'+new Date().toISOString().slice(0,10)+'.json';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),500);
   const n=Object.keys(data.store).length;
-  const st=$('#syncStat'); if(st){ st.className='ostat ok'; st.textContent=`✓ Exported ${n} data set${n!==1?'s':''}`; }
+  setSyncStat('ok',`✓ Exported ${n} data set${n!==1?'s':''}`);
   toast('Backup exported'); blip(900,0.07,'triangle',0.13);
 }
 function importAll(text){
-  const st=$('#syncStat');
-  let d; try{ d=JSON.parse(text); }catch(e){ if(st){ st.className='ostat err'; st.textContent='✕ Not a valid CARVIS backup file'; } return; }
-  if(!d||d._app!=='CARVIS'||!d.store){ if(st){ st.className='ostat err'; st.textContent='✕ No CARVIS data found in that file'; } return; }
-  let n=0; Object.entries(d.store).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
-  // reload in-memory state + re-render everything it feeds
-  CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState();
-  try{ refreshContactDropdown(); }catch(e){}
-  renderHot(); renderTasks();
-  if(st){ st.className='ostat ok'; st.textContent=`✓ Restored ${n} data set${n!==1?'s':''}${d._ts?' from '+d._ts.slice(0,10):''}`; }
+  let d; try{ d=JSON.parse(text); }catch(e){ setSyncStat('err','✕ Not a valid CARVIS backup file'); return; }
+  if(!d||d._app!=='CARVIS'||!d.store){ setSyncStat('err','✕ No CARVIS data found in that file'); return; }
+  const n=applyStore(d.store);
+  setSyncStat('ok',`✓ Restored ${n} data set${n!==1?'s':''}${d._ts?' from '+d._ts.slice(0,10):''}`);
   toast('Backup restored'); blip(960,0.08,'triangle',0.14);
 }
-function openSync(){ $('#syncStat').textContent=''; $('#syncStat').className='ostat'; $('#syncOverlay').classList.add('show'); }
+/* --- cloud sync --- */
+const getSyncKey = () => (localStorage.getItem('carvis_synckey')||'').trim();
+async function cloudPush(opts){
+  const key=getSyncKey(); if(!key) return false; const quiet=opts&&opts.quiet;
+  if(!quiet) setCloudStat('send','◉ Pushing to cloud…');
+  try{
+    const r=await fetch('/.netlify/functions/sync',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key, payload:{store:snapshotStore(), ts:new Date().toISOString()}})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.ok){ if(!quiet) setCloudStat('ok','✓ Pushed to cloud · '+new Date().toLocaleTimeString()); return true; }
+    setCloudStat('err','✕ '+(d.error||('HTTP '+r.status))); return false;
+  }catch(e){ setCloudStat('err','✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
+}
+async function cloudPull(opts){
+  const key=getSyncKey(); if(!key) return false; const quiet=opts&&opts.quiet;
+  if(!quiet) setCloudStat('send','◉ Pulling from cloud…');
+  try{
+    const r=await fetch('/.netlify/functions/sync?key='+encodeURIComponent(key),{cache:'no-store'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ setCloudStat('err','✕ '+(d.error||('HTTP '+r.status))); return false; }
+    if(d.payload&&d.payload.store){ const n=applyStore(d.payload.store);
+      setCloudStat('ok',`✓ Pulled ${n} data set${n!==1?'s':''}${d.payload.ts?' · '+new Date(d.payload.ts).toLocaleString():''}`);
+      if(quiet) toast('Synced from cloud'); return true; }
+    if(!quiet) setCloudStat('','Nothing saved under that key yet — push to seed it.'); return false;
+  }catch(e){ if(!quiet) setCloudStat('err','✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
+}
+let pushTimer=null;
+function scheduleCloudPush(){ if(!getSyncKey()) return; clearTimeout(pushTimer); pushTimer=setTimeout(()=>cloudPush({quiet:true}), 1500); }
+function saveSyncKey(){
+  const k=($('#syncKey').value||'').trim();
+  if(k && k.length<6){ setCloudStat('err','Pick a key of at least 6 characters.'); return; }
+  if(k){ localStorage.setItem('carvis_synckey',k); setCloudStat('ok','Key saved — pulling any existing cloud data…'); cloudPull(); toast('Cloud sync on'); }
+  else { localStorage.removeItem('carvis_synckey'); setCloudStat('','Cloud sync off — key cleared.'); toast('Cloud sync off'); }
+}
+function openSync(){ setSyncStat('',''); setCloudStat('',''); $('#syncKey').value=getSyncKey(); $('#syncOverlay').classList.add('show'); }
 function closeSync(){ $('#syncOverlay').classList.remove('show'); }
 
 /* ---------- wire ---------- */
@@ -1456,6 +1516,11 @@ function init(){
   $('#syncBtn').addEventListener('click', ()=>{ blip(760,0.06,'sine',0.12); openSync(); });
   $('#syncExport').addEventListener('click', exportAll);
   $('#syncFile').addEventListener('change', e=>{ const f=e.target.files[0]; if(f){ const r=new FileReader(); r.onload=()=>importAll(String(r.result||'')); r.onerror=()=>toast('Could not read that file'); r.readAsText(f); } e.target.value=''; });
+  $('#syncKeySave').addEventListener('click', saveSyncKey);
+  $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
+  $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
+  $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  if(getSyncKey()) cloudPull({quiet:true});
 
   // mic + voice toggle = cinematic only (talkback deferred)
   $('#mic').addEventListener('click', function(){
