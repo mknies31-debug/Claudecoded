@@ -1,0 +1,15 @@
+# Dependencies (Netlify installs these from package.json at deploy time)
+node_modules/
+
+# Local Netlify dev/build artifacts
+.netlify/
+
+# Deploy bundle (generated on demand, not source)
+carvis-netlify.zip
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
