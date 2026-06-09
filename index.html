@@ -343,6 +343,31 @@
   #vQ{width:100%;margin-top:4px}
   #vA{margin-top:11px;font-size:14px;line-height:1.55;color:var(--text);white-space:pre-wrap;min-height:20px}
   #vA:empty{display:none}
+
+  /* ===== high performance habits (Brendan Burchard HP6) ===== */
+  .hp{flex:1;min-height:0;display:flex;flex-direction:column}
+  .hp .pbody{overflow-y:auto;flex:1;min-height:0}
+  .hp .ph .meta{color:var(--green)}
+  .task{display:flex;gap:10px;align-items:flex-start;padding:9px 9px;border:1px solid var(--line);border-radius:10px;
+    margin-bottom:8px;cursor:pointer;transition:.16s;background:rgba(47,230,255,.03)}
+  .task:hover{border-color:var(--line-strong);background:rgba(47,230,255,.06)}
+  .task .tk-box{flex:0 0 auto;width:21px;height:21px;border:1.5px solid var(--cyan-dim);border-radius:6px;
+    display:flex;align-items:center;justify-content:center;color:var(--green);font-size:13px;margin-top:1px;transition:.16s}
+  .task.done .tk-box{background:rgba(56,240,138,.16);border-color:var(--green);box-shadow:0 0 10px rgba(56,240,138,.3)}
+  .task .tk-hp{font-family:'Orbitron';font-size:8.5px;letter-spacing:1.6px;color:var(--gold)}
+  .task .tk-t{font-size:13px;line-height:1.36;color:var(--text);margin-top:2px}
+  .task.done .tk-t{color:var(--dim);text-decoration:line-through}
+
+  /* ===== motivational quote rotator ===== */
+  .quote{max-width:340px;text-align:center;font-style:italic;font-size:13.5px;line-height:1.5;color:var(--gold);
+    letter-spacing:.3px;min-height:42px;transition:opacity .3s;padding:0 10px}
+
+  /* ===== stats chart ===== */
+  .chartwrap{padding:4px 14px 10px}
+  #statChart{width:100%;height:124px;display:block}
+  .chart-leg{display:flex;gap:18px;justify-content:center;margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.5px;color:var(--dim)}
+  .chart-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
+  .chart-leg .ls{background:var(--gold)} .chart-leg .lb{background:var(--cyan)}
 </style>
 </head>
 <body>
@@ -391,12 +416,16 @@
         <div class="pbody" id="sysBody"></div>
         <div class="pbody" style="padding-top:0">
           <div class="readouts">
+            <div class="ro"><div class="v" id="roSold">0</div><div class="l">Sold MTD</div></div>
+            <div class="ro"><div class="v" id="roBought">0</div><div class="l">Bought MTD</div></div>
             <div class="ro"><div class="v" id="roLeads">0</div><div class="l">Pipeline</div></div>
             <div class="ro"><div class="v" id="roInv">0</div><div class="l">Inventory</div></div>
-            <div class="ro"><div class="v">9d</div><div class="l">Avg to sale</div></div>
-            <div class="ro"><div class="v" id="roUp">100%</div><div class="l">Uptime</div></div>
           </div>
         </div>
+      </div>
+      <div class="panel hp">
+        <div class="ph"><span class="hbar"></span><h3>High Performance</h3><span class="meta" id="hpMeta">0/7</span></div>
+        <div class="pbody" id="hpBody"></div>
       </div>
       <div class="panel mk">
         <div class="ph"><span class="hbar"></span><h3>Market Pulse</h3><span class="meta">WEEKLY</span></div>
@@ -421,16 +450,24 @@
         </div>
       </div>
       <div class="hero">
-        <div class="v" id="heroV">$0</div>
-        <div class="l" id="heroL">GROSS · MONTH TO DATE</div>
+        <div class="v" id="heroV">0</div>
+        <div class="l" id="heroL">CARS SOLD · MONTH TO DATE</div>
         <div class="g" id="heroG">—</div>
         <svg class="spark" id="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2fe6ff"/><stop offset="1" stop-color="#2fe6ff" stop-opacity="0"/></linearGradient></defs><path id="sparkFill"/><path id="sparkLine"/></svg>
       </div>
       <div class="gauges" id="gauges"></div>
+      <div class="quote" id="quote"></div>
     </div>
 
     <!-- RIGHT -->
     <div class="col">
+      <div class="panel">
+        <div class="ph"><span class="hbar"></span><h3>Performance</h3><span class="meta">7-DAY · SOLD vs BOUGHT</span></div>
+        <div class="chartwrap">
+          <canvas id="statChart"></canvas>
+          <div class="chart-leg"><span><i class="ls"></i>SOLD</span><span><i class="lb"></i>PURCHASED</span></div>
+        </div>
+      </div>
       <div class="panel dir">
         <div class="ph"><span class="hbar"></span><h3>Directives</h3><span class="meta" id="dirMeta">TODAY</span></div>
         <div class="pbody" id="dirBody"></div>
@@ -575,12 +612,48 @@ const $$ = s => [...document.querySelectorAll(s)];
 
 const SRC = { fb:'FB MKTPLACE', ref:'REFERRAL', app:'NORTHSTAR APP', text:'SHORTCODE', mc:'MANYCHAT' };
 const DATA = {
-  hero:{ value:41200, goal:55000 },
+  // Sales tracked as COUNTS — completed deals, cars sold, cars purchased — never gross/volume dollars.
+  stats:{
+    sold:7,  soldGoal:12,   // cars retailed this month (sell-side)
+    bought:5, buyGoal:10,   // cars acquired this month (buy-side)
+    deals:7,  dealGoal:12,  // completed deals / projects closed
+    closeRate:38,           // %
+    // last 7 days, oldest → newest: cars sold vs cars purchased
+    week:[
+      {d:'MON',sold:1,bought:1},
+      {d:'TUE',sold:0,bought:1},
+      {d:'WED',sold:2,bought:0},
+      {d:'THU',sold:1,bought:1},
+      {d:'FRI',sold:1,bought:0},
+      {d:'SAT',sold:2,bought:1},
+      {d:'SUN',sold:0,bought:1},
+    ],
+  },
   gauges:[
-    {key:'units', label:'UNITS SOLD', val:7, max:12, color:'var(--gold)', fmt:v=>v},
-    {key:'leads', label:'ACTIVE LEADS', val:9, max:20, color:'var(--cyan)', fmt:v=>v},
-    {key:'follow', label:'FOLLOW-UPS', val:4, max:10, color:'var(--red)', fmt:v=>v},
-    {key:'conv', label:'CLOSE RATE', val:38, max:100, color:'var(--green)', fmt:v=>v+'%'},
+    {key:'sold',   label:'CARS SOLD',    val:7,  max:12,  color:'var(--gold)',  fmt:v=>v},
+    {key:'bought', label:'CARS BOUGHT',  val:5,  max:10,  color:'var(--cyan)',  fmt:v=>v},
+    {key:'deals',  label:'DEALS CLOSED', val:7,  max:12,  color:'var(--green)', fmt:v=>v},
+    {key:'conv',   label:'CLOSE RATE',   val:38, max:100, color:'var(--red)',   fmt:v=>v+'%'},
+  ],
+  // Brendan Burchard's High Performance Habits (HP6) → daily drivers, tailored to the lot.
+  tasks:[
+    {id:'clarity',   hp:'CLARITY',      t:"Name today's 3 outcomes — who I serve and the result they get."},
+    {id:'energy',    hp:'ENERGY',       t:"Move + hydrate before the first call. Release tension, set intention."},
+    {id:'necessity', hp:'NECESSITY',    t:"Say the #1 must-win deal out loud — why it matters, who's counting on me."},
+    {id:'pqo',       hp:'PRODUCTIVITY', t:"90-min block on follow-ups (PQO) — phone down, no distractions."},
+    {id:'influence', hp:'INFLUENCE',    t:"Ask one happy customer for a referral or a review."},
+    {id:'courage',   hp:'COURAGE',      t:"Make the hard call I've been avoiding."},
+    {id:'reflect',   hp:'CLARITY',      t:"End of day: what worked, what to sharpen tomorrow."},
+  ],
+  quotes:[
+    'You will be defined by how you serve under pressure. — Brendan Burchard',
+    'Honor the struggle. It’s making you the person who can win.',
+    'Clarity is the child of careful thought and mindful experimentation.',
+    'The most trusted car guy in the region isn’t the loudest — he’s the most consistent.',
+    'Energy is a choice you make at the start of every interaction.',
+    'Raise the necessity: someone is counting on you to show up today.',
+    'Trust is built in the follow-up nobody else bothers to send.',
+    'Bring the joy — don’t wait for it.',
   ],
   system:[
     {nm:'MARKET INTEL AGENT', status:'online'},
@@ -603,7 +676,6 @@ const DATA = {
 };
 const initials = n => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
 const phoneFmt = p => `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
-const kMoney = n => '$'+(n/1000).toFixed(1).replace(/\.0$/,'')+'K';
 
 /* ---------- BOOT ---------- */
 const BOOT_LINES = [
@@ -640,6 +712,7 @@ function renderSystem(){
   $('#sysBody').innerHTML = DATA.system.map(s=>`
     <div class="sys-row"><span class="sd ${s.status}"></span><span class="nm">${s.nm}</span><span class="st ${s.status}">${s.status.toUpperCase()}</span></div>`).join('');
   $('#sysMeta').textContent = DATA.system.length+' MODULES';
+  $('#roSold').textContent = DATA.stats.sold; $('#roBought').textContent = DATA.stats.bought;
   $('#roLeads').textContent = '10'; $('#roInv').textContent = '6';
 }
 function renderMarket(){
@@ -675,23 +748,24 @@ function renderDirectives(){
   $('#dirMeta').textContent = due.length+' TODAY';
 }
 function renderTicker(){
+  const s=DATA.stats;
   const items = DATA.market.map(m=>m.html.replace(/<[^>]+>/g,'')).join('   ◆   ');
-  const line = `GROSS MTD ${kMoney(DATA.hero.value)} / ${kMoney(DATA.hero.goal)}   ◆   ${items}   ◆   `;
+  const line = `CARS SOLD ${s.sold}/${s.soldGoal}   ◆   PURCHASED ${s.bought}/${s.buyGoal}   ◆   DEALS CLOSED ${s.deals}/${s.dealGoal}   ◆   ${items}   ◆   `;
   $('#ticker').innerHTML = `<span>${line}${line}</span>`;
 }
 
 /* ---------- animate on wake ---------- */
 function startHud(){
-  // hero count-up
-  const hv=$('#heroV');
-  countTo(hv, DATA.hero.value, v=>kMoney(v));
-  $('#heroL').textContent='GROSS · MONTH TO DATE';
-  const pct=Math.round(DATA.hero.value/DATA.hero.goal*100);
-  $('#heroG').innerHTML = `${pct}% to <b>${kMoney(DATA.hero.goal)}</b> goal`;
-  // goal ring
+  // hero count-up — CARS SOLD toward monthly goal (counts, not gross)
+  const hv=$('#heroV'), s=DATA.stats;
+  countTo(hv, s.sold, v=>v);
+  $('#heroL').textContent='CARS SOLD · MONTH TO DATE';
+  const pct=Math.round(s.sold/s.soldGoal*100);
+  $('#heroG').innerHTML = `${s.sold} of <b>${s.soldGoal}</b> goal · ${pct}%`;
+  // goal ring tracks sold / goal
   const gr=$('#goalProg'), C=2*Math.PI*166;
   gr.style.strokeDasharray=C; gr.style.strokeDashoffset=C;
-  requestAnimationFrame(()=>{ gr.style.strokeDashoffset = C*(1-DATA.hero.value/DATA.hero.goal); });
+  requestAnimationFrame(()=>{ gr.style.strokeDashoffset = C*(1-s.sold/s.soldGoal); });
   // gauges
   const R=34, GC=2*Math.PI*R;
   $$('.gauge').forEach((el,idx)=>{
@@ -699,7 +773,7 @@ function startHud(){
     requestAnimationFrame(()=>{ prog.style.strokeDashoffset = GC*(1-g.val/g.max); });
     countTo(gv, g.val, v=>v+(gv.dataset.suffix||''));
   });
-  startHum(); initNodes(); initSpark(); heartbeat();
+  startHum(); initNodes(); initSpark(); heartbeat(); drawChart(); startQuotes();
 }
 function countTo(el, target, fmt){
   const dur=1100, t0=performance.now();
@@ -1112,14 +1186,11 @@ function drawSpark(){
 }
 const INCOMING=[{name:'Dana Krause',vehicle:'Outback',src:'fb',phone:'5075550174',quiet:1},{name:'Hank Oleson',vehicle:'Tahoe LT',src:'mc',phone:'5075550190',appt:'FRI 14:00'},{name:'Tara Vold',vehicle:'CR-V XSE',src:'app',phone:'5075550155',quiet:1}];
 function heartbeat(){
-  const C=2*Math.PI*166;
+  // gentle live sparkline around goal pace — no fake sales
   setInterval(()=>{
-    DATA.hero.value += Math.floor(Math.random()*55+12);
-    $('#heroV').textContent=kMoney(DATA.hero.value);
-    const pct=Math.min(DATA.hero.value/DATA.hero.goal,1);
-    $('#heroG').innerHTML=`${Math.round(pct*100)}% to <b>${kMoney(DATA.hero.goal)}</b> goal`;
-    $('#goalProg').style.strokeDashoffset=C*(1-pct); pushSpark(pct);
-  },6000);
+    const base=DATA.stats.sold/DATA.stats.soldGoal;
+    pushSpark(Math.max(0.05,Math.min(1, base+(Math.random()-0.5)*0.06)));
+  },4000);
   let ix=0;
   setInterval(()=>{
     if(ix>=INCOMING.length) return; const s=INCOMING[ix++]; const l={...s,id:200+ix}; DATA.leads.push(l);
@@ -1131,17 +1202,76 @@ function heartbeat(){
   },15000);
 }
 
+/* ---------- high performance habits (Brendan Burchard HP6) ----------
+   Daily checklist; checked state persists per-day in localStorage so it resets
+   each morning. Tasks map to the six habits: Clarity, Energy, Necessity,
+   Productivity, Influence, Courage. */
+const TASK_KEY = () => 'carvis_tasks_'+new Date().toISOString().slice(0,10);
+function loadTaskState(){ try{ return JSON.parse(localStorage.getItem(TASK_KEY())||'{}')||{}; }catch(e){ return {}; } }
+let taskState=loadTaskState();
+function saveTaskState(){ try{ localStorage.setItem(TASK_KEY(), JSON.stringify(taskState)); }catch(e){} }
+function renderTasks(){
+  const done=DATA.tasks.filter(t=>taskState[t.id]).length;
+  $('#hpMeta').textContent=`${done}/${DATA.tasks.length}`;
+  $('#hpBody').innerHTML=DATA.tasks.map(t=>`
+    <div class="task ${taskState[t.id]?'done':''}" data-id="${t.id}">
+      <span class="tk-box">${taskState[t.id]?'✓':''}</span>
+      <div class="tk-main"><div class="tk-hp">${t.hp}</div><div class="tk-t">${t.t}</div></div>
+    </div>`).join('');
+}
+function toggleTask(id){
+  taskState[id]=!taskState[id]; saveTaskState(); renderTasks();
+  blip(taskState[id]?900:380,0.06,'sine',0.12);
+  if(taskState[id]){
+    const all=DATA.tasks.every(t=>taskState[t.id]);
+    toast(all?'All habits logged — high performance day ✓':'Habit logged ✓');
+  }
+}
+
+/* ---------- motivational quote rotator ---------- */
+let qi=0, qTimer=null;
+function renderQuote(){
+  const el=$('#quote'); if(!el) return; el.style.opacity=0;
+  setTimeout(()=>{ el.textContent='“'+DATA.quotes[qi%DATA.quotes.length]+'”'; el.style.opacity=1; qi++; },300);
+}
+function startQuotes(){ qi=0; renderQuote(); clearInterval(qTimer); qTimer=setInterval(renderQuote,11000); }
+
+/* ---------- stats chart (last 7 days: cars sold vs purchased) ---------- */
+function drawChart(){
+  const cv=$('#statChart'); if(!cv) return; const ctx=cv.getContext('2d');
+  const DPR=Math.min(window.devicePixelRatio||1,2);
+  const r=cv.getBoundingClientRect(); cv.width=Math.max(r.width,1)*DPR; cv.height=Math.max(r.height,1)*DPR;
+  const w=cv.width, h=cv.height; ctx.clearRect(0,0,w,h);
+  const wk=DATA.stats.week, pad=10*DPR, baseY=h-16*DPR, topY=8*DPR;
+  const mx=Math.max(1,...wk.map(d=>Math.max(d.sold,d.bought)));
+  const slot=(w-pad*2)/wk.length;
+  // gridlines
+  ctx.strokeStyle='rgba(47,230,255,0.10)'; ctx.lineWidth=DPR;
+  for(let g=0;g<=mx;g++){ const y=baseY-(g/mx)*(baseY-topY); ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); }
+  const barW=Math.min(slot*0.30, 13*DPR), gap=2*DPR;
+  ctx.textAlign='center'; ctx.font=`${9*DPR}px 'Share Tech Mono',monospace`;
+  wk.forEach((d,i)=>{
+    const cx=pad+slot*i+slot/2;
+    const hs=(d.sold/mx)*(baseY-topY), hb=(d.bought/mx)*(baseY-topY);
+    ctx.fillStyle='rgba(255,182,72,0.9)';  ctx.fillRect(cx-barW-gap, baseY-hs, barW, hs);   // sold = gold
+    ctx.fillStyle='rgba(47,230,255,0.85)'; ctx.fillRect(cx+gap,      baseY-hb, barW, hb);   // bought = cyan
+    ctx.fillStyle='rgba(93,122,134,0.95)'; ctx.fillText(d.d, cx, h-3*DPR);
+  });
+}
+
 /* ---------- wire ---------- */
 function init(){
   initSpace();
-  renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker();
+  renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker(); renderTasks();
   tick(); setInterval(tick,1000);
+  window.addEventListener('resize', drawChart);
 
   $('#wakeBtn').addEventListener('click', ()=>{ sessStart=new Date(); audioInit(); powerUp(); boot(); });
   // allow tap-anywhere on standby to wake
   $('#boot').addEventListener('click', e=>{ if(e.target===$('#boot')&&!$('#boot').classList.contains('powering')){ sessStart=new Date(); audioInit(); powerUp(); boot(); } });
 
   document.addEventListener('click', e=>{
+    const tk=e.target.closest('.task'); if(tk){ toggleTask(tk.dataset.id); return; }
     const dr=e.target.closest('.js-draft'); if(dr){ blip(720,0.06,'sine',0.13); openDraft(+dr.dataset.id); return; }
     const dn=e.target.closest('.js-done'); if(dn){ blip(300,0.08,'sawtooth',0.12);
       const di=dn.closest('.di'); di.style.transition='.25s'; di.style.opacity='0'; di.style.transform='translateX(16px)';
