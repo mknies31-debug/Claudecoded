@@ -4,8 +4,8 @@
   "description": "Jarvis-style AI voice assistant for Mick Knies / North Star Car Guy — drafts customer messages, handles objections, hands over agent prompts.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#04070d",
-  "theme_color": "#04070d",
+  "background_color": "#02060e",
+  "theme_color": "#02060e",
   "orientation": "portrait",
   "icons": [
     {

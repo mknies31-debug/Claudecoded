@@ -15,7 +15,7 @@
 // It is a personal convenience store, not an auth system — keep the key private
 // and make it long. No vehicle PII beyond what Mick types into his own lists.
 
-import { getStore } from '@netlify/blobs';
+import * as Blobs from '@netlify/blobs';
 import { createHash } from 'node:crypto';
 
 const MIN_KEY = 6;
@@ -23,7 +23,13 @@ const blobKey = (k) => createHash('sha256').update(String(k)).digest('hex');
 
 export const handler = async (event) => {
   try {
-    const store = getStore('carvis-sync');
+    // Lambda-compat handlers must hand the Blobs library the request context
+    // before getStore() works; without this getStore can throw
+    // "environment has not been configured" on deployed Netlify.
+    if (typeof Blobs.connectLambda === 'function') {
+      try { Blobs.connectLambda(event); } catch { /* modern runtime already has context */ }
+    }
+    const store = Blobs.getStore('carvis-sync');
 
     if (event.httpMethod === 'GET') {
       const key = (event.queryStringParameters || {}).key || '';
