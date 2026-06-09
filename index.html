@@ -267,7 +267,7 @@
   @keyframes diflash{0%{box-shadow:0 0 0 2px rgba(47,230,255,.5);background:rgba(47,230,255,.16)}100%{box-shadow:0 0 0 0 rgba(47,230,255,0)}}
   .di.fresh{animation:diflash 1.6s ease-out}
   @media(prefers-reduced-motion:reduce){ .stage,.reactor-wrap{transform:none!important}
-    .ring,.sweep,.ticker .run,.core .cdot,.scanbeam,.surge,.bloom,.orbit,.panel::before,.brand .logo,
+    .ring,.sweep,.ticker .run,.core .cdot,.scanbeam,.surge,.bloom,.orbit,.panel::before,.brand .logo,.hero .v,
     .app.live .top,.app.live .main>.col,.app.live .ticker,.app.live .cmd{animation:none!important} }
 
   /* ===== buyer reply assistant ===== */
@@ -327,6 +327,11 @@
   @keyframes bordersweep{from{background-position:220% 0}to{background-position:-120% 0}}
   .brand .logo{animation:logoglow 3.6s ease-in-out infinite}
   @keyframes logoglow{0%,100%{box-shadow:0 0 14px rgba(47,230,255,.45),inset 0 0 10px rgba(47,230,255,.25)}50%{box-shadow:0 0 26px rgba(47,230,255,.85),inset 0 0 15px rgba(47,230,255,.4)}}
+  /* panels lift on hover; big readout flickers like a charged display */
+  .panel{transition:border-color .3s,box-shadow .35s}
+  .panel:hover{border-color:var(--line-strong);box-shadow:0 0 30px -8px rgba(47,230,255,.4)}
+  .hero .v{animation:heroflick 7s steps(1) infinite}
+  @keyframes heroflick{0%,7%,9%,52%,54%,100%{text-shadow:0 0 26px rgba(47,230,255,.5)}8%{text-shadow:0 0 10px rgba(47,230,255,.3)}53%{text-shadow:0 0 40px rgba(47,230,255,.75),0 0 70px rgba(47,230,255,.35)}}
 
   /* ===== vehicle lookup ===== */
   .vphoto{width:100%;height:172px;border-radius:12px;object-fit:cover;border:1px solid var(--line);background:rgba(47,230,255,.05);margin-bottom:12px;display:block}
@@ -1219,26 +1224,82 @@ function initNodes(){
   })();
 }
 
-/* ---------- ambient starfield backdrop ---------- */
+/* ---------- ambient deep-space backdrop ----------
+   Living parallax field: drifting nebula clouds, three depth layers of stars
+   that shift against the cursor, constellation lines that knit themselves
+   around the pointer, and occasional shooting stars. Degrades to a calm
+   static field when prefers-reduced-motion is set. */
 function initSpace(){
   const cv=document.getElementById('space'); if(!cv) return; const ctx=cv.getContext('2d');
   const DPR=Math.min(window.devicePixelRatio||1,2);
-  const size=()=>{ cv.width=innerWidth*DPR; cv.height=innerHeight*DPR; }; size(); window.addEventListener('resize',size);
-  const N=90, ps=[];
-  for(let i=0;i<N;i++) ps.push({x:Math.random(),y:Math.random(),z:Math.random(),gold:Math.random()>0.86,tw:Math.random()*6.28});
+  let W=0,H=0;
+  const size=()=>{ W=cv.width=innerWidth*DPR; H=cv.height=innerHeight*DPR; }; size(); addEventListener('resize',size);
   const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  function draw(){
-    const w=cv.width,h=cv.height,t=performance.now()/1000; ctx.clearRect(0,0,w,h);
-    ps.forEach(p=>{
-      if(!still){ p.y-=(0.00002+p.z*0.00006); if(p.y<-0.02)p.y=1.02; }
-      const x=p.x*w, y=((p.y%1+1)%1)*h, r=(0.4+p.z*1.7)*DPR;
-      const a=(0.14+p.z*0.5)*(still?1:(0.6+0.4*Math.sin(t*1.4+p.tw)));
-      ctx.fillStyle=p.gold?`rgba(255,190,90,${a})`:`rgba(120,225,255,${a})`;
-      ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill();
+  // smoothed pointer drives parallax + the constellation focus point
+  let px=0.5,py=0.42,tx=0.5,ty=0.42;
+  addEventListener('pointermove',e=>{ tx=e.clientX/innerWidth; ty=e.clientY/innerHeight; },{passive:true});
+  // stars across three depths (z), a few warm-gold among the cyan
+  const N=120, stars=[];
+  for(let i=0;i<N;i++){ const z=Math.random(); stars.push({x:Math.random(),y:Math.random(),z,gold:Math.random()>0.88,tw:Math.random()*6.28,sp:0.00002+z*0.00007}); }
+  // slow drifting nebula clouds (additive glow)
+  const neb=[
+    {x:.22,y:.30,r:.42,c:[47,230,255],a:.060,ph:0.0},
+    {x:.78,y:.30,r:.40,c:[124,96,255],a:.050,ph:2.1},
+    {x:.64,y:.74,r:.46,c:[255,170,70],a:.042,ph:4.0},
+    {x:.32,y:.70,r:.36,c:[47,230,255],a:.044,ph:1.2},
+  ];
+  let shoot=[], nextShoot=900;
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    px+=(tx-px)*0.04; py+=(ty-py)*0.04;
+    const ox=px-0.5, oy=py-0.42;
+    // nebula — additive, drawn only within each blob's box to limit overdraw
+    ctx.globalCompositeOperation='lighter';
+    neb.forEach(n=>{
+      const nx=(n.x+(still?0:Math.sin(t*0.00006+n.ph)*0.02)-ox*0.07)*W;
+      const ny=(n.y+(still?0:Math.cos(t*0.00005+n.ph)*0.02)-oy*0.07)*H;
+      const rad=n.r*Math.min(W,H), pulse=still?1:0.82+0.18*Math.sin(t*0.0004+n.ph);
+      const g=ctx.createRadialGradient(nx,ny,0,nx,ny,rad);
+      g.addColorStop(0,`rgba(${n.c[0]},${n.c[1]},${n.c[2]},${(n.a*pulse).toFixed(3)})`);
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.fillRect(nx-rad,ny-rad,rad*2,rad*2);
     });
+    ctx.globalCompositeOperation='source-over';
+    // stars + collect those near the cursor for constellation lines
+    const cx=px*W, cy=py*H, linkR=150*DPR, near=[];
+    stars.forEach(p=>{
+      if(!still){ p.y-=p.sp; if(p.y<-0.02)p.y=1.02; }
+      const par=p.z*20*DPR;
+      const x=((p.x%1+1)%1)*W-ox*par, y=((p.y%1+1)%1)*H-oy*par;
+      const r=(0.4+p.z*1.8)*DPR, a=(0.14+p.z*0.5)*(still?1:0.55+0.45*Math.sin(t*0.0014+p.tw));
+      ctx.fillStyle=p.gold?`rgba(255,190,90,${a})`:`rgba(150,230,255,${a})`;
+      ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill();
+      if(!still){ const d=Math.hypot(x-cx,y-cy); if(d<linkR) near.push([x,y,d]); }
+    });
+    if(!still){
+      for(let i=0;i<near.length;i++)for(let j=i+1;j<near.length;j++){
+        const a=near[i],b=near[j],dd=Math.hypot(a[0]-b[0],a[1]-b[1]);
+        if(dd<linkR){ const al=(1-dd/linkR)*(1-(a[2]+b[2])/(2*linkR))*0.5;
+          if(al>0.02){ ctx.strokeStyle=`rgba(47,230,255,${al.toFixed(3)})`; ctx.lineWidth=DPR*0.7;
+            ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); } }
+      }
+      // shooting stars
+      if(t>nextShoot){ shoot.push({x:Math.random()*0.7+0.1,y:Math.random()*0.35,vx:0.5+Math.random()*0.5,vy:0.25+Math.random()*0.3,life:0,max:0.6+Math.random()*0.4,gold:Math.random()>0.7}); nextShoot=t+2600+Math.random()*4600; }
+      shoot.forEach(s=>s.life+=0.016/s.max); shoot=shoot.filter(s=>s.life<1);
+      ctx.lineCap='round';
+      shoot.forEach(s=>{
+        const len=0.12, fade=Math.sin(s.life*Math.PI), col=s.gold?'255,200,120':'170,240,255';
+        const hx=(s.x+s.vx*s.life)*W, hy=(s.y+s.vy*s.life)*H;
+        const tlx=(s.x+s.vx*Math.max(s.life-len,0))*W, tly=(s.y+s.vy*Math.max(s.life-len,0))*H;
+        const g=ctx.createLinearGradient(tlx,tly,hx,hy);
+        g.addColorStop(0,`rgba(${col},0)`); g.addColorStop(1,`rgba(${col},${(0.8*fade).toFixed(3)})`);
+        ctx.strokeStyle=g; ctx.lineWidth=DPR*1.6; ctx.beginPath(); ctx.moveTo(tlx,tly); ctx.lineTo(hx,hy); ctx.stroke();
+        ctx.fillStyle=`rgba(255,255,255,${(0.9*fade).toFixed(3)})`; ctx.beginPath(); ctx.arc(hx,hy,DPR*1.5,0,6.2832); ctx.fill();
+      });
+    }
     if(!still) requestAnimationFrame(draw);
   }
-  draw();
+  if(still) draw(0); else requestAnimationFrame(draw);
 }
 
 /* ---------- parallax + cursor glow ---------- */
