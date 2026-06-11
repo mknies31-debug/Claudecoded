@@ -9,7 +9,7 @@
 // Deploy: drag the carvis/ folder onto Netlify, then set ANTHROPIC_API_KEY in
 //         Site settings → Environment variables. No build step.
 
-const MODEL = 'claude-fable-5'; // Fable 5 — Anthropic's latest/most capable tier
+const MODEL = process.env.CARVIS_MODEL || 'claude-fable-5'; // override via CARVIS_MODEL env var if your account lacks Fable 5
 const MAX_TOKENS = 1000;
 
 const SYSTEM_PROMPT = `You are CARVIS, the personal AI assistant for Mick Knies, who runs North Star Car Guy — an independent used-car operation INSIDE Mosaic Auto Group in Zumbrota, Minnesota. Mick is NOT the owner of Mosaic; he runs his own branded buy-side (acquiring from private sellers) and sell-side (retailing to customers) operation within it. His customer base is rural Minnesota; buyers often drive 30-90 minutes.
@@ -44,7 +44,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY is not set on the server. Add it in Netlify → Site settings → Environment variables.' }),
+      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY is not set on the server. In Netlify: Site settings → Environment variables → add ANTHROPIC_API_KEY, then redeploy (Deploys → Trigger deploy → Clear cache and deploy).' }),
     };
   }
 
