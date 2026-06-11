@@ -1170,7 +1170,9 @@ function parseImport(text){
   }).filter(Boolean);
 }
 function refreshContactDropdown(){
-  $('#oContact').innerHTML=CONTACTS.map((c,i)=>`<option value="${i}">${c.name} — ${c.type==='sold'?'sold · '+(c.vehicle||'—'):'referral'}</option>`).join('');
+  $('#oContact').innerHTML = CONTACTS.length
+    ? CONTACTS.map((c,i)=>`<option value="${i}">${c.name} — ${c.type==='sold'?'sold · '+(c.vehicle||'—'):'referral'}</option>`).join('')
+    : '<option value="">No contacts yet — use “Manage contacts” below to import</option>';
 }
 function importText(text){
   text=(text||'').trim(); if(!text){ toast('Nothing to import'); return; }
@@ -1200,7 +1202,7 @@ const MAILTPL={
     body:c=>`Hey ${first2(c.name)},\n\nJust checking in — how's the ${c.vehicle} running for you? Anything come up that I can help with?\n\nIf you ever need anything down the road, I'm one message away.\n\nMick — North Star Car Guy` },
 };
 const MAIL_FOOTER='\n\n— North Star Car Guy · Mosaic Auto Group, Zumbrota, MN · Reply "STOP" to opt out.';
-function curContact(){ return CONTACTS[+($('#oContact').value||0)]||CONTACTS[0]; }
+function curContact(){ return CONTACTS[+($('#oContact').value||0)]||CONTACTS[0]||null; }
 function openOutreach(){
   refreshContactDropdown();
   $('#oContact').value='0';
@@ -1210,8 +1212,8 @@ function openOutreach(){
   $('#oOverlay').classList.add('show');
 }
 function closeOutreach(){ $('#oOverlay').classList.remove('show'); }
-function fillContact(){ const c=curContact(); $('#oName').value=c.name; $('#oTo').value=c.email; const on=$('#oTpl button.on'); applyTemplate(on?on.dataset.tpl:'review'); }
-function applyTemplate(key){ const t=MAILTPL[key]||MAILTPL.review; const c={name:$('#oName').value||curContact().name, vehicle:curContact().vehicle}; $('#oSubj').value=t.subject(c); $('#oBody').value=t.body(c); }
+function fillContact(){ const c=curContact(); $('#oName').value=c?c.name:''; $('#oTo').value=c?c.email:''; const on=$('#oTpl button.on'); applyTemplate(on?on.dataset.tpl:'review'); }
+function applyTemplate(key){ const t=MAILTPL[key]||MAILTPL.review; const cc=curContact()||{}; const c={name:$('#oName').value||cc.name||'there', vehicle:cc.vehicle||''}; $('#oSubj').value=t.subject(c); $('#oBody').value=t.body(c); }
 async function sendOutreach(){
   const to=$('#oTo').value.trim(), toName=$('#oName').value.trim(), subject=$('#oSubj').value.trim();
   const body=$('#oBody').value.trim(), st=$('#oStat');
@@ -1235,17 +1237,13 @@ async function sendOutreach(){
    talkback (deferred). Inventory comes from inventory.json (the desktop crawler);
    falls back to these samples until the crawl runs. */
 const vmoney = n => '$'+(+n||0).toLocaleString();
-const SAMPLE_VEHICLES=[
-  {vin:'KNDJT2A58D7615703',year:2013,make:'Kia',model:'Soul',trim:'Base',condition:'used',price:8220,msrp:9865,miles:64448,stock:'T160084',color:'Titanium Pearl Metallic',body:'Hatchback',drivetrain:'FWD',transmission:'6-Speed Manual',engine:'1.6L I4',mpg:'25/30',store:'Mosaic CDJR',image:'https://vimg.remora.inc/444039/kndjt2a58d7615703-2013-kia-soul-base-titanium-pearl-metallic-1-111302.avif',url:'https://mosaicautos.com/for-sale/used-kia-soul-base-zumbrota-mn/2013-kia-soul-base-kndjt2a58d7615703'},
-  {vin:'1FT8W3DT3HEE03251',year:2017,make:'Ford',model:'F-350',trim:'Super Duty DRW Lariat',condition:'used',price:41995,msrp:0,miles:98500,stock:'T210090',color:'Oxford White',body:'Truck',drivetrain:'4X4',transmission:'6-Speed Automatic',engine:'6.7L Power Stroke Diesel',mpg:'',store:'Mosaic Ford',image:'',url:'https://mosaicautos.com/for-sale/used-ford-super-duty-f350-drw-lariat-zumbrota-mn/2017-ford-super-duty-f350-drw-lariat-1ft8w3dt3hee03251'},
-  {vin:'3GCUKREC5JG000001',year:2021,make:'Chevrolet',model:'Silverado',trim:'1500 LT',condition:'used',price:34995,msrp:0,miles:48200,stock:'P260253',color:'Black',body:'Truck',drivetrain:'4X4',transmission:'8-Speed Automatic',engine:'5.3L V8',mpg:'16/22',store:'Mosaic Chevrolet',image:'',url:'https://mosaicautos.com/'},
-  {vin:'2T3W1RFV5MC000002',year:2022,make:'Toyota',model:'RAV4',trim:'XLE',condition:'used',price:31200,msrp:0,miles:22100,stock:'P260111',color:'Silver Sky',body:'SUV',drivetrain:'AWD',transmission:'8-Speed Automatic',engine:'2.5L I4',mpg:'27/35',store:'Mosaic CDJR',image:'',url:'https://mosaicautos.com/'},
-];
 const MAKES=['ford','chevrolet','chevy','gmc','ram','dodge','jeep','chrysler','toyota','honda','kia','hyundai','nissan','subaru','mazda','buick','cadillac','lincoln','volkswagen','vw','tesla','lexus','acura','volvo','audi','bmw'];
 let INVENTORY=[], vCur=null, vMatches=[];
+// Real inventory only (inventory.json, scraped from mosaicautos.com).
+// No sample fallback — if it can't load, car lookups simply report no match.
 async function loadInventory(){
   try{ const r=await fetch('inventory.json',{cache:'no-store'}); if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.vehicles)&&d.vehicles.length) INVENTORY=d.vehicles; } }catch(e){}
-  if(!INVENTORY.length) INVENTORY=SAMPLE_VEHICLES;
+  try{ renderStats(); }catch(e){}   // refresh the Inventory readout once loaded
 }
 const vTitle=v=>`${v.year||''} ${v.make||''} ${v.model||''} ${v.trim||''}`.replace(/\s+/g,' ').trim();
 function isCarQuery(q){
@@ -1324,8 +1322,9 @@ function runCmd(raw){
   { const looksMsg=/\?/.test(q)||q.split(/\s+/).length>6; const ms=findVehicles(q);
     if(ms.length && !looksMsg && (isCarQuery(q)||q.split(/\s+/).length<=4)){ openVehicle(ms); $('#cmd').value=''; return; }
     if(isCarQuery(q) && !looksMsg && INVENTORY.length){ toast(`No match for "${q}" in inventory`); $('#cmd').value=''; return; } }
-  if(low.includes('market')){ $('#mkList').scrollIntoView({behavior:'smooth'}); toast('Market pulse — see left panel'); $('#cmd').value=''; return; }
-  if(low.includes('directive')||low.includes('follow')){ toast(`${DATA.leads.length} directives queued — see right`); $('#cmd').value=''; return; }
+  // exact-match shortcuts only — full sentences fall through to the live brain
+  if(low==='market'){ $('#mkList').scrollIntoView({behavior:'smooth'}); toast('Market pulse — see left panel'); $('#cmd').value=''; return; }
+  if(low==='directives'||low==='directive'){ toast(`${DATA.leads.length} directives queued — see right`); $('#cmd').value=''; return; }
   // anything else → hand it to the live CARVIS brain (Fable 5)
   openAI(q); $('#cmd').value='';
 }
