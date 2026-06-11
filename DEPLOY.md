@@ -22,7 +22,7 @@ Features stay dark until their variables are present.
 
 | Variable | Powers | Example |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | AI proxy (`carvis.js`) | `sk-ant-...` |
+| `ANTHROPIC_API_KEY` | Live Ask CARVIS answers (`carvis.js`, Fable 5) | `sk-ant-...` |
 | `RESEND_API_KEY` | Outreach email (`send-email.js`) | from resend.com |
 | `MAIL_FROM` | Email sender identity | `Mick Knies <mick@northstarcarguy.com>` |
 | `MAIL_REPLY_TO` | Where replies land | `mick@northstarcarguy.com` |
@@ -43,7 +43,8 @@ then it can only reach your own Resend account email — fine for testing wiring
 ## What each function does
 
 - `carvis.js` — server-side Anthropic proxy (keeps the API key off the client).
-  Ready for when the assistant is wired to live AI; not called by the UI yet.
+  Powers ◉ Ask CARVIS, the command bar, and the 🎙 mic — live answers in
+  Mick's voice on Fable 5 (`claude-fable-5`), spoken aloud when AUDIO is on.
 - `send-email.js` — sends 1:1 outreach email via Resend, replies routed to Mick.
 - `sync.mjs` — cross-device cloud sync of CARVIS data, keyed by a private
   passphrase, stored in Netlify Blobs.

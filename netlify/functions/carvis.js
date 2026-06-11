@@ -9,7 +9,7 @@
 // Deploy: drag the carvis/ folder onto Netlify, then set ANTHROPIC_API_KEY in
 //         Site settings → Environment variables. No build step.
 
-const MODEL = 'claude-sonnet-4-6'; // current Sonnet tier; claude-sonnet-4-20250514 retires 2026-06-15
+const MODEL = 'claude-fable-5'; // Fable 5 — Anthropic's latest/most capable tier
 const MAX_TOKENS = 1000;
 
 const SYSTEM_PROMPT = `You are CARVIS, the personal AI assistant for Mick Knies, who runs North Star Car Guy — an independent used-car operation INSIDE Mosaic Auto Group in Zumbrota, Minnesota. Mick is NOT the owner of Mosaic; he runs his own branded buy-side (acquiring from private sellers) and sell-side (retailing to customers) operation within it. His customer base is rural Minnesota; buyers often drive 30-90 minutes.

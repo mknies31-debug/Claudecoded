@@ -300,6 +300,16 @@
   .omanage:hover{text-decoration:underline}
   .omg{margin-top:10px;padding:12px;border:1px dashed var(--line-strong);border-radius:11px}
 
+  /* ===== ask CARVIS (live · Fable 5) ===== */
+  .ailog{display:flex;flex-direction:column;gap:10px;min-height:90px;max-height:46vh;overflow-y:auto;margin-bottom:12px}
+  .aim{max-width:90%;padding:11px 14px;border-radius:12px;font-size:17px;line-height:1.55;white-space:pre-wrap}
+  .aim.you{align-self:flex-end;background:rgba(92,240,255,.12);border:1px solid var(--line)}
+  .aim.bot{align-self:flex-start;background:rgba(6,14,24,.95);border:1px solid var(--line);border-left:3px solid var(--cyan)}
+  .aim.bot.thinking{color:var(--dim);font-style:italic}
+  .airow{display:flex;gap:10px;align-items:flex-end}
+  .airow .rta{margin-top:0}
+  body.hivis .aim{font-size:21px}
+
   /* ===== monthly numbers ===== */
   .numgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
   #numMonth{color-scheme:dark}
@@ -608,12 +618,13 @@
 
   <!-- COMMAND -->
   <div class="cmd">
-    <button class="mic" id="mic" title="Voice — talkback coming soon">🎙</button>
+    <button class="mic" id="mic" title="Voice — speak to CARVIS, it answers out loud">🎙</button>
     <button class="mic" id="replyBtn" title="Reply to a buyer's Marketplace message" style="font-size:18px">✉</button>
     <button class="mic" id="outreachBtn" title="Send a referral / sold-customer email" style="font-size:17px">📧</button>
     <button class="mic" id="carBtn" title="Find a car / ask about inventory" style="font-size:18px">🚗</button>
     <button class="mic" id="statsBtn" title="Enter monthly sales numbers (backfill any month)" style="font-size:17px">📊</button>
     <div class="chips">
+      <div class="chip" data-cmd="ask">◉ Ask CARVIS</div>
       <div class="chip" data-cmd="numbers">📊 Numbers</div>
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
       <div class="chip" data-cmd="reply">✉ Buyer reply</div>
@@ -656,7 +667,7 @@
       <button class="rgen" id="rGen">◉ GENERATE REPLIES</button>
       <div id="rIntent"></div>
       <div id="rDrafts"></div>
-      <div class="mnote"><span>✦</span><span>Three options in your voice — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>. <span class="soon">Templated for your common Marketplace asks; live, fully-contextual replies arrive with talkback.</span> CARVIS never touches your Messenger — you copy the one you like and paste it.</span></div>
+      <div class="mnote"><span>✦</span><span>Three options in your voice — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>. <span class="soon">Templated for your common Marketplace asks — for a fully-contextual live reply, hit ◉ Ask CARVIS.</span> CARVIS never touches your Messenger — you copy the one you like and paste it.</span></div>
     </div>
   </div>
 </div>
@@ -756,6 +767,26 @@ Janelle Aas, janelle@email.com, referral"></textarea>
   </div>
 </div>
 
+<!-- ============ ASK CARVIS (live · Fable 5) ============ -->
+<div class="overlay" id="aiOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">◉</div>
+      <div><div class="mt">ASK CARVIS</div><div class="ms">Live answers · powered by Fable 5</div></div>
+      <button class="x" id="aiClose">✕</button>
+    </div>
+    <div class="mb">
+      <div class="ailog" id="aiLog"></div>
+      <div class="airow">
+        <textarea id="aiIn" class="rta" rows="2" placeholder="Ask anything — an objection, a customer text to write, a pricing approach…"></textarea>
+        <button class="send" id="aiSend" title="Send">➤</button>
+      </div>
+      <div class="ostat" id="aiStat"></div>
+      <div class="mnote"><span>✦</span><span>Answers are <b>spoken aloud</b> when AUDIO is on. Dollar figures are estimates — verify before quoting a customer. Live answers need <b>ANTHROPIC_API_KEY</b> set on Netlify.</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ NUMBERS (monthly totals) ============ -->
 <div class="overlay" id="numOverlay">
   <div class="modal" role="dialog" aria-modal="true">
@@ -796,11 +827,11 @@ Janelle Aas, janelle@email.com, referral"></textarea>
 <script>
 /* ============================================================
    CARVIS — Jarvis HUD command center.
-   Cinematic "wake up" boot → functional HUD wired to real
-   metrics + the follow-up / 3-option draft flow.
-   TALKBACK (voice reply / live AI conversation) is DEFERRED:
-   the boot log reports it OFFLINE, the mic & command bar are
-   visual/local-only, and nothing calls the proxy or speaks.
+   Cinematic "wake up" boot → functional HUD wired to Mick's
+   real monthly numbers + the follow-up / 3-option draft flow.
+   LIVE AI: the command bar / ◉ Ask CARVIS / 🎙 mic route to the
+   Anthropic proxy (netlify/functions/carvis.js, Fable 5);
+   answers are spoken aloud when AUDIO is on.
    ============================================================ */
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -838,10 +869,10 @@ const DATA = {
     'Bring the joy — don’t wait for it.',
   ],
   system:[
-    {nm:'MARKET INTEL AGENT', status:'online'},
+    {nm:'LIVE AI — FABLE 5', status:'online'},
+    {nm:'TALKBACK / VOICE', status:'online'},
     {nm:'PIPELINE SYNC', status:'online'},
     {nm:'FOLLOW-UP SEQUENCER', status:'standby'},
-    {nm:'TALKBACK / VOICE', status:'offline'},
   ],
   market:[],   // start empty — no assumed market figures
   leads:[],    // start empty — no assumed directives/leads
@@ -894,8 +925,8 @@ const BOOT_LINES = [
   {t:'> LINK: NORTH STAR COMMAND ......... <span class="ok">OK</span>', d:140},
   {t:'> SYNC: PIPELINE .................. <span class="ok">OK</span>', d:130},
   {t:'> SYNC: INVENTORY ................. <span class="ok">OK</span>', d:120},
-  {t:'> AGENT: MARKET INTEL .............. <span class="ok">ONLINE</span>', d:140},
-  {t:'> MODULE: TALKBACK / VOICE ......... <span class="def">DEFERRED</span>', d:150},
+  {t:'> LINK: FABLE 5 LIVE BRAIN ......... <span class="ok">ONLINE</span>', d:140},
+  {t:'> MODULE: TALKBACK / VOICE ......... <span class="ok">ONLINE</span>', d:150},
   {t:'> ALL CORE SYSTEMS NOMINAL', d:160},
   {t:'> <span class="ok">GOOD MORNING, MICK.</span>', d:260},
 ];
@@ -1278,6 +1309,7 @@ function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classLis
 function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
+  if(low==='ask'||low==='carvis'||low==='ai'){ openAI(); $('#cmd').value=''; return; }
   if(low==='numbers'||low==='stats'||low==='month'||low==='totals'){ openNumbers(); return; }
   if(low==='reply'||low==='buyer reply'){ openReply(); return; }
   if(low==='outreach'||low==='email'){ openOutreach(); return; }
@@ -1294,9 +1326,8 @@ function runCmd(raw){
     if(isCarQuery(q) && !looksMsg && INVENTORY.length){ toast(`No match for "${q}" in inventory`); $('#cmd').value=''; return; } }
   if(low.includes('market')){ $('#mkList').scrollIntoView({behavior:'smooth'}); toast('Market pulse — see left panel'); $('#cmd').value=''; return; }
   if(low.includes('directive')||low.includes('follow')){ toast(`${DATA.leads.length} directives queued — see right`); $('#cmd').value=''; return; }
-  // looks like a pasted buyer message → open the reply assistant pre-filled
-  if(q.length>24||/\?/.test(q)){ openReply(); $('#rMsg').value=q; genReplies(); $('#cmd').value=''; return; }
-  toast('Type a name to draft, or paste a buyer message for replies'); $('#cmd').value='';
+  // anything else → hand it to the live CARVIS brain (Fable 5)
+  openAI(q); $('#cmd').value='';
 }
 
 /* ---------- audio FX (synthesized, no files; muted via AUDIO toggle) ---------- */
@@ -1668,6 +1699,65 @@ function saveSyncKey(){
 function openSync(){ setSyncStat('',''); setCloudStat('',''); $('#syncKey').value=getSyncKey(); $('#syncOverlay').classList.add('show'); }
 function closeSync(){ $('#syncOverlay').classList.remove('show'); }
 
+/* ---------- ask CARVIS — live answers via the Anthropic proxy (Fable 5) ----------
+   The client only ships the rolling conversation; Mick's voice/system prompt
+   and the API key live server-side in netlify/functions/carvis.js. Answers
+   are spoken aloud (speechSynthesis) when AUDIO is on — eyes-free operation. */
+let AIMSGS=[], aiBusy=false;
+function aiAdd(role,text,extra){
+  const d=document.createElement('div');
+  d.className='aim '+(role==='user'?'you':'bot')+(extra?' '+extra:'');
+  d.textContent=text;
+  const log=$('#aiLog'); log.appendChild(d); log.scrollTop=log.scrollHeight;
+  return d;
+}
+function speak(text){
+  try{
+    if(!audioOn || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.rate=1.04; u.pitch=0.92;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function openAI(seed){
+  $('#aiOverlay').classList.add('show');
+  if(!$('#aiLog').children.length) aiAdd('bot','Ready when you are, Mick. Objections, customer texts, pricing strategy — fire away.');
+  if(seed){ $('#aiIn').value=seed; askCarvis(); }
+  else setTimeout(()=>{ try{ $('#aiIn').focus(); }catch(e){} },60);
+}
+function closeAI(){ $('#aiOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
+async function askCarvis(){
+  if(aiBusy) return;
+  const q=$('#aiIn').value.trim(); if(!q) return;
+  $('#aiIn').value=''; aiAdd('user',q);
+  AIMSGS.push({role:'user',content:q});
+  AIMSGS=AIMSGS.slice(-12); while(AIMSGS.length && AIMSGS[0].role!=='user') AIMSGS.shift();
+  aiBusy=true; const th=aiAdd('bot','◉ thinking…','thinking');
+  $('#aiStat').className='ostat'; $('#aiStat').textContent='';
+  const r0=$('#reactor'); if(r0) r0.classList.add('listening');
+  try{
+    const r=await fetch('/.netlify/functions/carvis',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:AIMSGS})});
+    const d=await r.json().catch(()=>({}));
+    th.remove();
+    if(!r.ok){
+      AIMSGS.pop();
+      const msg=(d&&d.error&&(d.error.message||d.error))||('HTTP '+r.status);
+      aiAdd('bot','✕ '+msg);
+      $('#aiStat').className='ostat err'; $('#aiStat').textContent='Live brain error — check ANTHROPIC_API_KEY on Netlify.';
+    }else{
+      const text=(d.content||[]).map(b=>b.text||'').join('\n').trim()||'(no answer)';
+      AIMSGS.push({role:'assistant',content:text});
+      aiAdd('bot',text); speak(text); blip(940,0.06,'sine',0.12);
+    }
+  }catch(e){
+    th.remove(); AIMSGS.pop();
+    aiAdd('bot',"✕ CARVIS's live brain isn't reachable here — deploy on Netlify with ANTHROPIC_API_KEY set. Until then, the ✉ Buyer Reply button has scripted drafts.");
+    $('#aiStat').className='ostat err'; $('#aiStat').textContent='Offline / not deployed.';
+  }
+  aiBusy=false; if(r0) r0.classList.remove('listening');
+}
+
 /* ---------- monthly numbers modal ---------- */
 function loadMonthIntoForm(key){ const m=monthData(key);
   $('#numSold').value   = m.sold   || '';
@@ -1740,11 +1830,12 @@ function init(){
     if(e.target.closest('#vClose')||e.target===$('#vOverlay')) closeVehicle();
     if(e.target.closest('#syncClose')||e.target===$('#syncOverlay')) closeSync();
     if(e.target.closest('#numClose')||e.target===$('#numOverlay')) closeNumbers();
+    if(e.target.closest('#aiClose')||e.target===$('#aiOverlay')) closeAI();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
     const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
@@ -1777,6 +1868,9 @@ function init(){
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  // ask CARVIS (live)
+  $('#aiSend').addEventListener('click', askCarvis);
+  $('#aiIn').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); askCarvis(); } });
   // monthly numbers
   $('#statsBtn').addEventListener('click', ()=>{ blip(760,0.06,'sine',0.12); openNumbers(); });
   $('#numClose').addEventListener('click', closeNumbers);
@@ -1794,10 +1888,20 @@ function init(){
   });
 
   // mic + voice toggle = cinematic only (talkback deferred)
+  // mic — real voice input where the browser supports it (Chrome/Edge);
+  // transcript goes straight to the live CARVIS brain, answer is spoken back
+  let rec=null;
   $('#mic').addEventListener('click', function(){
-    const on=this.classList.toggle('on'); $('#reactor').classList.toggle('listening',on);
-    blip(on?520:360,0.07,'sine',0.13);
-    if(on){ toast('Listening… (voice reply ships with talkback)'); setTimeout(()=>{ this.classList.remove('on'); $('#reactor').classList.remove('listening'); },2600); }
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){ blip(360,0.07,'sine',0.13); toast("Voice input isn't supported in this browser — type to CARVIS instead"); return; }
+    if(rec){ try{ rec.stop(); }catch(e){} return; }
+    rec=new SR(); rec.lang='en-US'; rec.interimResults=false; rec.maxAlternatives=1;
+    const mb=this, off=()=>{ mb.classList.remove('on'); $('#reactor').classList.remove('listening'); rec=null; };
+    mb.classList.add('on'); $('#reactor').classList.add('listening'); blip(520,0.07,'sine',0.13);
+    rec.onresult=e=>{ const t=(e.results[0][0].transcript||'').trim(); off(); if(t) openAI(t); };
+    rec.onerror=()=>{ off(); toast("Didn't catch that — try again"); };
+    rec.onend=off;
+    try{ rec.start(); toast('Listening…'); }catch(e){ off(); }
   });
   $('#vtoggle').addEventListener('click', function(){
     audioOn=this.classList.toggle('on'); this.textContent=audioOn?'AUDIO ON':'AUDIO OFF';
