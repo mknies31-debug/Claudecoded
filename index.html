@@ -300,6 +300,16 @@
   .omanage:hover{text-decoration:underline}
   .omg{margin-top:10px;padding:12px;border:1px dashed var(--line-strong);border-radius:11px}
 
+  /* ===== monthly numbers ===== */
+  .numgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+  #numMonth{color-scheme:dark}
+  .numrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline;
+    padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;
+    background:rgba(47,230,255,.03);transition:.15s}
+  .numrow:hover{border-color:var(--line-strong);background:rgba(47,230,255,.07)}
+  .numrow .nmk{font-weight:700;font-size:15px;color:var(--text)}
+  .numrow .nmv{font-family:var(--mono);font-size:13px;color:var(--dim)}
+
   /* ===== extraordinary optics ===== */
   #space{position:fixed;inset:0;z-index:0;pointer-events:none}
   /* time-of-day color grade — drifts cool at midday, golden by evening */
@@ -573,7 +583,7 @@
     <!-- RIGHT -->
     <div class="col">
       <div class="panel">
-        <div class="ph"><span class="hbar"></span><h3>Performance</h3><span class="meta">7-DAY · SOLD vs BOUGHT</span></div>
+        <div class="ph"><span class="hbar"></span><h3>Performance</h3><span class="meta">BY MONTH · SOLD vs BOUGHT</span></div>
         <div class="chartwrap">
           <canvas id="statChart"></canvas>
           <div class="chart-leg"><span><i class="ls"></i>SOLD</span><span><i class="lb"></i>PURCHASED</span></div>
@@ -602,13 +612,14 @@
     <button class="mic" id="replyBtn" title="Reply to a buyer's Marketplace message" style="font-size:18px">✉</button>
     <button class="mic" id="outreachBtn" title="Send a referral / sold-customer email" style="font-size:17px">📧</button>
     <button class="mic" id="carBtn" title="Find a car / ask about inventory" style="font-size:18px">🚗</button>
+    <button class="mic" id="statsBtn" title="Enter monthly sales numbers (backfill any month)" style="font-size:17px">📊</button>
     <div class="chips">
+      <div class="chip" data-cmd="numbers">📊 Numbers</div>
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
       <div class="chip" data-cmd="reply">✉ Buyer reply</div>
       <div class="chip" data-cmd="outreach">📧 Outreach</div>
       <div class="chip" data-cmd="directives">Directives</div>
       <div class="chip" data-cmd="market">Market</div>
-      <div class="chip" data-cmd="draft Karla">Draft Karla</div>
     </div>
     <input id="cmd" type="text" placeholder="Command CARVIS — type a name to draft, or ask…" autocomplete="off">
     <button class="send" id="send">➤</button>
@@ -745,6 +756,41 @@ Janelle Aas, janelle@email.com, referral"></textarea>
   </div>
 </div>
 
+<!-- ============ NUMBERS (monthly totals) ============ -->
+<div class="overlay" id="numOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">📊</div>
+      <div><div class="mt">MONTHLY NUMBERS</div><div class="ms">Your real totals — backfill any past month</div></div>
+      <button class="x" id="numClose">✕</button>
+    </div>
+    <div class="mb">
+      <span class="olabel" style="margin-top:0">Month</span>
+      <input type="month" id="numMonth" class="rin" style="margin-top:0">
+      <div class="numgrid">
+        <div><span class="olabel">Cars sold</span><input type="number" min="0" step="1" inputmode="numeric" id="numSold" class="rin" style="margin-top:0" placeholder="0"></div>
+        <div><span class="olabel">Cars bought</span><input type="number" min="0" step="1" inputmode="numeric" id="numBought" class="rin" style="margin-top:0" placeholder="0"></div>
+        <div><span class="olabel">Deals closed</span><input type="number" min="0" step="1" inputmode="numeric" id="numDeals" class="rin" style="margin-top:0" placeholder="0"></div>
+        <div><span class="olabel">Close rate %</span><input type="number" min="0" max="100" step="1" inputmode="numeric" id="numRate" class="rin" style="margin-top:0" placeholder="0"></div>
+      </div>
+      <button class="rgen" id="numSave">◉ SAVE THIS MONTH</button>
+      <div class="ostat" id="numStat"></div>
+
+      <span class="olabel" style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px;display:block">Monthly goals (targets)</span>
+      <div class="numgrid">
+        <div><span class="olabel">Sold goal</span><input type="number" min="0" step="1" inputmode="numeric" id="goalSold" class="rin" style="margin-top:0" placeholder="0"></div>
+        <div><span class="olabel">Buy goal</span><input type="number" min="0" step="1" inputmode="numeric" id="goalBuy" class="rin" style="margin-top:0" placeholder="0"></div>
+        <div><span class="olabel">Deal goal</span><input type="number" min="0" step="1" inputmode="numeric" id="goalDeal" class="rin" style="margin-top:0" placeholder="0"></div>
+      </div>
+      <button class="rgen" id="goalSave" style="background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205">◉ SAVE GOALS</button>
+
+      <span class="olabel" style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px;display:block">History — tap a month to edit</span>
+      <div id="numHistory"></div>
+      <div class="mnote"><span>✦</span><span>Everything starts at 0. Totals save per month and ride along in Data Sync. Pick any earlier month above to fill in the past.</span></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><span class="tc"></span><span id="toastMsg">—</span></div>
 
 <script>
@@ -761,28 +807,15 @@ const $$ = s => [...document.querySelectorAll(s)];
 
 const SRC = { fb:'FB MKTPLACE', ref:'REFERRAL', app:'NORTHSTAR APP', text:'SHORTCODE', mc:'MANYCHAT' };
 const DATA = {
-  // Sales tracked as COUNTS — completed deals, cars sold, cars purchased — never gross/volume dollars.
-  stats:{
-    sold:7,  soldGoal:12,   // cars retailed this month (sell-side)
-    bought:5, buyGoal:10,   // cars acquired this month (buy-side)
-    deals:7,  dealGoal:12,  // completed deals / projects closed
-    closeRate:38,           // %
-    // last 7 days, oldest → newest: cars sold vs cars purchased
-    week:[
-      {d:'MON',sold:1,bought:1},
-      {d:'TUE',sold:0,bought:1},
-      {d:'WED',sold:2,bought:0},
-      {d:'THU',sold:1,bought:1},
-      {d:'FRI',sold:1,bought:0},
-      {d:'SAT',sold:2,bought:1},
-      {d:'SUN',sold:0,bought:1},
-    ],
-  },
+  // Sales are COUNTS Mick enters per month in the NUMBERS panel — never
+  // fabricated. Everything starts at 0 until he fills it in (and he can
+  // backfill any earlier month). Gauges below are just labels/colors;
+  // their live values come from the current month's saved totals.
   gauges:[
-    {key:'sold',   label:'CARS SOLD',    val:7,  max:12,  color:'var(--gold)',  fmt:v=>v},
-    {key:'bought', label:'CARS BOUGHT',  val:5,  max:10,  color:'var(--cyan)',  fmt:v=>v},
-    {key:'deals',  label:'DEALS CLOSED', val:7,  max:12,  color:'var(--green)', fmt:v=>v},
-    {key:'conv',   label:'CLOSE RATE',   val:38, max:100, color:'var(--red)',   fmt:v=>v+'%'},
+    {key:'sold',   label:'CARS SOLD',    color:'var(--gold)'},
+    {key:'bought', label:'CARS BOUGHT',  color:'var(--cyan)'},
+    {key:'deals',  label:'DEALS CLOSED', color:'var(--green)'},
+    {key:'conv',   label:'CLOSE RATE',   color:'var(--red)'},
   ],
   // Brendan Burchard's High Performance Habits (HP6) → daily drivers, tailored to the lot.
   tasks:[
@@ -810,28 +843,57 @@ const DATA = {
     {nm:'FOLLOW-UP SEQUENCER', status:'standby'},
     {nm:'TALKBACK / VOICE', status:'offline'},
   ],
-  market:[
-    {n:'01', html:'Half-ton pickups up <span class="est">~3%</span> regionally — tighten Silverado &amp; F-150 asks.'},
-    {n:'02', html:'Compact SUV demand strong — RAV4 / CR-V moving fast. Hold firm on the 22k-mi RAV4.'},
-    {n:'03', html:'Wrangler days-on-lot climbing — consider a <span class="est">~$500</span> trim.'},
-    {n:'04', html:'Diesel 2500s thin regionally — Denali sold above comps.'},
-  ],
-  leads:[
-    {id:2, name:'Karla Boe', vehicle:'Equinox', src:'ref', phone:'5075550178', quiet:4},
-    {id:5, name:'Roger Vetsch', vehicle:'Wrangler Unltd', src:'text', phone:'5075550161', quiet:2},
-    {id:3, name:'Travis Lund', vehicle:'F-150 XLT', src:'app', phone:'5075550199', appt:'SAT 10:00'},
-    {id:7, name:'Pat Niedermayer', vehicle:'Highlander', src:'app', phone:'5075550188', appt:'THU 17:30'},
-  ],
+  market:[],   // start empty — no assumed market figures
+  leads:[],    // start empty — no assumed directives/leads
 };
 const initials = n => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
 const phoneFmt = p => `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
+
+/* ---------- monthly numbers (real, user-entered, start at 0) ----------
+   Mick types his actual totals per month in the NUMBERS panel; nothing is
+   assumed. Stored as { "YYYY-MM": {sold,bought,deals,closeRate} } plus global
+   goals. Both ride along in cloud sync + file backup (carvis_ keys). */
+const MONTHS_KEY='carvis_months', GOALS_KEY='carvis_goals';
+const monthKey = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+function prettyMonth(key){ const [y,m]=key.split('-'); return new Date(+y,+m-1,1).toLocaleString('en-US',{month:'long',year:'numeric'}); }
+function shortMonth(d){ return d.toLocaleString('en-US',{month:'short'}).toUpperCase(); }
+function loadMonths(){ try{ const m=JSON.parse(localStorage.getItem(MONTHS_KEY)||'{}'); return (m&&typeof m==='object'&&!Array.isArray(m))?m:{}; }catch(e){ return {}; } }
+function saveMonths(m){ try{ localStorage.setItem(MONTHS_KEY, JSON.stringify(m)); }catch(e){} scheduleCloudPush(); }
+function loadGoals(){ try{ const g=JSON.parse(localStorage.getItem(GOALS_KEY)||'{}')||{}; return {soldGoal:+g.soldGoal||0, buyGoal:+g.buyGoal||0, dealGoal:+g.dealGoal||0}; }catch(e){ return {soldGoal:0,buyGoal:0,dealGoal:0}; } }
+function saveGoals(g){ try{ localStorage.setItem(GOALS_KEY, JSON.stringify(g)); }catch(e){} scheduleCloudPush(); }
+function monthData(key){ const m=loadMonths()[key]||{}; return {sold:+m.sold||0, bought:+m.bought||0, deals:+m.deals||0, closeRate:+m.closeRate||0}; }
+let STATS={sold:0,bought:0,deals:0,closeRate:0,soldGoal:0,buyGoal:0,dealGoal:0};
+function refreshStats(){ STATS={...monthData(monthKey()), ...loadGoals()}; return STATS; }
+function gaugeVals(key){ const s=STATS;
+  if(key==='sold')   return {val:s.sold,   max:s.soldGoal};
+  if(key==='bought') return {val:s.bought, max:s.buyGoal};
+  if(key==='deals')  return {val:s.deals,  max:s.dealGoal};
+  return {val:s.closeRate, max:100}; }
+// Push the current month's saved numbers into every metric on the dashboard.
+function renderStats(){
+  refreshStats();
+  const hv=$('#heroV'); if(hv) hv.textContent=STATS.sold;
+  const hg=$('#heroG'); if(hg) hg.innerHTML = STATS.soldGoal>0
+    ? `${STATS.sold} of <b>${STATS.soldGoal}</b> goal · ${Math.round(STATS.sold/STATS.soldGoal*100)}%`
+    : `${STATS.sold} sold · <b>set a monthly goal</b>`;
+  const gr=$('#goalProg'); if(gr){ const C=2*Math.PI*166, ratio=STATS.soldGoal>0?Math.min(STATS.sold/STATS.soldGoal,1):0;
+    gr.style.strokeDasharray=C; gr.style.strokeDashoffset=C*(1-ratio); }
+  $$('.gauge').forEach(el=>{ const {val,max}=gaugeVals(el.dataset.key); const R=34,GC=2*Math.PI*R, ratio=max>0?Math.min(val/max,1):0;
+    const prog=el.querySelector('.prog2'), gv=el.querySelector('.gv');
+    if(prog) prog.style.strokeDashoffset=GC*(1-ratio);
+    if(gv) gv.textContent = el.dataset.key==='conv' ? val+'%' : val; });
+  const set=(id,v)=>{ const e=$('#'+id); if(e) e.textContent=v; };
+  set('roSold',STATS.sold); set('roBought',STATS.bought);
+  set('roLeads', (typeof HOT!=='undefined'?HOT.length:0)); set('roInv', (typeof INVENTORY!=='undefined'?INVENTORY.length:0));
+  renderTicker(); drawChart(); buildSpark();
+}
 
 /* ---------- BOOT ---------- */
 const BOOT_LINES = [
   {t:'> BOOTING CARVIS v2 ...', d:90},
   {t:'> LINK: NORTH STAR COMMAND ......... <span class="ok">OK</span>', d:140},
-  {t:'> SYNC: PIPELINE (10 leads) ........ <span class="ok">OK</span>', d:130},
-  {t:'> SYNC: INVENTORY (6 units) ........ <span class="ok">OK</span>', d:120},
+  {t:'> SYNC: PIPELINE .................. <span class="ok">OK</span>', d:130},
+  {t:'> SYNC: INVENTORY ................. <span class="ok">OK</span>', d:120},
   {t:'> AGENT: MARKET INTEL .............. <span class="ok">ONLINE</span>', d:140},
   {t:'> MODULE: TALKBACK / VOICE ......... <span class="def">DEFERRED</span>', d:150},
   {t:'> ALL CORE SYSTEMS NOMINAL', d:160},
@@ -861,10 +923,15 @@ function renderSystem(){
   $('#sysBody').innerHTML = DATA.system.map(s=>`
     <div class="sys-row"><span class="sd ${s.status}"></span><span class="nm">${s.nm}</span><span class="st ${s.status}">${s.status.toUpperCase()}</span></div>`).join('');
   $('#sysMeta').textContent = DATA.system.length+' MODULES';
-  $('#roSold').textContent = DATA.stats.sold; $('#roBought').textContent = DATA.stats.bought;
-  $('#roLeads').textContent = '10'; $('#roInv').textContent = '6';
+  // readout tiles (Sold/Bought/Pipeline/Inventory) are filled by renderStats()
 }
 function renderMarket(){
+  const vf=document.querySelector('.verify');
+  if(!DATA.market.length){
+    $('#mkList').innerHTML = '<div class="hot-empty">No market notes yet.</div>';
+    if(vf) vf.style.display='none'; return;
+  }
+  if(vf) vf.style.display='';
   $('#mkList').innerHTML = DATA.market.map(m=>`<div class="mk-item"><span class="n">${m.n}</span><p>${m.html}</p></div>`).join('');
 }
 function renderGauges(){
@@ -874,13 +941,17 @@ function renderGauges(){
       <div class="gwrap">
         <svg width="86" height="86" viewBox="0 0 86 86"><circle class="track2" cx="43" cy="43" r="${R}"/>
           <circle class="prog2" cx="43" cy="43" r="${R}" style="stroke:${g.color};stroke-dasharray:${C};stroke-dashoffset:${C}"/></svg>
-        <div class="gv" style="color:${g.color}" data-count="${g.val}" data-suffix="${g.key==='conv'?'%':''}">0</div>
+        <div class="gv" style="color:${g.color}">0</div>
       </div>
       <div class="gl">${g.label}</div>
     </div>`).join('');
 }
 function renderDirectives(){
   const due = DATA.leads.slice().sort((a,b)=>(b.quiet||0)-(a.quiet||0));
+  if(!due.length){
+    $('#dirBody').innerHTML = '<div class="hot-empty">No directives yet.<br>Pin Hot Prospects or import contacts to build your day.</div>';
+    $('#dirMeta').textContent='—'; return;
+  }
   $('#dirBody').innerHTML = due.map(l=>{
     const tag = l.quiet?`<span class="tag quiet">QUIET ${l.quiet}D</span>`:`<span class="tag appt">APPT ${l.appt}</span>`;
     const ac = l.quiet?'var(--red)':'var(--green)';
@@ -897,32 +968,25 @@ function renderDirectives(){
   $('#dirMeta').textContent = due.length+' TODAY';
 }
 function renderTicker(){
-  const s=DATA.stats;
-  const items = DATA.market.map(m=>m.html.replace(/<[^>]+>/g,'')).join('   ◆   ');
-  const line = `CARS SOLD ${s.sold}/${s.soldGoal}   ◆   PURCHASED ${s.bought}/${s.buyGoal}   ◆   DEALS CLOSED ${s.deals}/${s.dealGoal}   ◆   ${items}   ◆   `;
+  const s=STATS;
+  const parts=[`CARS SOLD ${s.sold}/${s.soldGoal}`,`PURCHASED ${s.bought}/${s.buyGoal}`,
+    `DEALS ${s.deals}/${s.dealGoal}`,`CLOSE RATE ${s.closeRate}%`,'NORTH STAR CAR GUY · ZUMBROTA MN'];
+  const line = parts.join('   ◆   ')+'   ◆   ';
   $('#ticker').innerHTML = `<span>${line}${line}</span>`;
 }
 
 /* ---------- animate on wake ---------- */
 function startHud(){
-  // hero count-up — CARS SOLD toward monthly goal (counts, not gross)
-  const hv=$('#heroV'), s=DATA.stats;
-  countTo(hv, s.sold, v=>v);
+  refreshStats();
   $('#heroL').textContent='CARS SOLD · MONTH TO DATE';
-  const pct=Math.round(s.sold/s.soldGoal*100);
-  $('#heroG').innerHTML = `${s.sold} of <b>${s.soldGoal}</b> goal · ${pct}%`;
-  // goal ring tracks sold / goal
-  const gr=$('#goalProg'), C=2*Math.PI*166;
-  gr.style.strokeDasharray=C; gr.style.strokeDashoffset=C;
-  requestAnimationFrame(()=>{ gr.style.strokeDashoffset = C*(1-s.sold/s.soldGoal); });
-  // gauges
-  const R=34, GC=2*Math.PI*R;
-  $$('.gauge').forEach((el,idx)=>{
-    const g=DATA.gauges[idx]; const prog=el.querySelector('.prog2'); const gv=el.querySelector('.gv');
-    requestAnimationFrame(()=>{ prog.style.strokeDashoffset = GC*(1-g.val/g.max); });
-    countTo(gv, g.val, v=>v+(gv.dataset.suffix||''));
+  renderStats();                              // steady-state values (ring, readouts, ticker, chart)
+  countTo($('#heroV'), STATS.sold, v=>v);     // animated count-up over the set value
+  // gauges — animate the number up to the current month's value
+  $$('.gauge').forEach(el=>{
+    const {val}=gaugeVals(el.dataset.key); const gv=el.querySelector('.gv'); const conv=el.dataset.key==='conv';
+    countTo(gv, val, v=> conv ? v+'%' : v);
   });
-  startHum(); initNodes(); initSpark(); heartbeat(); drawChart(); startQuotes();
+  startHum(); initNodes(); buildSpark(); drawChart(); startQuotes();
 }
 function countTo(el, target, fmt){
   const dur=1100, t0=performance.now();
@@ -1058,14 +1122,9 @@ function genReplies(){
    Templates use Mick's real scripts (;mpREV1 review+referral, etc.).
    Sample contacts stand in until wired to Lead Command's refContacts/sold leads. */
 const first2 = n => (n||'').split(' ')[0];
-const SAMPLE_CONTACTS=[
-  {name:'Cory Bjork', email:'cory.bjork@example.com', vehicle:'Sierra 2500 Denali', type:'sold'},
-  {name:'Janelle Aas', email:'janelle.aas@example.com', vehicle:'RAV4 XLE', type:'referral'},
-  {name:'Dwight Hansen', email:'dwight.hansen@example.com', vehicle:'Silverado 1500 LT', type:'sold'},
-  {name:'Megan Fuglie', email:'megan.fuglie@example.com', vehicle:'Pacifica Touring', type:'referral'},
-];
-// Real contacts persist in localStorage; seeded with samples until Mick imports his own.
-function loadContacts(){ try{ const s=JSON.parse(localStorage.getItem('carvis_contacts')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(e){} return SAMPLE_CONTACTS.slice(); }
+const SAMPLE_CONTACTS=[];   // no assumed contacts — Mick imports his own
+// Real contacts persist in localStorage; start empty until Mick imports his own.
+function loadContacts(){ try{ const s=JSON.parse(localStorage.getItem('carvis_contacts')||'null'); if(Array.isArray(s)) return s; }catch(e){} return []; }
 let CONTACTS=loadContacts();
 function saveContacts(){ try{ localStorage.setItem('carvis_contacts',JSON.stringify(CONTACTS)); }catch(e){} scheduleCloudPush(); }
 function addContacts(list){ let n=0; list.forEach(c=>{ if(!c.email) return; if(CONTACTS.some(x=>(x.email||'').toLowerCase()===c.email.toLowerCase())) return; CONTACTS.push(c); n++; }); if(n) saveContacts(); return n; }
@@ -1219,6 +1278,7 @@ function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classLis
 function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
+  if(low==='numbers'||low==='stats'||low==='month'||low==='totals'){ openNumbers(); return; }
   if(low==='reply'||low==='buyer reply'){ openReply(); return; }
   if(low==='outreach'||low==='email'){ openOutreach(); return; }
   if(low==='findcar'){ $('#cmd').focus(); toast('Ask about a car — type a year, make/model, or stock # (e.g. "2017 F350")'); return; }
@@ -1419,32 +1479,20 @@ function initParallax(){
   window.addEventListener('pointerleave', ()=>{ if(glow) glow.style.opacity=0; });
 }
 
-/* ---------- sparkline + live heartbeat ---------- */
+/* ---------- sparkline — real monthly sold trend (last 12 months) ---------- */
 let spark=[];
-function initSpark(){ spark=[]; for(let i=0;i<24;i++) spark.push(0.5+i*0.008+Math.sin(i/3)*0.04); drawSpark(); }
-function pushSpark(v){ spark.push(v); if(spark.length>24) spark.shift(); drawSpark(); }
+function buildSpark(){
+  const now=new Date(), arr=[];
+  for(let i=11;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); arr.push(monthData(monthKey(d)).sold); }
+  spark = arr.length ? arr : [0];
+  drawSpark();
+}
 function drawSpark(){
+  if(!spark.length) spark=[0];
   const w=200,h=34,mn=Math.min(...spark),mx=Math.max(...spark),rng=(mx-mn)||1;
-  const p=spark.map((v,i)=>[ (i/(spark.length-1))*w, h-4-((v-mn)/rng)*(h-8) ]);
+  const p=spark.map((v,i)=>[ (i/Math.max(spark.length-1,1))*w, h-4-((v-mn)/rng)*(h-8) ]);
   const d=p.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
   const ln=$('#sparkLine'), fl=$('#sparkFill'); if(ln) ln.setAttribute('d',d); if(fl) fl.setAttribute('d',d+` L${w} ${h} L0 ${h} Z`);
-}
-const INCOMING=[{name:'Dana Krause',vehicle:'Outback',src:'fb',phone:'5075550174',quiet:1},{name:'Hank Oleson',vehicle:'Tahoe LT',src:'mc',phone:'5075550190',appt:'FRI 14:00'},{name:'Tara Vold',vehicle:'CR-V XSE',src:'app',phone:'5075550155',quiet:1}];
-function heartbeat(){
-  // gentle live sparkline around goal pace — no fake sales
-  setInterval(()=>{
-    const base=DATA.stats.sold/DATA.stats.soldGoal;
-    pushSpark(Math.max(0.05,Math.min(1, base+(Math.random()-0.5)*0.06)));
-  },4000);
-  let ix=0;
-  setInterval(()=>{
-    if(ix>=INCOMING.length) return; const s=INCOMING[ix++]; const l={...s,id:200+ix}; DATA.leads.push(l);
-    const ac=l.quiet?'var(--red)':'var(--green)';
-    const tag=l.quiet?`<span class="tag quiet">QUIET ${l.quiet}D</span>`:`<span class="tag appt">APPT ${l.appt}</span>`;
-    $('#dirBody').insertAdjacentHTML('afterbegin',`<div class="di fresh" data-id="${l.id}" style="--ac:${ac}"><div class="dtop"><span class="nm">${l.name}</span>${tag}</div><div class="veh">${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}</div><div class="acts"><a class="act" href="tel:${l.phone}">CALL</a><button class="act go js-draft" data-id="${l.id}">DRAFT</button><button class="act js-done" data-id="${l.id}">DONE</button></div></div>`);
-    $('#dirMeta').textContent=$$('.di').length+' TODAY';
-    toast(`◉ Incoming lead — ${l.name}`); blip(880,0.1,'triangle',0.16); setTimeout(()=>blip(1300,0.09,'triangle',0.12),90);
-  },15000);
 }
 
 /* ---------- high performance habits (Brendan Burchard HP6) ----------
@@ -1481,26 +1529,28 @@ function renderQuote(){
 }
 function startQuotes(){ qi=0; renderQuote(); clearInterval(qTimer); qTimer=setInterval(renderQuote,11000); }
 
-/* ---------- stats chart (last 7 days: cars sold vs purchased) ---------- */
+/* ---------- stats chart (last 6 months: cars sold vs purchased) ---------- */
 function drawChart(){
   const cv=$('#statChart'); if(!cv) return; const ctx=cv.getContext('2d');
   const DPR=Math.min(window.devicePixelRatio||1,2);
   const r=cv.getBoundingClientRect(); cv.width=Math.max(r.width,1)*DPR; cv.height=Math.max(r.height,1)*DPR;
   const w=cv.width, h=cv.height; ctx.clearRect(0,0,w,h);
-  const wk=DATA.stats.week, pad=10*DPR, baseY=h-16*DPR, topY=8*DPR;
+  const now=new Date(), wk=[];
+  for(let i=5;i>=0;i--){ const dt=new Date(now.getFullYear(), now.getMonth()-i, 1); const md=monthData(monthKey(dt)); wk.push({d:shortMonth(dt), sold:md.sold, bought:md.bought}); }
+  const pad=10*DPR, baseY=h-16*DPR, topY=8*DPR;
   const mx=Math.max(1,...wk.map(d=>Math.max(d.sold,d.bought)));
   const slot=(w-pad*2)/wk.length;
-  // gridlines
+  // gridlines (cap line count so big months don't draw hundreds)
   ctx.strokeStyle='rgba(47,230,255,0.10)'; ctx.lineWidth=DPR;
-  for(let g=0;g<=mx;g++){ const y=baseY-(g/mx)*(baseY-topY); ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); }
-  const barW=Math.min(slot*0.30, 13*DPR), gap=2*DPR;
+  const steps=Math.min(mx,6); for(let g=0;g<=steps;g++){ const y=baseY-(g/steps)*(baseY-topY); ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); }
+  const barW=Math.min(slot*0.30, 15*DPR), gap=2*DPR;
   ctx.textAlign='center'; ctx.font=`${12*DPR}px 'Atkinson Hyperlegible',sans-serif`;
   wk.forEach((d,i)=>{
     const cx=pad+slot*i+slot/2;
     const hs=(d.sold/mx)*(baseY-topY), hb=(d.bought/mx)*(baseY-topY);
     ctx.fillStyle='rgba(255,182,72,0.9)';  ctx.fillRect(cx-barW-gap, baseY-hs, barW, hs);   // sold = gold
     ctx.fillStyle='rgba(47,230,255,0.85)'; ctx.fillRect(cx+gap,      baseY-hb, barW, hb);   // bought = cyan
-    ctx.fillStyle='rgba(93,122,134,0.95)'; ctx.fillText(d.d, cx, h-3*DPR);
+    ctx.fillStyle='rgba(188,208,218,0.95)'; ctx.fillText(d.d, cx, h-3*DPR);
   });
 }
 
@@ -1558,6 +1608,7 @@ function applyStore(store){
   CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState();
   try{ refreshContactDropdown(); }catch(e){}
   renderHot(); renderTasks();
+  try{ renderStats(); }catch(e){}   // reflect pulled/restored monthly numbers
   return n;
 }
 function setSyncStat(cls,msg){ const st=$('#syncStat'); if(st){ st.className='ostat '+(cls||''); st.textContent=msg||''; } }
@@ -1617,11 +1668,50 @@ function saveSyncKey(){
 function openSync(){ setSyncStat('',''); setCloudStat('',''); $('#syncKey').value=getSyncKey(); $('#syncOverlay').classList.add('show'); }
 function closeSync(){ $('#syncOverlay').classList.remove('show'); }
 
+/* ---------- monthly numbers modal ---------- */
+function loadMonthIntoForm(key){ const m=monthData(key);
+  $('#numSold').value   = m.sold   || '';
+  $('#numBought').value = m.bought || '';
+  $('#numDeals').value  = m.deals  || '';
+  $('#numRate').value   = m.closeRate || '';
+}
+function renderHistory(){
+  const host=$('#numHistory'); if(!host) return;
+  const m=loadMonths(), keys=Object.keys(m).sort().reverse();
+  if(!keys.length){ host.innerHTML='<div class="hot-empty">No months entered yet.</div>'; return; }
+  host.innerHTML = keys.map(k=>{ const d=monthData(k);
+    return `<div class="numrow" data-k="${k}"><span class="nmk">${prettyMonth(k)}</span><span class="nmv">${d.sold} sold · ${d.bought} bought · ${d.deals} deals</span></div>`;
+  }).join('');
+}
+function openNumbers(){
+  const mk=monthKey(); $('#numMonth').value=mk; loadMonthIntoForm(mk);
+  const g=loadGoals(); $('#goalSold').value=g.soldGoal||''; $('#goalBuy').value=g.buyGoal||''; $('#goalDeal').value=g.dealGoal||'';
+  renderHistory(); $('#numStat').textContent=''; $('#numStat').className='ostat';
+  $('#numOverlay').classList.add('show');
+}
+function closeNumbers(){ $('#numOverlay').classList.remove('show'); }
+const numClamp=(v,max)=>{ v=Math.floor(+v||0); if(v<0)v=0; if(max!=null&&v>max)v=max; return v; };
+function saveMonthFromForm(){
+  const key=$('#numMonth').value || monthKey();
+  const m=loadMonths();
+  m[key]={ sold:numClamp($('#numSold').value), bought:numClamp($('#numBought').value),
+           deals:numClamp($('#numDeals').value), closeRate:numClamp($('#numRate').value,100) };
+  saveMonths(m); renderHistory(); renderStats();
+  $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Saved '+prettyMonth(key);
+  toast('Numbers saved'); blip(900,0.07,'sine',0.12);
+}
+function saveGoalsFromForm(){
+  saveGoals({ soldGoal:numClamp($('#goalSold').value), buyGoal:numClamp($('#goalBuy').value), dealGoal:numClamp($('#goalDeal').value) });
+  renderStats(); $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Goals saved';
+  toast('Goals saved'); blip(820,0.07,'sine',0.12);
+}
+
 /* ---------- wire ---------- */
 function init(){
   initSpace();
   applyTimeTheme(); setInterval(applyTimeTheme, 5*60*1000);
   renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker(); renderTasks(); renderHot();
+  renderStats();   // fill hero/ring/gauges/readouts/ticker/chart from saved monthly numbers (0 until entered)
   tick(); setInterval(tick,1000);
   window.addEventListener('resize', drawChart);
 
@@ -1649,11 +1739,12 @@ function init(){
     if(e.target.closest('#oClose')||e.target===$('#oOverlay')) closeOutreach();
     if(e.target.closest('#vClose')||e.target===$('#vOverlay')) closeVehicle();
     if(e.target.closest('#syncClose')||e.target===$('#syncOverlay')) closeSync();
+    if(e.target.closest('#numClose')||e.target===$('#numOverlay')) closeNumbers();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
     const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
@@ -1686,6 +1777,13 @@ function init(){
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  // monthly numbers
+  $('#statsBtn').addEventListener('click', ()=>{ blip(760,0.06,'sine',0.12); openNumbers(); });
+  $('#numClose').addEventListener('click', closeNumbers);
+  $('#numSave').addEventListener('click', saveMonthFromForm);
+  $('#goalSave').addEventListener('click', saveGoalsFromForm);
+  $('#numMonth').addEventListener('change', e=>loadMonthIntoForm(e.target.value));
+  $('#numHistory').addEventListener('click', e=>{ const r=e.target.closest('.numrow'); if(!r) return; $('#numMonth').value=r.dataset.k; loadMonthIntoForm(r.dataset.k); });
   if(getSyncKey()) cloudPull({quiet:true});
   // refresh when returning to an already-open tab: flush our own pending edits
   // first (so we never overwrite them with older cloud data), else pull latest.
