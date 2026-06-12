@@ -749,6 +749,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     </div>
   </div>
 
+  <div id="wxWidget" style="display:none;margin:0 20px 14px"></div>
+  <div id="parkedRow" style="display:none;margin:0 20px 14px"></div>
+
   <div class="sec-hdr">
     <div class="sec-title">Nearby Trails</div>
     <div class="sec-more" onclick="goTo('trails')">See all →</div>
@@ -790,6 +793,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="map-top-bar">
       <div class="map-chip"><div class="mc-dot" id="rdot"></div><span id="rlabel">LIVE</span></div>
       <div class="map-chip"><div class="mc-dot safe"></div>Scooter-legal</div>
+      <div class="map-chip" id="beaconChip" style="display:none;cursor:pointer" onclick="copyBeaconLink()">📡 SHARED</div>
     </div>
     <div class="szwarn" id="szwarn">⚠ 15 mph zone in 0.3 mi</div>
   </div>
@@ -951,6 +955,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="at-c"><div class="at-v" id="atTime">0h 0m</div><div class="at-l">Time Riding</div></div>
       <div class="at-c"><div class="at-v" id="atTop">0 <span class="at-u">mph</span></div><div class="at-l">Top Speed</div></div>
     </div>
+    <div id="achSection"></div>
   </div>
 
   <div style="padding:0 20px 20px">
@@ -989,9 +994,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div id="profScoPhoto"></div>
       <div class="sc-model" id="profScoModel">EOEOTWO Land</div>
       <div class="sc-meta" id="profScoMeta">500W · 20 mph · 30 mi range</div>
-      <div class="sc-mrow"><span class="sc-mi">Last tire check</span><span class="sc-mv" id="profTireCheck">—</span></div>
-      <div class="sc-mrow"><span class="sc-mi">Brake inspection</span><span class="sc-mv sc-warn" id="profBrake">Check due</span></div>
-
+      <div id="maintRows"></div>
     </div>
 
     <!-- Hidden file input for profile photo changes -->
@@ -1031,6 +1034,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <button class="club-tab active" id="ctab-rides" onclick="switchClubTab('rides')">Rides</button>
       <button class="club-tab" id="ctab-clubs" onclick="switchClubTab('clubs')">Clubs</button>
       <button class="club-tab" id="ctab-routes" onclick="switchClubTab('routes')">Routes</button>
+      <button class="club-tab" id="ctab-ranks" onclick="switchClubTab('ranks')">Ranks</button>
     </div>
   </div>
 
@@ -1053,6 +1057,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div id="communityRoutesList"></div>
     <div class="settings-lbl" style="margin-top:14px;margin-bottom:10px">My Published Routes</div>
     <div id="myPublishedRoutes"></div>
+  </div>
+
+  <!-- RANKS TAB -->
+  <div id="club-tab-ranks" style="padding:0 20px 20px;display:none">
+    <div id="ranksList"></div>
   </div>
 
   <!-- Club detail sheet -->
@@ -1287,6 +1296,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="ms-c"><div class="ms-v" id="mTime">0:00</div><div class="ms-l">Time</div></div>
       <div class="ms-c"><div class="ms-v" id="mSpd">0.0</div><div class="ms-l">Avg MPH</div></div>
     </div>
+    <div class="ob-field" style="margin-bottom:10px">
+      <div class="ob-label">Battery now <span style="color:var(--muted2);font-size:.58rem">(adjust to match your scooter)</span></div>
+      <input type="range" class="be-slider" id="mBattSlider" min="0" max="100" value="72" oninput="document.getElementById('mBattVal').textContent=this.value+'%'">
+      <div style="display:flex;justify-content:space-between"><span class="be-sub">Helps VOLT learn your real range</span><span class="be-sub" id="mBattVal">72%</span></div>
+    </div>
+    <div class="ob-field" style="margin-bottom:10px">
+      <div class="ob-label">Note <span style="color:var(--muted2);font-size:.58rem">(optional)</span></div>
+      <input class="ob-input" id="mNote" type="text" placeholder="How was the ride?" autocomplete="off">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button id="mPhotoBtn" onclick="document.getElementById('m-photo-input').click()" style="flex:1;padding:11px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--muted2);font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.06em;cursor:pointer">📷 ADD PHOTO</button>
+      <img id="mPhotoThumb" style="display:none;width:46px;height:46px;border-radius:8px;object-fit:cover;border:1px solid var(--volt)" alt="">
+      <input type="file" id="m-photo-input" accept="image/*" style="display:none" onchange="ridePhotoSelect(this)">
+    </div>
     <button class="modal-save" onclick="saveRide()">💾 Save Ride</button>
     <button class="modal-disc" onclick="discardRide()">Discard</button>
   </div>
@@ -1352,12 +1375,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
      Riders sign in from Profile → Account (no login wall; app works without it).
      IMPORTANT: also set Realtime Database security rules, or any visitor can
      read/write everything. Minimum sensible rules:
-       { "rules": { "rides": {
-           ".read": "auth != null",
-           "$rideId": {
-             ".write": "auth != null && (!data.exists() || data.child('creatorId').val() === auth.uid)",
-             "rsvps": { "$uid": { ".write": "auth != null && $uid === auth.uid" } }
-       } } } }
+       { "rules": {
+           "rides": {
+             ".read": "auth != null",
+             "$rideId": {
+               ".write": "auth != null && (!data.exists() || data.child('creatorId').val() === auth.uid)",
+               "rsvps": { "$uid": { ".write": "auth != null && $uid === auth.uid" } }
+             }
+           },
+           "leaderboard": { ".read": "auth != null",
+             "$uid": { ".write": "auth != null && $uid === auth.uid" } },
+           "beacon": { ".read": true,
+             "$uid": { ".write": "auth != null && $uid === auth.uid" } }
+       } }
+     (beacon is world-readable on purpose: live-track links are shared with
+      people who don't have accounts; sharing is opt-in per ride.)
   ══════════════════════════════════════════════ -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -1714,7 +1746,23 @@ setInterval(tick, 15000);
 // ══════════════════════════════════════════════
 // BATTERY
 // ══════════════════════════════════════════════
+// Learned miles-per-battery-% for a garage scooter, from rides where the
+// rider confirmed battery use in the post-ride form. Null until there's
+// enough real data; falls back to the spec-sheet range.
+function scooterEff(garageIdx) {
+  const rides = (state.rides || []).filter(r =>
+    r.scooterIdx === garageIdx && (r.battUsed || 0) >= 2 && r.dist >= 0.3);
+  if (rides.length < 3) return null;
+  const mi = rides.reduce((a,r) => a + r.dist, 0);
+  const used = rides.reduce((a,r) => a + r.battUsed, 0);
+  if (!used) return null;
+  const eff = mi / used;
+  return (eff > 0.02 && eff < 2) ? eff : null;
+}
+
 function battRange(pct) {
+  const eff = scooterEff(state.scooterIdx);
+  if (eff) return (pct * eff).toFixed(1);
   const activeSco = (state.garage && state.garage[state.scooterIdx]) || SCOOTERS[state.scooterIdx] || SCOOTERS[0];
   const r = activeSco.range || 30;
   return (pct / 100 * r).toFixed(1);
@@ -1729,14 +1777,16 @@ function updateBatt(val) {
   document.getElementById('profRangeEst').textContent = '≈ ' + battRange(val) + ' mi range';
   document.getElementById('sBatt').textContent = val + '% 🔋';
   refreshHomeWidgets();
+  if (window.updateRangeRing) window.updateRangeRing();
 }
 
 function refreshHomeWidgets() {
   const pct = state.battPct;
   const activeSco = (state.garage && state.garage[state.scooterIdx]) || SCOOTERS[state.scooterIdx] || SCOOTERS[0];
   const activeRange = activeSco.range || 30;
-  const range = (pct / 100 * activeRange).toFixed(1);
-  const fullRange = activeRange.toFixed ? activeRange.toFixed(1) : activeRange;
+  const eff = scooterEff(state.scooterIdx);
+  const range = battRange(pct);
+  const fullRange = eff ? (100 * eff).toFixed(1) : (activeRange.toFixed ? activeRange.toFixed(1) : activeRange);
   document.getElementById('homeBattPct').innerHTML = pct + '<small>%</small>';
   document.getElementById('homeBattBar').style.width = pct + '%';
   document.getElementById('homeRange').textContent = range + ' mi';
@@ -1744,7 +1794,7 @@ function refreshHomeWidgets() {
   document.getElementById('homeScoModel').textContent = activeSco.name || 'My Scooter';
   document.getElementById('profBattSlider').value = pct;
   document.getElementById('profBattVal').textContent = pct + '%';
-  document.getElementById('profRangeEst').textContent = '≈ ' + range + ' mi range';
+  document.getElementById('profRangeEst').textContent = '≈ ' + range + ' mi range' + (eff ? ' · learned from your rides' : '');
   document.getElementById('sBatt').textContent = pct + '% 🔋';
 }
 
@@ -1753,6 +1803,24 @@ function refreshHomeWidgets() {
 // ══════════════════════════════════════════════
 function refreshHome() {
   refreshHomeWidgets();
+  refreshWeather();
+
+  // Find-my-scooter: where the last ride ended
+  const pr = document.getElementById('parkedRow');
+  if (pr) {
+    if (state.lastParked && !rideActive) {
+      const mins = Math.max(1, Math.round((Date.now() - state.lastParked.ts) / 60000));
+      const ago = mins < 60 ? mins + ' min' : Math.round(mins / 60) + ' hr';
+      pr.innerHTML = '<div onclick="openParked()" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:11px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+        '<span style="font-size:1.2rem">📍</span>' +
+        '<div style="flex:1"><div style="font-size:.8rem;font-weight:600">Scooter parked ' + ago + ' ago</div>' +
+        '<div style="font-size:.66rem;color:var(--muted2)">Tap to open the spot in Maps</div></div>' +
+        '<span style="color:var(--volt);font-size:.8rem">→</span></div>';
+      pr.style.display = 'block';
+    } else {
+      pr.style.display = 'none';
+    }
+  }
 
   const rides = state.rides;
   const weekAgo = Date.now() - 7*24*3600*1000;
@@ -1800,6 +1868,8 @@ let rideTopSpd = 0;
 let rideSpdSum = 0;
 let rideSpdCount = 0;
 let rideStartBatt = 72;
+let ridePaused = false;
+let rideStillSince = null;
 
 const GPS_COORDS = ['44.2930° N','44.2935° N','44.2940° N','44.2945° N','44.2950° N','44.2953° N','44.2958° N'];
 
@@ -1813,6 +1883,8 @@ function startRide() {
 
   rideActive = true;
   rideSecs = 0; rideDist = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
+  ridePaused = false; rideStillSince = null;
+  window._beaconLastPub = 0;
   rideStartBatt = state.battPct;
   let rideLastLat = null, rideLastLng = null, rideLastTime = null;
   let szShown = false;
@@ -1857,10 +1929,39 @@ function startRide() {
       if (segMi > 0 && segMi < 0.5) rideDist += segMi; // ignore GPS jumps
 
       rideLastLat = lat; rideLastLng = lng; rideLastTime = now;
+      window._lastFix = { lat, lng, ts: Date.now() };
+
+      // Auto-pause: stop the clock when stationary for a few seconds,
+      // resume the moment movement is detected again.
+      if (spd < 1) {
+        if (rideStillSince === null) rideStillSince = now;
+        else if (!ridePaused && now - rideStillSince > 4000) {
+          ridePaused = true;
+          document.getElementById('rlabel').textContent = 'AUTO-PAUSED';
+          document.getElementById('rdot').classList.add('safe');
+        }
+      } else {
+        rideStillSince = null;
+        if (ridePaused) {
+          ridePaused = false;
+          document.getElementById('rlabel').textContent = 'LIVE';
+          document.getElementById('rdot').classList.remove('safe');
+        }
+      }
 
       if (spd > rideTopSpd) rideTopSpd = spd;
-      rideSpdSum += spd; rideSpdCount++;
+      if (!ridePaused) { rideSpdSum += spd; rideSpdCount++; }
       const avgSpd = rideSpdCount > 0 ? rideSpdSum / rideSpdCount : 0;
+
+      // Beacon: publish live position for shared tracking (opt-in + signed in)
+      if (state.settings.loc && _fbActive && voltDb && voltUid && Date.now() - (window._beaconLastPub || 0) > 5000) {
+        window._beaconLastPub = Date.now();
+        try {
+          voltDb.ref('beacon/' + voltUid).set({ lat, lng, spd: Math.round(spd * 10) / 10, name: voltName(), ts: Date.now() });
+          const bc = document.getElementById('beaconChip');
+          if (bc) bc.style.display = 'flex';
+        } catch(e) {}
+      }
 
       document.getElementById('rideSpd').textContent = spd.toFixed(1);
       document.getElementById('rideSpd').className = 'spd-num' + (spd > 20 ? ' warn' : '');
@@ -1888,7 +1989,7 @@ function startRide() {
 
   // ── CLOCK — runs every second independently of GPS ──
   rideTimer = setInterval(() => {
-    if (!rideActive) return;
+    if (!rideActive || ridePaused) return;
     rideSecs++;
     document.getElementById('rideTime').textContent = fmtTime(rideSecs);
     document.getElementById('rideCal').textContent = Math.round(rideDist * 35 + rideSecs * 0.01);
@@ -1903,14 +2004,35 @@ function stopRide() {
     window._rideGpsId = undefined;
   }
   rideActive = false;
+  ridePaused = false; rideStillSince = null;
+  document.getElementById('rlabel').textContent = 'LIVE';
+  document.getElementById('rdot').classList.remove('safe');
   const fab = document.getElementById('fab');
   fab.textContent = '🛴'; fab.classList.remove('riding');
   document.getElementById('rideSpd').textContent = '0.0';
+
+  // Remember where the scooter was left (find-my-scooter on Home)
+  if (window._lastFix) {
+    state.lastParked = { lat: window._lastFix.lat, lng: window._lastFix.lng, ts: Date.now() };
+    saveState(state);
+  }
+  // Stop live-location sharing
+  if (_fbActive && voltDb && voltUid) { try { voltDb.ref('beacon/' + voltUid).remove(); } catch(e) {} }
+  const bc = document.getElementById('beaconChip');
+  if (bc) bc.style.display = 'none';
 
   document.getElementById('mDist').textContent = rideDist.toFixed(2);
   document.getElementById('mTime').textContent = fmtTime(rideSecs);
   const avg = rideSpdCount ? (rideSpdSum / rideSpdCount).toFixed(1) : '0.0';
   document.getElementById('mSpd').textContent = avg;
+  // Pre-fill the post-ride form: estimated battery, empty note/photo
+  const estBatt = Math.max(5, Math.round(rideStartBatt - rideDist * 2.5));
+  document.getElementById('mBattSlider').value = estBatt;
+  document.getElementById('mBattVal').textContent = estBatt + '%';
+  document.getElementById('mNote').value = '';
+  window._ridePhotoPending = null;
+  document.getElementById('mPhotoThumb').style.display = 'none';
+  document.getElementById('mPhotoBtn').textContent = '📷 ADD PHOTO';
   const now = new Date();
   document.getElementById('modalSub').textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   document.getElementById('rideModal').classList.add('open');
@@ -1921,16 +2043,26 @@ function saveRide() {
   const avg = rideSpdCount ? rideSpdSum / rideSpdCount : 0;
   const route = window._rideRoute || null;
   const rideName = route ? route.name : rideNames[Math.floor(Math.random() * rideNames.length)];
-  state.rides.push({ name: rideName, ts: Date.now(), dist: rideDist, secs: rideSecs, avgSpd: avg, topSpd: rideTopSpd, scooterIdx: state.scooterIdx, route });
+  // The rider confirms actual battery % — this is what range learning feeds on.
+  const battNow = parseInt(document.getElementById('mBattSlider').value);
+  const battUsed = isNaN(battNow) ? 0 : Math.max(0, rideStartBatt - battNow);
+  state.rides.push({
+    name: rideName, ts: Date.now(), dist: rideDist, secs: rideSecs, avgSpd: avg,
+    topSpd: rideTopSpd, scooterIdx: state.scooterIdx, route,
+    note: (document.getElementById('mNote').value || '').trim(),
+    photo: window._ridePhotoPending || null,
+    battUsed
+  });
   window._rideRoute = null;
+  window._ridePhotoPending = null;
 
-  // Same drain model as the in-ride range bar: ~2.5% per mile.
-  const drained = rideDist * 2.5;
-  state.battPct = Math.max(5, state.battPct - Math.round(drained));
+  state.battPct = isNaN(battNow) ? Math.max(5, state.battPct - Math.round(rideDist * 2.5)) : battNow;
   if (state.garage && state.garage[state.scooterIdx]) {
     state.garage[state.scooterIdx].battPct = state.battPct;
   }
   saveState(state);
+  checkAchievements(true);
+  publishLeaderboard();
   rideDist = 0; rideSecs = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
   goTo('home');
   toast('✅ Ride saved!', true);
@@ -1951,6 +2083,98 @@ function startRideFromTrail() {
 }
 
 const rideNames = ['Morning Ride','Evening Cruise','Quick Loop','Park Ride','City Run','Greenway Ride','Sunset Ride','Trail Blast','Neighborhood Cruise','Riverside Roll'];
+
+function ridePhotoSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  readScaledImage(file, dataUrl => {
+    window._ridePhotoPending = dataUrl;
+    const th = document.getElementById('mPhotoThumb');
+    th.src = dataUrl; th.style.display = 'block';
+    document.getElementById('mPhotoBtn').textContent = '✅ PHOTO ADDED';
+  });
+}
+
+function openParked() {
+  const p = state.lastParked;
+  if (!p) return;
+  window.open('https://maps.google.com/?q=' + p.lat + ',' + p.lng, '_blank');
+}
+
+function copyBeaconLink() {
+  if (!voltUid) return;
+  const url = location.origin + location.pathname + '?beacon=' + voltUid;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(
+      () => toast('🔗 Live-track link copied — send it to family!', true),
+      () => prompt('Share this live-track link:', url));
+  } else {
+    prompt('Share this live-track link:', url);
+  }
+}
+
+// ── GPX export — rides with a saved GPS track ──
+function exportRideGpx(ts) {
+  const r = (state.rides || []).find(x => x.ts === ts);
+  if (!r || !r.gpsCoords || r.gpsCoords.length < 2) { toast('No GPS track saved for this ride'); return; }
+  const t0 = r.ts - r.secs * 1000;
+  const n = r.gpsCoords.length;
+  const pts = r.gpsCoords.map((c, i) => {
+    const t = c.t || (t0 + (i / (n - 1)) * r.secs * 1000);
+    return '<trkpt lat="' + c.lat + '" lon="' + c.lng + '"><time>' + new Date(t).toISOString() + '</time></trkpt>';
+  }).join('\n');
+  const gpx = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<gpx version="1.1" creator="VOLT" xmlns="http://www.topografix.com/GPX/1/1">\n' +
+    '<trk><name>' + esc(r.name) + '</name><trkseg>\n' + pts + '\n</trkseg></trk></gpx>';
+  const a = document.createElement('a');
+  try {
+    a.href = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
+  } catch(e) {
+    a.href = 'data:application/gpx+xml;charset=utf-8,' + encodeURIComponent(gpx);
+  }
+  a.download = ((r.name || 'volt-ride').replace(/[^\w-]+/g, '-').toLowerCase() || 'volt-ride') +
+    '-' + new Date(r.ts).toISOString().slice(0, 10) + '.gpx';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('⬇ GPX exported — import it anywhere', true);
+}
+
+// ── Weather (Open-Meteo, free & keyless) ──
+let _wxTs = 0;
+function refreshWeather() {
+  const el = document.getElementById('wxWidget');
+  if (!el || typeof fetch !== 'function') return;
+  if (Date.now() - _wxTs < 30 * 60 * 1000) return; // keep the cached render
+  const go = (lat, lng) => {
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lng +
+          '&current=temperature_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph')
+      .then(r => r.json())
+      .then(d => {
+        const c = d && d.current;
+        if (!c) return;
+        _wxTs = Date.now();
+        const code = c.weather_code;
+        const icon = code === 0 ? '☀️' : code < 3 ? '⛅' : code < 50 ? '☁️' : code < 70 ? '🌧️' : code < 80 ? '🌨️' : code < 95 ? '🌦️' : '⛈️';
+        const wind = Math.round(c.wind_speed_10m);
+        el.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:11px 15px;display:flex;align-items:center;gap:12px">' +
+          '<span style="font-size:1.3rem">' + icon + '</span>' +
+          '<div style="flex:1"><div style="font-size:.8rem;font-weight:600">' + Math.round(c.temperature_2m) + '°F · Wind ' + wind + ' mph</div>' +
+          (wind >= 15
+            ? '<div style="font-size:.66rem;color:var(--orange)">Strong wind — expect reduced range</div>'
+            : '<div style="font-size:.66rem;color:var(--muted2)">Good conditions for a ride</div>') +
+          '</div></div>';
+        el.style.display = 'block';
+      })
+      .catch(() => {});
+  };
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      p => go(p.coords.latitude, p.coords.longitude),
+      () => go(44.2930, -92.6710),
+      { timeout: 5000, maximumAge: 600000 });
+  } else {
+    go(44.2930, -92.6710);
+  }
+}
 
 function fmtTime(secs) {
   const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
@@ -2019,7 +2243,10 @@ function refreshHistory() {
         <div><div class="ri-sv">${avg} mph</div><div class="ri-sl">Avg</div></div>
       </div>${r.route ? '<div class="ri-tag">' + (r.route.type === 'course' ? '🏁 Course: ' : '🗺️ Trail: ') + esc(r.route.name) + '</div>' : ''}
         ${isPB ? '<div class="ri-tag">🏆 Personal best distance</div>' : ''}
-        ${filterVal === 'all' && (state.garage || [])[r.scooterIdx] ? '<div class="ri-tag">🛴 ' + esc(state.garage[r.scooterIdx].name || '') + '</div>' : ''}</div>`;
+        ${filterVal === 'all' && (state.garage || [])[r.scooterIdx] ? '<div class="ri-tag">🛴 ' + esc(state.garage[r.scooterIdx].name || '') + '</div>' : ''}
+        ${r.gpsCoords && r.gpsCoords.length > 1 ? '<div class="ri-tag" style="cursor:pointer" onclick="exportRideGpx(' + r.ts + ')">⬇ Export GPX</div>' : ''}
+        ${r.note ? '<div style="font-size:.72rem;color:var(--muted2);margin-top:7px;line-height:1.5">📝 ' + esc(r.note) + '</div>' : ''}
+        ${r.photo ? '<img src="' + r.photo + '" style="width:100%;height:90px;object-fit:cover;border-radius:10px;margin-top:8px" alt="">' : ''}</div>`;
   });
   wrap.innerHTML = html;
 }
@@ -2086,8 +2313,9 @@ function refreshProfile() {
     perScoEl.style.display = 'none';
   }
 
-  document.getElementById('profTireCheck').textContent = totalMi > 0 ? totalMi.toFixed(0) + ' mi logged' : '—';
-  document.getElementById('profBrake').textContent = totalMi > 50 ? '⚠ Due now' : 'OK — check at 50 mi';
+  const activeMi = rides.filter(r => r.scooterIdx === state.scooterIdx).reduce((a,r) => a + r.dist, 0);
+  renderMaint(activeMi);
+  renderAchievements();
 
   refreshHomeWidgets();
   if (typeof updateAuthUI === 'function') updateAuthUI();
@@ -2104,6 +2332,11 @@ function togSet(key) {
   toast(key === 'spd' ? 'Speed zone alerts ' + (state.settings.spd ? 'on' : 'off') :
         key === 'loc' ? 'Location sharing ' + (state.settings.loc ? 'on' : 'off') :
         'Auto RideCam ' + (state.settings.cam ? 'on' : 'off'));
+  if (key === 'loc' && state.settings.loc) {
+    if (!fbAvailable()) toast('Sharing activates once shared rides (Firebase) are set up');
+    else if (!voltUid) toast('Sign in (Profile → Account) to share your live location');
+    else toast('📡 Your next ride will be shareable — tap SHARED on the ride map for the link', true);
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -2779,6 +3012,8 @@ function stopCourseRide() {
     const pb = Math.min(...course.attempts.map(a => a.secs));
     const isNewPb = pb === courseRideSecs && course.attempts.length > 1;
     toast(isNewPb ? '🏆 New personal best: ' + fmtTime(courseRideSecs) + '!' : '🏁 Ride complete! ' + fmtTime(courseRideSecs), true);
+    checkAchievements(true);
+    publishLeaderboard();
   }
 }
 
@@ -2917,13 +3152,14 @@ function updateAuthUI() {
 
 function switchClubTab(tab) {
   clubActiveTab = tab;
-  ['rides','clubs','routes'].forEach(t => {
+  ['rides','clubs','routes','ranks'].forEach(t => {
     document.getElementById('ctab-' + t).classList.toggle('active', t === tab);
     document.getElementById('club-tab-' + t).style.display = t === tab ? 'block' : 'none';
   });
   if (tab === 'rides') renderRideEvents();
   if (tab === 'clubs') renderMyClubs();
   if (tab === 'routes') renderCommunityRoutes();
+  if (tab === 'ranks') renderRanks();
 }
 
 function renderClub() {
@@ -3418,6 +3654,173 @@ function showGarageInProfile() {
 }
 
 // ══════════════════════════════════════════════
+// ACHIEVEMENTS & STREAKS
+// ══════════════════════════════════════════════
+const ACHIEVEMENTS = [
+  { id: 'first-ride', icon: '🛴', name: 'First Ride',    test: s => s.rideCount >= 1 },
+  { id: 'rides-5',    icon: '🔥', name: '5 Rides',       test: s => s.rideCount >= 5 },
+  { id: 'rides-25',   icon: '💪', name: '25 Rides',      test: s => s.rideCount >= 25 },
+  { id: 'mi-10',      icon: '📏', name: '10 Miles',      test: s => s.totalMi >= 10 },
+  { id: 'mi-50',      icon: '🚀', name: '50 Miles',      test: s => s.totalMi >= 50 },
+  { id: 'mi-100',     icon: '🏆', name: '100 Miles',     test: s => s.totalMi >= 100 },
+  { id: 'spd-15',     icon: '⚡', name: '15+ MPH',       test: s => s.topSpd >= 15 },
+  { id: 'spd-20',     icon: '🌪️', name: '20+ MPH',       test: s => s.topSpd >= 20 },
+  { id: 'streak-3',   icon: '📅', name: '3-Day Streak',  test: s => s.streak >= 3 },
+  { id: 'streak-7',   icon: '🗓️', name: '7-Day Streak',  test: s => s.streak >= 7 },
+  { id: 'trail-1',    icon: '🗺️', name: 'Trail Rider',   test: s => s.trailRides >= 1 },
+  { id: 'course-2',   icon: '🏁', name: 'Course Racer',  test: s => s.courseRuns >= 2 }
+];
+
+function achStats() {
+  const rides = state.rides || [];
+  // Day streak: consecutive calendar days with at least one ride, ending today.
+  const days = [...new Set(rides.map(r => new Date(r.ts).toDateString()))]
+    .map(d => new Date(d).getTime()).sort((a, b) => b - a);
+  let streak = 0;
+  if (days.length) {
+    const day = 86400000;
+    const today = new Date(new Date().toDateString()).getTime();
+    if (today - days[0] <= day) {
+      streak = 1;
+      for (let i = 1; i < days.length; i++) {
+        if (days[i-1] - days[i] === day) streak++;
+        else break;
+      }
+    }
+  }
+  return {
+    rideCount: rides.length,
+    totalMi: rides.reduce((a,r) => a + r.dist, 0),
+    topSpd: rides.length ? Math.max(...rides.map(r => r.topSpd || 0)) : 0,
+    streak,
+    trailRides: rides.filter(r => r.route && r.route.type === 'trail').length,
+    courseRuns: rides.filter(r => r.route && r.route.type === 'course').length
+  };
+}
+
+function checkAchievements(announce) {
+  if (!state.badges) state.badges = {};
+  const s = achStats();
+  let changed = false;
+  ACHIEVEMENTS.forEach(a => {
+    if (!state.badges[a.id] && a.test(s)) {
+      state.badges[a.id] = Date.now();
+      changed = true;
+      if (announce) toast('🏅 Achievement unlocked: ' + a.name + '!', true);
+    }
+  });
+  if (changed) saveState(state);
+}
+
+function renderAchievements() {
+  const el = document.getElementById('achSection');
+  if (!el) return;
+  if (!state.badges) state.badges = {};
+  const streak = achStats().streak;
+  el.innerHTML = '<div class="settings-lbl" style="margin-top:2px">Achievements' +
+    (streak >= 2 ? ' · 🔥 ' + streak + '-day streak' : '') + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px">' +
+    ACHIEVEMENTS.map(a => {
+      const got = !!state.badges[a.id];
+      return '<div style="background:var(--surface);border:1px solid ' + (got ? 'rgba(200,255,0,.3)' : 'var(--border)') +
+        ';border-radius:12px;padding:9px 4px;text-align:center;' + (got ? '' : 'opacity:.35;filter:grayscale(1)') + '">' +
+        '<div style="font-size:1.2rem">' + a.icon + '</div>' +
+        '<div style="font-size:.5rem;color:var(--muted2);font-family:\'JetBrains Mono\',monospace;margin-top:3px;letter-spacing:.04em">' +
+        a.name.toUpperCase() + '</div></div>';
+    }).join('') + '</div>';
+}
+
+// ══════════════════════════════════════════════
+// MAINTENANCE REMINDERS (per-scooter, mileage-based)
+// ══════════════════════════════════════════════
+const MAINT_ITEMS = [
+  { key: 'tire',  label: 'Tire check',        interval: 250 },
+  { key: 'brake', label: 'Brake inspection',  interval: 500 }
+];
+
+function renderMaint(scoMi) {
+  const el = document.getElementById('maintRows');
+  if (!el) return;
+  const sco = (state.garage || [])[state.scooterIdx];
+  if (!sco) { el.innerHTML = ''; return; }
+  if (!sco.maint) sco.maint = {};
+  el.innerHTML = MAINT_ITEMS.map(it => {
+    const since = Math.max(0, scoMi - (sco.maint[it.key] || 0));
+    const due = since >= it.interval;
+    return '<div class="sc-mrow"><span class="sc-mi">' + it.label + '</span>' +
+      '<span class="sc-mv' + (due ? ' sc-warn' : '') + '">' +
+      (due ? '⚠ Due now' : since.toFixed(0) + ' / ' + it.interval + ' mi') +
+      ' · <span style="color:var(--volt);cursor:pointer" onclick="maintDone(\'' + it.key + '\')">Done ✓</span></span></div>';
+  }).join('');
+}
+
+function maintDone(key) {
+  const sco = (state.garage || [])[state.scooterIdx];
+  if (!sco) return;
+  if (!sco.maint) sco.maint = {};
+  const scoMi = (state.rides || []).filter(r => r.scooterIdx === state.scooterIdx).reduce((a,r) => a + r.dist, 0);
+  sco.maint[key] = scoMi;
+  saveState(state);
+  refreshProfile();
+  const it = MAINT_ITEMS.find(m => m.key === key);
+  toast('✅ Logged — next reminder in ' + (it ? it.interval : '') + ' mi', true);
+}
+
+// ══════════════════════════════════════════════
+// MILEAGE LEADERBOARD (shared via Firebase, like the Segway app's ranks)
+// ══════════════════════════════════════════════
+function publishLeaderboard() {
+  if (!_fbActive || !voltDb || !voltUid) return;
+  const rides = state.rides || [];
+  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+  const weekMi = rides.filter(r => r.ts > weekAgo).reduce((a,r) => a + r.dist, 0);
+  const totalMi = rides.reduce((a,r) => a + r.dist, 0);
+  try {
+    voltDb.ref('leaderboard/' + voltUid).set({
+      name: voltName(),
+      weekMi: Math.round(weekMi * 10) / 10,
+      totalMi: Math.round(totalMi * 10) / 10,
+      ts: Date.now()
+    });
+  } catch(e) {}
+}
+
+function renderRanks() {
+  const el = document.getElementById('ranksList');
+  if (!el) return;
+  if (!fbAvailable()) {
+    el.innerHTML = '<div class="no-clubs"><div class="nc-icon">🏆</div>Leaderboards need shared rides<br>set up (add a Firebase config).</div>';
+    return;
+  }
+  if (!_fbActive) {
+    el.innerHTML = '<div class="no-clubs" onclick="openAuthSheet()" style="cursor:pointer"><div class="nc-icon">🔒</div>Sign in to compete on the<br>weekly mileage leaderboard →</div>';
+    return;
+  }
+  el.innerHTML = '<div style="color:var(--muted2);font-size:.8rem;padding:8px 0">Loading riders...</div>';
+  publishLeaderboard();
+  voltDb.ref('leaderboard').once('value').then(snap => {
+    const v = snap.val() || {};
+    const rows = Object.keys(v).map(k => v[k]).filter(r => r && typeof r.weekMi === 'number');
+    const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    const week = rows.filter(r => r.ts > weekAgo && r.weekMi > 0).sort((a,b) => b.weekMi - a.weekMi).slice(0, 20);
+    const all = rows.filter(r => (r.totalMi || 0) > 0).sort((a,b) => (b.totalMi||0) - (a.totalMi||0)).slice(0, 20);
+    const row = (r, i, mi) =>
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 13px;margin-bottom:6px;display:flex;align-items:center;gap:11px">' +
+      '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;color:' + (i < 3 ? 'var(--volt)' : 'var(--muted2)') + ';width:22px">' + (i+1) + '</span>' +
+      '<span style="flex:1;font-size:.82rem">' + esc(r.name || 'Rider') + '</span>' +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.76rem;color:var(--volt);font-weight:600">' + mi.toFixed(1) + ' mi</span></div>';
+    el.innerHTML = '<div class="settings-lbl">This Week</div>' +
+      (week.length ? week.map((r,i) => row(r, i, r.weekMi)).join('')
+                   : '<div style="color:var(--muted2);font-size:.8rem;padding:6px 0 12px">No miles logged this week — get out there!</div>') +
+      '<div class="settings-lbl" style="margin-top:12px">All Time</div>' +
+      (all.length ? all.map((r,i) => row(r, i, r.totalMi || 0)).join('')
+                  : '<div style="color:var(--muted2);font-size:.8rem;padding:6px 0">Be the first on the board!</div>');
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--muted2);font-size:.8rem;padding:8px 0">Couldn\'t load the leaderboard — try again.</div>';
+  });
+}
+
+// ══════════════════════════════════════════════
 // TOAST
 // ══════════════════════════════════════════════
 let toastT;
@@ -3443,6 +3846,7 @@ function resetApp() {
 // ══════════════════════════════════════════════
 (function boot() {
   if (!state.settings) state.settings = { spd: true, loc: false, cam: false };
+  if (!state.badges) state.badges = {};
   if (!state.courses) state.courses = [];
   if (!state.clubs) state.clubs = [];
   if (!state.rideEvents) state.rideEvents = [];
@@ -3466,6 +3870,7 @@ function resetApp() {
     saveState(state);
   }
   if (state.onboarded) {
+    checkAchievements(false); // backfill badges for existing riders, no toasts
     document.getElementById('screen-onboard').classList.remove('active');
     currentScreen = 'onboard';
     renderTrails();
@@ -3570,6 +3975,16 @@ function initTrailsMap() {
     youMarker = L.circleMarker([lat, lng], { radius: 6, color: '#000', weight: 2, fillColor: '#C8FF00', fillOpacity: 1 }).addTo(trailsMap);
     L.circle([lat, lng], { radius: 80, color: '#C8FF00', weight: 1, opacity: 0.25, fillColor: '#C8FF00', fillOpacity: 0.07 }).addTo(trailsMap);
 
+    // Round-trip range ring: how far out you can ride and still make it home
+    if (window._rangeRing) { window._rangeRing.remove(); window._rangeRing = null; }
+    const ringMi = parseFloat(battRange(state.battPct)) / 2;
+    if (ringMi > 0) {
+      window._rangeRing = L.circle([lat, lng], {
+        radius: ringMi * 1609.34, color: '#C8FF00', weight: 1, dashArray: '6 6', opacity: .4, fill: false
+      }).addTo(trailsMap);
+      window._rangeRing.bindTooltip('Round-trip range on current battery (~' + ringMi.toFixed(1) + ' mi out)');
+    }
+
     trailMarkers.forEach(m => m.remove());
     trailMarkers = [];
     TRAILS.forEach((t, i) => {
@@ -3621,7 +4036,7 @@ function initRideMap() {
 
     if (navigator.geolocation) {
       window._rideWatchId = navigator.geolocation.watchPosition(pos => {
-        const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const p = { lat: pos.coords.latitude, lng: pos.coords.longitude, t: pos.timestamp };
         ridePathCoords.push(p);
         ridePolyline.setLatLngs(ridePathCoords.map(c => [c.lat, c.lng]));
         rideUserMarker.setLatLng([p.lat, p.lng]);
@@ -3807,11 +4222,56 @@ window.stopCourseRide = stopCourseRide = function() {
   _origStopCourseRide();
 };
 
+window.updateRangeRing = function() {
+  if (!trailsMap || !window._rangeRing) return;
+  const ringMi = parseFloat(battRange(state.battPct)) / 2;
+  window._rangeRing.setRadius(Math.max(1, ringMi * 1609.34));
+};
+
+// ══ BEACON VIEWER ══
+// Opening volt.html?beacon=<uid> shows that rider's live location — the page
+// a family member lands on from a shared live-track link.
+function initBeaconViewer(uid) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:#080808;z-index:9999;display:flex;flex-direction:column';
+  ov.innerHTML =
+    '<div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between">' +
+      '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;color:#C8FF00;letter-spacing:.08em">VOLT LIVE TRACK</div>' +
+      '<div id="bvWho" style="font-family:\'JetBrains Mono\',monospace;font-size:.66rem;color:#888">Waiting for rider...</div></div>' +
+      '<div style="text-align:right"><div id="bvSpd" style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;color:#C8FF00;line-height:1">--</div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.55rem;color:#888;letter-spacing:.1em">MPH</div></div></div>' +
+    '<div id="bvMap" style="flex:1;background:#0a120a"></div>';
+  document.body.appendChild(ov);
+  let bvMap = null, bvMarker = null;
+  firebase.database().ref('beacon/' + uid).on('value', snap => {
+    const v = snap.val();
+    const who = document.getElementById('bvWho');
+    if (!v) { if (who) who.textContent = 'Rider is not sharing right now.'; return; }
+    if (who) who.textContent = (v.name || 'Rider') + ' · updated ' + new Date(v.ts).toLocaleTimeString();
+    const spdEl = document.getElementById('bvSpd');
+    if (spdEl) spdEl.textContent = v.spd != null ? v.spd.toFixed ? v.spd.toFixed(1) : v.spd : '--';
+    whenMapsReady(() => {
+      if (!bvMap) bvMap = makeMap(document.getElementById('bvMap'), v.lat, v.lng, 15);
+      if (!bvMap) return;
+      if (!bvMarker) bvMarker = makeMarker(bvMap, v.lat, v.lng);
+      bvMarker.setLatLng([v.lat, v.lng]);
+      bvMap.panTo([v.lat, v.lng]);
+    });
+  });
+}
+
 // ══ BOOT: init trails map if already on trails screen ══
 document.addEventListener('DOMContentLoaded', () => {
   whenMapsReady(() => {
     if (currentScreen === 'trails') initTrailsMap();
   });
+  const bUid = new URLSearchParams(location.search).get('beacon');
+  if (bUid && typeof fbAvailable === 'function' && fbAvailable()) {
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(window.VOLT_FIREBASE_CONFIG);
+      initBeaconViewer(bUid.replace(/[^\w-]/g, ''));
+    } catch(e) { console.warn('VOLT: beacon viewer error', e); }
+  }
 });
 
 } catch(e) { console.warn('VOLT Maps integration error:', e); }
