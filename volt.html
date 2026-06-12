@@ -2468,13 +2468,11 @@ let courseRecTimer = null;
 let courseRecSecs = 0;
 let courseRecDist = 0;
 let courseRecSpdIdx = 0;
-const SPD_COURSE = [0,4,10,15.2,18.4,20.1,17.8,19.3,21.2,18.6,16.4,20.8,22.3,19.1,17.5,21.6];
 
 let courseRiding = false;
 let courseRideTimer = null;
 let courseRideSecs = 0;
 let courseRideDist = 0;
-let courseRideSpdIdx = 0;
 let courseRideTopSpd = 0;
 let activeCoursePb = null;
 let activeCourseIdx = -1;
@@ -2633,10 +2631,11 @@ function startCourseRide(idx) {
   const course = state.courses[idx];
   if (!course) return;
   if (courseRiding) { stopCourseRide(); }
+  if (!navigator.geolocation) { toast('GPS not available on this device'); return; }
   activeCourseIdx = idx;
   activeCoursePb = course.attempts && course.attempts.length ? Math.min(...course.attempts.map(a => a.secs)) : null;
   courseRiding = true;
-  courseRideSecs = 0; courseRideDist = 0; courseRideSpdIdx = 0; courseRideTopSpd = 0;
+  courseRideSecs = 0; courseRideDist = 0; courseRideTopSpd = 0;
 
   document.getElementById('crideTitleLbl').textContent = course.name;
   document.getElementById('crideCourseName').textContent = course.name;
@@ -2658,38 +2657,76 @@ function startCourseRide(idx) {
   dot.style.top = '85%'; dot.style.left = '5%';
 
   document.getElementById('courseRideOverlay').classList.add('open');
+  toast('🏁 Course started! Acquiring GPS...', true);
 
+  // ── GPS WATCH — real speed, distance, and progress along the course ──
+  let crLastLat = null, crLastLng = null, crLastTime = null;
+  window._crideEngineGpsId = navigator.geolocation.watchPosition(
+    function(pos) {
+      if (!courseRiding) return;
+      const lat = pos.coords.latitude, lng = pos.coords.longitude, now = pos.timestamp;
+      let spd = 0, segMi = 0;
+      if (crLastLat !== null) {
+        const R = 3958.8;
+        const dLat = (lat - crLastLat) * Math.PI / 180;
+        const dLng = (lng - crLastLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(crLastLat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)**2;
+        segMi = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      }
+      if (pos.coords.speed !== null && pos.coords.speed >= 0) {
+        spd = pos.coords.speed * 2.23694;
+      } else if (crLastLat !== null) {
+        const dt = (now - crLastTime) / 1000;
+        if (dt > 0) spd = Math.min((segMi / dt) * 3600, 60);
+      }
+      crLastLat = lat; crLastLng = lng; crLastTime = now;
+      if (segMi > 0 && segMi < 0.5) courseRideDist += segMi; // ignore GPS jumps
+      if (spd > courseRideTopSpd) courseRideTopSpd = spd;
+
+      document.getElementById('crideDist').textContent = courseRideDist.toFixed(2);
+      document.getElementById('crideSpd').textContent = spd.toFixed(1);
+      document.getElementById('crideTop').textContent = courseRideTopSpd.toFixed(1);
+
+      const progress = Math.min(0.95, courseRideDist / Math.max(0.01, course.dist));
+      dot.style.left = (5 + progress * 85) + '%';
+      dot.style.top = (85 - progress * 70) + '%';
+
+      if (courseRideDist >= course.dist) {
+        stopCourseRide();
+      }
+    },
+    function(err) {
+      console.warn('Course GPS error:', err.message);
+      if (err.code === 1) toast('Allow location access to race this course');
+    },
+    { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+  );
+
+  // ── CLOCK — runs every second independently of GPS ──
   courseRideTimer = setInterval(() => {
+    if (!courseRiding) return;
     courseRideSecs++;
-    const spd = SPD_COURSE[courseRideSpdIdx++ % SPD_COURSE.length];
-    courseRideDist += spd / 3600;
-    if (spd > courseRideTopSpd) courseRideTopSpd = spd;
-
     document.getElementById('crideTime').textContent = fmtTime(courseRideSecs);
     document.getElementById('crideYouTime').textContent = fmtTime(courseRideSecs);
-    document.getElementById('crideDist').textContent = courseRideDist.toFixed(2);
-    document.getElementById('crideSpd').textContent = spd.toFixed(1);
-    document.getElementById('crideTop').textContent = courseRideTopSpd.toFixed(1);
-
     if (activeCoursePb) {
       const pct = Math.min(100, Math.round((courseRideSecs / activeCoursePb) * 100));
       document.getElementById('cridePaceFill').style.width = pct + '%';
       document.getElementById('crideStatusChip').textContent = pct < 90 ? '🟢 AHEAD' : pct < 100 ? '🟡 ON PACE' : '🔴 BEHIND';
     }
-
-    const progress = Math.min(0.95, courseRideDist / Math.max(0.01, course.dist));
-    dot.style.left = (5 + progress * 85) + '%';
-    dot.style.top = (85 - progress * 70) + '%';
-
-    if (courseRideDist >= course.dist) {
-      stopCourseRide();
-    }
   }, 1000);
+}
+
+function clearCrideEngineGps() {
+  if (window._crideEngineGpsId != null) {
+    navigator.geolocation.clearWatch(window._crideEngineGpsId);
+    window._crideEngineGpsId = null;
+  }
 }
 
 function stopCourseRide() {
   if (!courseRiding) return;
   clearInterval(courseRideTimer);
+  clearCrideEngineGps();
   courseRiding = false;
   document.getElementById('courseRideOverlay').classList.remove('open');
 
@@ -2709,6 +2746,7 @@ function stopCourseRide() {
 function discardCourseRide() {
   if (!courseRiding) return;
   clearInterval(courseRideTimer);
+  clearCrideEngineGps();
   courseRiding = false;
   if (typeof stopCrideMapTracking === 'function') stopCrideMapTracking();
   document.getElementById('courseRideOverlay').classList.remove('open');
