@@ -672,7 +672,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
           <span style="font-size:2rem">📷</span>
           <span style="font-size:.72rem;color:var(--muted2);font-family:'JetBrains Mono',monospace;letter-spacing:.08em">TAP TO ADD PHOTO</span>
         </div>
-        <input type="file" id="ob-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this,'ob-photo-preview','ob')">
+        <input type="file" id="ob-photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'ob-photo-preview','ob')">
       </div>
       <button class="ob-btn" onclick="obNext(1)">Continue →</button>
       <button class="ob-btn-ghost" onclick="obBack(1)">← Back</button>
@@ -995,7 +995,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     </div>
 
     <!-- Hidden file input for profile photo changes -->
-    <input type="file" id="prof-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this,'profScoPhoto','prof')">
+    <input type="file" id="prof-photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'profScoPhoto','prof')">
 
     <!-- Pro -->
     <div class="pro-banner">
@@ -1243,7 +1243,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <span style="font-size:2rem;position:relative;z-index:1">📷</span>
         <span class="gs-photo-lbl" id="gsPhotoLbl" style="position:relative;z-index:1">TAP TO ADD PHOTO</span>
       </div>
-      <input type="file" id="gs-photo-input" accept="image/*" capture="environment" style="display:none" onchange="gsHandlePhoto(this)">
+      <input type="file" id="gs-photo-input" accept="image/*" style="display:none" onchange="gsHandlePhoto(this)">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
         <div class="ob-model-card" id="gs-m0" onclick="gsSelectModel(0)"><div class="ob-model-icon">🛴</div><div class="ob-model-name">EOEOTWO Land</div><div class="ob-model-meta">30 mi · 20 mph</div></div>
         <div class="ob-model-card" id="gs-m1" onclick="gsSelectModel(1)"><div class="ob-model-icon">🛴</div><div class="ob-model-name">Circooter Land Turbo</div><div class="ob-model-meta">40 mi · 28 mph</div></div>
@@ -1337,7 +1337,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <span style="font-size:2rem;position:relative;z-index:1">📷</span>
       <span style="font-size:.68rem;color:var(--muted2);font-family:'JetBrains Mono',monospace;letter-spacing:.08em;position:relative;z-index:1" id="edit-photo-lbl">TAP TO ADD PHOTO</span>
     </div>
-    <input type="file" id="edit-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this,'edit-photo-preview','edit')">
+    <input type="file" id="edit-photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'edit-photo-preview','edit')">
     <button class="modal-save" onclick="saveScooterEdit()">💾 Save Scooter</button>
     <button class="modal-disc" onclick="closeScooterEdit()">Cancel</button>
   </div>
@@ -1568,6 +1568,7 @@ const TRAILS = [
 // ══════════════════════════════════════════════
 let currentScreen = 'onboard';
 let trailFilter = 'all';
+let currentTrailIdx = -1;
 
 function goTo(screen) {
   if (screen === 'history' && rideActive) { toast('Stop your ride first'); return; }
@@ -1782,6 +1783,7 @@ function refreshHome() {
           <div><div class="lr-sv">${fmtTime(r.secs)}</div><div class="lr-sl">Duration</div></div>
           <div><div class="lr-sv">${r.avgSpd.toFixed(1)} mph</div><div class="lr-sl">Avg speed</div></div>
         </div>
+        ${r.route ? '<div class="ri-tag" style="margin-top:8px">' + (r.route.type === 'course' ? '🏁 Course: ' : '🗺️ Trail: ') + esc(r.route.name) + '</div>' : ''}
       </div>
     </div>`;
   }
@@ -1917,8 +1919,10 @@ function stopRide() {
 function saveRide() {
   document.getElementById('rideModal').classList.remove('open');
   const avg = rideSpdCount ? rideSpdSum / rideSpdCount : 0;
-  const rideName = rideNames[Math.floor(Math.random() * rideNames.length)];
-  state.rides.push({ name: rideName, ts: Date.now(), dist: rideDist, secs: rideSecs, avgSpd: avg, topSpd: rideTopSpd, scooterIdx: state.scooterIdx });
+  const route = window._rideRoute || null;
+  const rideName = route ? route.name : rideNames[Math.floor(Math.random() * rideNames.length)];
+  state.rides.push({ name: rideName, ts: Date.now(), dist: rideDist, secs: rideSecs, avgSpd: avg, topSpd: rideTopSpd, scooterIdx: state.scooterIdx, route });
+  window._rideRoute = null;
 
   // Same drain model as the in-ride range bar: ~2.5% per mile.
   const drained = rideDist * 2.5;
@@ -1935,11 +1939,14 @@ function saveRide() {
 function discardRide() {
   document.getElementById('rideModal').classList.remove('open');
   rideDist = 0; rideSecs = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
+  window._rideRoute = null;
   goTo('home');
 }
 
 function startRideFromTrail() {
   closeTrail();
+  const t = TRAILS[currentTrailIdx];
+  window._rideRoute = t ? { type: 'trail', name: t.name } : null;
   setTimeout(() => { startRide(); }, 300);
 }
 
@@ -2010,7 +2017,8 @@ function refreshHistory() {
         <div><div class="ri-sv">${r.dist.toFixed(2)} mi</div><div class="ri-sl">Distance</div></div>
         <div><div class="ri-sv">${fmtTime(r.secs)}</div><div class="ri-sl">Time</div></div>
         <div><div class="ri-sv">${avg} mph</div><div class="ri-sl">Avg</div></div>
-      </div>${isPB ? '<div class="ri-tag">🏆 Personal best distance</div>' : ''}
+      </div>${r.route ? '<div class="ri-tag">' + (r.route.type === 'course' ? '🏁 Course: ' : '🗺️ Trail: ') + esc(r.route.name) + '</div>' : ''}
+        ${isPB ? '<div class="ri-tag">🏆 Personal best distance</div>' : ''}
         ${filterVal === 'all' && (state.garage || [])[r.scooterIdx] ? '<div class="ri-tag">🛴 ' + esc(state.garage[r.scooterIdx].name || '') + '</div>' : ''}</div>`;
   });
   wrap.innerHTML = html;
@@ -2026,8 +2034,13 @@ function refreshProfile() {
   document.getElementById('profScoMeta').textContent = activeSco.meta || '—';
   const photoEl = document.getElementById('profScoPhoto');
   if (photoEl) {
-    if (state.scooterPhoto) {
-      photoEl.innerHTML = '<img class="sc-photo" src="' + state.scooterPhoto + '" alt="My scooter"><span class="sc-change-photo" onclick="document.getElementById(\'prof-photo-input\').click()">📷 Change photo</span>';
+    const profPhoto = (activeSco && activeSco.photo) || state.scooterPhoto;
+    if (profPhoto) {
+      photoEl.innerHTML = '<img class="sc-photo" src="' + profPhoto + '" alt="My scooter">' +
+        '<div style="display:flex;justify-content:center;gap:18px">' +
+        '<span class="sc-change-photo" onclick="document.getElementById(\'prof-photo-input\').click()">📷 Change photo</span>' +
+        '<span class="sc-change-photo" onclick="downloadScooterPhoto()">⬇ Download photo</span>' +
+        '</div>';
     } else {
       photoEl.innerHTML = '<div class="sc-photo-placeholder" onclick="document.getElementById(\'prof-photo-input\').click()"><span class="spp-icon">📷</span><span class="spp-lbl">TAP TO ADD A PHOTO</span></div>';
     }
@@ -2131,6 +2144,7 @@ function setChip(el, filter) {
 
 function openTrail(idx) {
   const t = TRAILS[idx];
+  currentTrailIdx = idx;
   document.getElementById('tsName').textContent = t.name;
   document.getElementById('tsMeta').textContent = t.away + ' away · ' + t.surface.charAt(0).toUpperCase()+t.surface.slice(1) + ' surface';
   document.getElementById('tsDist').textContent = t.dist + ' mi';
@@ -2209,6 +2223,7 @@ function handlePhotoSelect(input, previewId, context) {
     }
     if (context === 'prof') {
       state.scooterPhoto = dataUrl;
+      if (state.garage && state.garage[state.scooterIdx]) state.garage[state.scooterIdx].photo = dataUrl;
       saveState(state);
       refreshProfile();
       toast('📷 Scooter photo saved!', true);
@@ -2216,6 +2231,19 @@ function handlePhotoSelect(input, previewId, context) {
       window._pendingPhoto = dataUrl;
     }
   });
+}
+
+function downloadScooterPhoto() {
+  const sco = (state.garage || [])[state.scooterIdx];
+  const photo = (sco && sco.photo) || state.scooterPhoto;
+  if (!photo) { toast('No photo to download yet'); return; }
+  const a = document.createElement('a');
+  a.href = photo;
+  a.download = (((sco && sco.name) || 'volt-scooter').replace(/[^\w-]+/g, '-').toLowerCase() || 'volt-scooter') + '.jpg';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  toast('⬇ Photo saved to downloads', true);
 }
 
 function openScooterEdit() {
@@ -2474,6 +2502,8 @@ let courseRideTimer = null;
 let courseRideSecs = 0;
 let courseRideDist = 0;
 let courseRideTopSpd = 0;
+let courseRideSpdSum = 0;
+let courseRideSpdCount = 0;
 let activeCoursePb = null;
 let activeCourseIdx = -1;
 
@@ -2636,6 +2666,7 @@ function startCourseRide(idx) {
   activeCoursePb = course.attempts && course.attempts.length ? Math.min(...course.attempts.map(a => a.secs)) : null;
   courseRiding = true;
   courseRideSecs = 0; courseRideDist = 0; courseRideTopSpd = 0;
+  courseRideSpdSum = 0; courseRideSpdCount = 0;
 
   document.getElementById('crideTitleLbl').textContent = course.name;
   document.getElementById('crideCourseName').textContent = course.name;
@@ -2682,6 +2713,7 @@ function startCourseRide(idx) {
       crLastLat = lat; crLastLng = lng; crLastTime = now;
       if (segMi > 0 && segMi < 0.5) courseRideDist += segMi; // ignore GPS jumps
       if (spd > courseRideTopSpd) courseRideTopSpd = spd;
+      courseRideSpdSum += spd; courseRideSpdCount++;
 
       document.getElementById('crideDist').textContent = courseRideDist.toFixed(2);
       document.getElementById('crideSpd').textContent = spd.toFixed(1);
@@ -2734,6 +2766,14 @@ function stopCourseRide() {
   if (course) {
     if (!course.attempts) course.attempts = [];
     course.attempts.push({ ts: Date.now(), secs: courseRideSecs, dist: courseRideDist });
+    // Course runs also land in the ride log so History tells the full story.
+    const avg = courseRideSpdCount ? courseRideSpdSum / courseRideSpdCount
+              : (courseRideSecs > 0 ? courseRideDist / courseRideSecs * 3600 : 0);
+    state.rides.push({
+      name: course.name, ts: Date.now(), dist: courseRideDist, secs: courseRideSecs,
+      avgSpd: avg, topSpd: courseRideTopSpd, scooterIdx: state.scooterIdx,
+      route: { type: 'course', name: course.name }
+    });
     saveState(state);
     renderCourses();
     const pb = Math.min(...course.attempts.map(a => a.secs));
