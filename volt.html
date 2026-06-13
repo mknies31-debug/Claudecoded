@@ -98,6 +98,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .bw-rval{font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text);font-weight:600}
 .bw-rlbl{font-size:.66rem;color:var(--muted2)}
 
+.odo-widget{margin:0 20px 14px;background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .2s}
+.odo-widget:active{border-color:var(--volt)}
+.odo-lbl{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.14em;color:var(--muted2);text-transform:uppercase}
+.odo-val{font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--volt);letter-spacing:.06em}
+.odo-unit{font-size:.7rem;color:var(--muted2);font-weight:400}
 .qs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 20px 14px}
 .qs-card{background:var(--surface);border-radius:16px;padding:14px;border:1px solid var(--border);cursor:pointer;transition:border-color .2s}
 .qs-card:active{border-color:var(--volt)}
@@ -722,6 +727,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div><div class="bw-rval" id="homeRange">18.4 mi</div><div class="bw-rlbl">Est. range</div></div>
       <div style="text-align:right"><div class="bw-rval" id="homeFullRange">25.6 mi</div><div class="bw-rlbl">Full range</div></div>
     </div>
+  </div>
+
+  <!-- Lifetime odometer: total distance ever recorded (persisted, survives ride deletion) -->
+  <div class="odo-widget" onclick="goTo('profile')">
+    <div class="odo-lbl">⛽ Odometer · Total Distance</div>
+    <div class="odo-val"><span id="homeOdo">0.0</span> <span class="odo-unit">mi</span></div>
   </div>
 
   <div class="qs-grid">
@@ -1709,6 +1720,26 @@ tick();
 setInterval(tick, 15000);
 
 // ══════════════════════════════════════════════
+// ODOMETER — lifetime recorded distance (persisted, survives ride deletion)
+// ══════════════════════════════════════════════
+function odoCareer() {
+  if (typeof state.odometer === 'number') return state.odometer;
+  return (state.rides || []).reduce((a, r) => a + r.dist, 0);
+}
+function odoScooter(i) {
+  const sco = (state.garage || [])[i];
+  if (sco && typeof sco.odometer === 'number') return sco.odometer;
+  return (state.rides || []).filter(r => r.scooterIdx === i).reduce((a, r) => a + r.dist, 0);
+}
+// Add a completed ride's distance to the lifetime odometers.
+function odoAdd(miles, scooterIdx) {
+  if (!(miles > 0)) return;
+  state.odometer = (typeof state.odometer === 'number' ? state.odometer : odoCareer()) + miles;
+  const sco = (state.garage || [])[scooterIdx];
+  if (sco) sco.odometer = (typeof sco.odometer === 'number' ? sco.odometer : odoScooter(scooterIdx)) + miles;
+}
+
+// ══════════════════════════════════════════════
 // BATTERY
 // ══════════════════════════════════════════════
 function battRange(pct) {
@@ -1743,6 +1774,8 @@ function refreshHomeWidgets() {
   document.getElementById('profBattVal').textContent = pct + '%';
   document.getElementById('profRangeEst').textContent = '≈ ' + range + ' mi range';
   document.getElementById('sBatt').textContent = pct + '% 🔋';
+  const odoEl = document.getElementById('homeOdo');
+  if (odoEl) odoEl.textContent = odoCareer().toFixed(1);
 }
 
 // ══════════════════════════════════════════════
@@ -1937,6 +1970,7 @@ function saveRide() {
   const route = window._rideRoute || null;
   const rideName = route ? route.name : rideNames[Math.floor(Math.random() * rideNames.length)];
   state.rides.push({ name: rideName, ts: Date.now(), dist: rideDist, secs: rideSecs, avgSpd: avg, topSpd: rideTopSpd, scooterIdx: state.scooterIdx, route });
+  odoAdd(rideDist, state.scooterIdx);
   window._rideRoute = null;
 
   // Same drain model as the in-ride range bar: ~2.5% per mile.
@@ -2068,7 +2102,7 @@ function refreshProfile() {
   // Career average = total distance / total moving time (true lifetime average).
   const careerAvg = totalSecs > 0 ? totalMi / (totalSecs / 3600) : 0;
   const hrs = Math.floor(totalSecs / 3600), mins = Math.floor((totalSecs % 3600) / 60);
-  document.getElementById('atMi').innerHTML = totalMi.toFixed(1) + ' <span class="at-u">mi</span>';
+  document.getElementById('atMi').innerHTML = odoCareer().toFixed(1) + ' <span class="at-u">mi</span>';
   document.getElementById('atRides').textContent = rides.length;
   document.getElementById('atTime').textContent = hrs + 'h ' + mins + 'm';
   document.getElementById('atAvg').innerHTML = careerAvg.toFixed(1) + ' <span class="at-u">mph</span>';
@@ -2095,7 +2129,7 @@ function refreshProfile() {
             <div style="font-size:.68rem;color:var(--muted2);font-family:'JetBrains Mono',monospace">${scoRides.length} rides · avg ${scoAvg.toFixed(1)} · top ${scoTop.toFixed(1)} mph</div>
           </div>
           <div style="text-align:right">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--volt);line-height:1">${scoMi.toFixed(1)}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--volt);line-height:1">${odoScooter(i).toFixed(1)}</div>
             <div style="font-size:.6rem;color:var(--muted2)">miles</div>
           </div>
         </div>`;
@@ -2779,6 +2813,7 @@ function stopCourseRide() {
       avgSpd: avg, topSpd: courseRideTopSpd, scooterIdx: state.scooterIdx,
       route: { type: 'course', name: course.name }
     });
+    odoAdd(courseRideDist, state.scooterIdx);
     saveState(state);
     renderCourses();
     const pb = Math.min(...course.attempts.map(a => a.secs));
@@ -3471,6 +3506,17 @@ function resetApp() {
   // Guard against a stale scooterIdx pointing past the garage.
   if (state.garage && state.garage.length && state.scooterIdx >= state.garage.length) {
     state.scooterIdx = 0;
+    saveState(state);
+  }
+  // Seed lifetime odometers from existing rides the first time (so past
+  // distance counts), then they increment independently per saved ride.
+  if (typeof state.odometer !== 'number') {
+    state.odometer = (state.rides || []).reduce((a, r) => a + r.dist, 0);
+    (state.garage || []).forEach((sco, i) => {
+      if (typeof sco.odometer !== 'number') {
+        sco.odometer = (state.rides || []).filter(r => r.scooterIdx === i).reduce((a, r) => a + r.dist, 0);
+      }
+    });
     saveState(state);
   }
   if (state.onboarded) {
