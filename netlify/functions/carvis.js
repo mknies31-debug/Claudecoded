@@ -9,7 +9,17 @@
 // Deploy: drag the carvis/ folder onto Netlify, then set ANTHROPIC_API_KEY in
 //         Site settings → Environment variables. No build step.
 
-const MODEL = process.env.CARVIS_MODEL || 'claude-fable-5'; // override via CARVIS_MODEL env var if your account lacks Fable 5
+// Model preference, best → most-available. CARVIS tries them in order and uses
+// the first one this Anthropic account accepts, so the live brain works even if
+// a newer model isn't enabled on the key. Override the top pick with CARVIS_MODEL.
+const MODEL_CHAIN = [
+  process.env.CARVIS_MODEL,
+  'claude-fable-5',
+  'claude-opus-4-8',
+  'claude-sonnet-4-6',
+  'claude-3-5-sonnet-latest',
+  'claude-3-5-haiku-latest',
+].filter((m, i, a) => m && a.indexOf(m) === i);
 const MAX_TOKENS = 1000;
 
 const SYSTEM_PROMPT = `You are CARVIS, the personal AI assistant for Mick Knies, who runs North Star Car Guy — an independent used-car operation INSIDE Mosaic Auto Group in Zumbrota, Minnesota. Mick is NOT the owner of Mosaic; he runs his own branded buy-side (acquiring from private sellers) and sell-side (retailing to customers) operation within it. His customer base is rural Minnesota; buyers often drive 30-90 minutes.
@@ -58,35 +68,41 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: 'messages must be a non-empty array.' }) };
   }
 
-  try {
-    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages,
-      }),
-    });
+  // Detects "this model isn't available on your key" so we can fall back to the
+  // next candidate (vs. an auth/credit error, which would fail on every model).
+  const isModelError = (status, text) => {
+    if (status !== 400 && status !== 403 && status !== 404) return false;
+    return /model/i.test(text) && /(not[_ ]?found|not.*exist|invalid|unknown|permission|access|do(es)? not have)/i.test(text);
+  };
 
-    // Pass the Anthropic response through verbatim so the client parses
-    // data.content exactly as it would a direct call.
+  let lastStatus = 502, lastText = '{"error":"No model could be reached."}';
+  for (const model of MODEL_CHAIN) {
+    let upstream;
+    try {
+      upstream = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT, messages }),
+      });
+    } catch (err) {
+      lastStatus = 502;
+      lastText = JSON.stringify({ error: 'Upstream request to Anthropic failed: ' + String(err && err.message ? err.message : err) });
+      break; // network failure — retrying other models won't help
+    }
+
     const text = await upstream.text();
-    return {
-      statusCode: upstream.status,
-      headers: { 'content-type': 'application/json' },
-      body: text,
-    };
-  } catch (err) {
-    return {
-      statusCode: 502,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ error: 'Upstream request to Anthropic failed: ' + String(err && err.message ? err.message : err) }),
-    };
+    if (upstream.ok) {
+      // Success — pass Anthropic's body through verbatim (client reads .content).
+      return { statusCode: 200, headers: { 'content-type': 'application/json', 'x-carvis-model': model }, body: text };
+    }
+    lastStatus = upstream.status; lastText = text;
+    if (!isModelError(upstream.status, text)) break; // auth/credit/other — stop, don't mask it
+    // else: try the next model in the chain
   }
+
+  return { statusCode: lastStatus, headers: { 'content-type': 'application/json' }, body: lastText };
 };
