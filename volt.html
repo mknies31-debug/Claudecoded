@@ -674,7 +674,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
           <span style="font-size:2rem">📷</span>
           <span style="font-size:.72rem;color:var(--muted2);font-family:'JetBrains Mono',monospace;letter-spacing:.08em">TAP TO ADD PHOTO</span>
         </div>
-        <input type="file" id="ob-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this,'ob-photo-preview','ob')">
+        <input type="file" id="ob-photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'ob-photo-preview','ob')">
       </div>
       <button class="ob-btn" onclick="obNext(1)">Continue →</button>
       <button class="ob-btn-ghost" onclick="obBack(1)">← Back</button>
@@ -951,7 +951,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="at-c"><div class="at-v" id="atMi">0 <span class="at-u">mi</span></div><div class="at-l">Total Distance</div></div>
       <div class="at-c"><div class="at-v" id="atRides">0</div><div class="at-l">Total Rides</div></div>
       <div class="at-c"><div class="at-v" id="atTime">0h 0m</div><div class="at-l">Time Riding</div></div>
+      <div class="at-c"><div class="at-v" id="atAvg">0 <span class="at-u">mph</span></div><div class="at-l">Avg Speed</div></div>
       <div class="at-c"><div class="at-v" id="atTop">0 <span class="at-u">mph</span></div><div class="at-l">Top Speed</div></div>
+      <div class="at-c"><div class="at-v" id="atLongest">0 <span class="at-u">mi</span></div><div class="at-l">Longest Ride</div></div>
     </div>
   </div>
 
@@ -997,7 +999,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     </div>
 
     <!-- Hidden file input for profile photo changes -->
-    <input type="file" id="prof-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this,'profScoPhoto','prof')">
+    <input type="file" id="prof-photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'profScoPhoto','prof')">
 
     <!-- Pro -->
     <div class="pro-banner">
@@ -1245,7 +1247,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <span style="font-size:2rem;position:relative;z-index:1">📷</span>
         <span class="gs-photo-lbl" id="gsPhotoLbl" style="position:relative;z-index:1">TAP TO ADD PHOTO</span>
       </div>
-      <input type="file" id="gs-photo-input" accept="image/*" capture="environment" style="display:none" onchange="gsHandlePhoto(this)">
+      <input type="file" id="gs-photo-input" accept="image/*" style="display:none" onchange="gsHandlePhoto(this)">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
         <div class="ob-model-card" id="gs-m0" onclick="gsSelectModel(0)"><div class="ob-model-icon">🛴</div><div class="ob-model-name">EOEOTWO Land</div><div class="ob-model-meta">30 mi · 20 mph</div></div>
         <div class="ob-model-card" id="gs-m1" onclick="gsSelectModel(1)"><div class="ob-model-icon">🛴</div><div class="ob-model-name">Circooter Land Turbo</div><div class="ob-model-meta">40 mi · 28 mph</div></div>
@@ -1339,7 +1341,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <span style="font-size:2rem;position:relative;z-index:1">📷</span>
       <span style="font-size:.68rem;color:var(--muted2);font-family:'JetBrains Mono',monospace;letter-spacing:.08em;position:relative;z-index:1" id="edit-photo-lbl">TAP TO ADD PHOTO</span>
     </div>
-    <input type="file" id="edit-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this,'edit-photo-preview','edit')">
+    <input type="file" id="edit-photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'edit-photo-preview','edit')">
     <button class="modal-save" onclick="saveScooterEdit()">💾 Save Scooter</button>
     <button class="modal-disc" onclick="closeScooterEdit()">Cancel</button>
   </div>
@@ -2048,8 +2050,9 @@ function refreshProfile() {
   document.getElementById('profScoMeta').textContent = activeSco.meta || '—';
   const photoEl = document.getElementById('profScoPhoto');
   if (photoEl) {
-    if (state.scooterPhoto) {
-      photoEl.innerHTML = '<img class="sc-photo" src="' + state.scooterPhoto + '" alt="My scooter"><span class="sc-change-photo" onclick="document.getElementById(\'prof-photo-input\').click()">📷 Change photo</span>';
+    const activePhoto = (activeSco && activeSco.photo) || state.scooterPhoto;
+    if (activePhoto) {
+      photoEl.innerHTML = '<img class="sc-photo" src="' + activePhoto + '" alt="My scooter"><span class="sc-change-photo" onclick="document.getElementById(\'prof-photo-input\').click()">📷 Change photo</span>';
     } else {
       photoEl.innerHTML = '<div class="sc-photo-placeholder" onclick="document.getElementById(\'prof-photo-input\').click()"><span class="spp-icon">📷</span><span class="spp-lbl">TAP TO ADD A PHOTO</span></div>';
     }
@@ -2061,34 +2064,39 @@ function refreshProfile() {
   const totalMi = rides.reduce((a,r) => a + r.dist, 0);
   const totalSecs = rides.reduce((a,r) => a + r.secs, 0);
   const topSpd = rides.length ? Math.max(...rides.map(r => r.topSpd || 0)) : 0;
+  const longest = rides.length ? Math.max(...rides.map(r => r.dist)) : 0;
+  // Career average = total distance / total moving time (true lifetime average).
+  const careerAvg = totalSecs > 0 ? totalMi / (totalSecs / 3600) : 0;
   const hrs = Math.floor(totalSecs / 3600), mins = Math.floor((totalSecs % 3600) / 60);
   document.getElementById('atMi').innerHTML = totalMi.toFixed(1) + ' <span class="at-u">mi</span>';
   document.getElementById('atRides').textContent = rides.length;
   document.getElementById('atTime').textContent = hrs + 'h ' + mins + 'm';
+  document.getElementById('atAvg').innerHTML = careerAvg.toFixed(1) + ' <span class="at-u">mph</span>';
   document.getElementById('atTop').innerHTML = topSpd.toFixed(1) + ' <span class="at-u">mph</span>';
+  document.getElementById('atLongest').innerHTML = longest.toFixed(1) + ' <span class="at-u">mi</span>';
 
-  // ── Per-scooter breakdown ── (FIXED: template literal — nested 'Bebas Neue'
-  // single quotes inside a single-quoted string was a SyntaxError.)
+  // ── Per-scooter breakdown — distance, rides, and average/top speed each ──
   const garage = state.garage || [];
   const perScoEl = document.getElementById('perScooterStats');
-  if (perScoEl && garage.length > 1) {
+  if (perScoEl && garage.length >= 1) {
     perScoEl.style.display = 'block';
-    perScoEl.innerHTML = '<div class="settings-lbl" style="margin-top:0;margin-bottom:10px">Miles Per Scooter</div>' +
+    perScoEl.innerHTML = '<div class="settings-lbl" style="margin-top:0;margin-bottom:10px">Stats Per Scooter</div>' +
       garage.map((sco, i) => {
         const scoRides = rides.filter(r => r.scooterIdx === i);
         const scoMi = scoRides.reduce((a,r) => a + r.dist, 0);
+        const scoSecs = scoRides.reduce((a,r) => a + r.secs, 0);
         const scoTop = scoRides.length ? Math.max(...scoRides.map(r => r.topSpd || 0)) : 0;
+        const scoAvg = scoSecs > 0 ? scoMi / (scoSecs / 3600) : 0;
         const isActive = i === state.scooterIdx;
         return `<div style="background:var(--surface);border-radius:14px;border:1px solid ${isActive ? 'rgba(200,255,0,.25)' : 'var(--border)'};padding:13px 15px;margin-bottom:8px;display:flex;align-items:center;gap:14px">
           <div style="width:38px;height:38px;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${sco.photo ? `<img src="${sco.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">` : '🛴'}</div>
           <div style="flex:1">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.05em;line-height:1;margin-bottom:3px">${esc(sco.name)}${isActive ? ` <span style="font-size:.55rem;color:var(--volt);font-family:'JetBrains Mono',monospace;letter-spacing:.1em">⚡ACTIVE</span>` : ''}</div>
-            <div style="font-size:.68rem;color:var(--muted2);font-family:'JetBrains Mono',monospace">${scoRides.length} rides · ${scoMi.toFixed(1)} mi total</div>
+            <div style="font-size:.68rem;color:var(--muted2);font-family:'JetBrains Mono',monospace">${scoRides.length} rides · avg ${scoAvg.toFixed(1)} · top ${scoTop.toFixed(1)} mph</div>
           </div>
           <div style="text-align:right">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--volt);line-height:1">${scoMi.toFixed(1)}</div>
             <div style="font-size:.6rem;color:var(--muted2)">miles</div>
-            ${scoTop > 0 ? `<div style="font-size:.65rem;color:var(--muted2);margin-top:2px">Top: ${scoTop.toFixed(1)} mph</div>` : ''}
           </div>
         </div>`;
       }).join('');
