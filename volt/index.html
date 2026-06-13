@@ -1578,10 +1578,19 @@ function comingSoon(label) {
   toast('🔒 ' + (label || 'This feature') + ' is coming soon', false);
 }
 
+// Blur whatever input is focused (kills the iOS shake-to-undo edit session).
+function blurActive() {
+  const a = document.activeElement;
+  if (a && typeof a.blur === 'function' && a !== document.body) a.blur();
+}
+
 function goTo(screen) {
   if (screen === 'history' && rideActive) { toast('Stop your ride first'); return; }
   if (!state.onboarded && screen !== 'onboard') return;
   if (SOLO_MODE && SOLO_LOCKED.includes(screen)) { comingSoon('Scooter Club & group rides'); return; }
+  // Drop keyboard focus so iOS "Shake to Undo" has no active text-edit session
+  // to pop "Undo/Redo Typing" over while the phone is moving/vibrating.
+  blurActive();
 
   const prev = document.getElementById('screen-' + currentScreen);
   const prevNb = document.getElementById('nb-' + currentScreen);
@@ -2595,6 +2604,7 @@ function deleteCourse(i) {
 // ── Record a Course ──
 function startCourseRecording() {
   if (courseRecording) { goTo('courses'); return; }
+  blurActive();
   courseRecording = true;
   courseRecSecs = 0; courseRecDist = 0; courseRecSpdIdx = 0;
   document.getElementById('courseRecOverlay').classList.add('open');
@@ -2698,6 +2708,7 @@ function cancelCourseRecording() {
 function startCourseRide(idx) {
   const course = state.courses[idx];
   if (!course) return;
+  blurActive();
   if (courseRiding) { stopCourseRide(); }
   if (!navigator.geolocation) { toast('GPS not available on this device'); return; }
   activeCourseIdx = idx;
