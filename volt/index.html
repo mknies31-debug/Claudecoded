@@ -1501,11 +1501,20 @@ let state = loadState() || {
 };
 
 const SCOOTERS = [
-  { name: 'EOEOTWO Land',          meta: '500W · 20 mph · 30 mi range', range: 30 },
-  { name: 'Circooter Land Turbo',meta: '1200W · 30 mph · 40 mi range', range: 40 },
-  { name: 'Ninebot Max G2',      meta: '700W · 25 mph · 43 mi range', range: 43 },
-  { name: 'Other / Custom',      meta: 'User-configured',              range: 30 }
+  { name: 'EOEOTWO Land',          meta: '500W · 20 mph · 30 mi range', range: 30, maxSpd: 20 },
+  { name: 'Circooter Land Turbo',meta: '1200W · 30 mph · 40 mi range', range: 40, maxSpd: 30 },
+  { name: 'Ninebot Max G2',      meta: '700W · 25 mph · 43 mi range', range: 43, maxSpd: 25 },
+  { name: 'Other / Custom',      meta: 'User-configured',              range: 30, maxSpd: 0 }
 ];
+
+// Believable top-speed bound for a ride's scooter (rated max + GPS margin).
+// Used to scrub impossible legacy records; 0/unknown falls back to the ceiling.
+function rideSpdCap(scooterIdx) {
+  const sco = (state.garage || [])[scooterIdx];
+  let max = sco && typeof sco.maxSpd === 'number' ? sco.maxSpd : 0;
+  if (!max && sco && typeof sco.modelIdx === 'number' && SCOOTERS[sco.modelIdx]) max = SCOOTERS[sco.modelIdx].maxSpd || 0;
+  return max > 0 ? Math.round(max * 1.25) : SPEED_CEILING;
+}
 
 const TRAILS = [
   {
@@ -1684,6 +1693,7 @@ function obFinish() {
     meta: selectedModel === 3 ? ('Custom · ' + (state.customRange||30) + ' mi range') : _sco.meta,
     range: selectedModel === 3 ? (state.customRange||30) : _sco.range,
     modelIdx: selectedModel,
+    maxSpd: (SCOOTERS[selectedModel] && SCOOTERS[selectedModel].maxSpd) || 0,
     battPct: state.battPct,
     photo: state.scooterPhoto || null,
     customName: state.customName || ''
@@ -1842,6 +1852,20 @@ let rideStartBatt = 72;
 
 const GPS_COORDS =['44.2930° N','44.2935° N','44.2940° N','44.2945° N','44.2950° N','44.2953° N','44.2958° N'];
 
+// Speed sanitiser — rejects GPS glitches so a single bad fix can't record an
+// impossible top speed. A poor-accuracy fix is untrustworthy (coast on the last
+// good value); a real scooter can't gain tens of mph in one sample, so cap the
+// rise; and nothing on wheels here exceeds the hard ceiling.
+const SPEED_CEILING = 45; // mph
+const SPEED_MAX_ACCEL = 6; // mph gained per second treated as plausible
+function cleanSpeed(rawSpd, lastSpd, dt, accuracy) {
+  if (!(rawSpd > 0)) return 0;
+  if (accuracy != null && accuracy > 35) return lastSpd || 0; // distrust bad fixes
+  let s = Math.min(rawSpd, SPEED_CEILING);
+  if (dt > 0 && lastSpd != null) s = Math.min(s, lastSpd + SPEED_MAX_ACCEL * dt);
+  return Math.max(0, s);
+}
+
 function startRide() {
   if (rideActive) { goTo('ride'); return; }
 
@@ -1854,6 +1878,7 @@ function startRide() {
   rideSecs = 0; rideDist = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
   rideStartBatt = state.battPct;
   let rideLastLat = null, rideLastLng = null, rideLastTime = null;
+  let rideLastSpd = 0;
   let szShown = false;
 
   document.getElementById('rideSpd').textContent = '0.0';
@@ -1892,14 +1917,17 @@ function startRide() {
         segMi = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       }
 
-      // Speed: device value (m/s → mph) when present, else derived; clamp 0–60.
-      let spd = 0;
+      // Raw speed: device value (m/s → mph) when present, else derived.
+      let rawSpd = 0;
       if (pos.coords.speed != null && pos.coords.speed >= 0) {
-        spd = pos.coords.speed * 2.23694;
+        rawSpd = pos.coords.speed * 2.23694;
       } else if (rideLastLat !== null && dt > 0) {
-        spd = (segMi / dt) * 3600;
+        rawSpd = (segMi / dt) * 3600;
       }
-      spd = Math.min(Math.max(spd, 0), 60);
+      // Reject GPS glitches: a poor-accuracy fix isn't trustworthy for speed,
+      // and a real scooter can't jump tens of mph in one sample. cleanSpeed
+      // rejects/limits both so a single bad fix can't record a fake top speed.
+      const spd = cleanSpeed(rawSpd, rideLastSpd, dt, acc);
 
       // Accept the fix for distance only if it's accurate enough, not a
       // teleport, and represents real movement (ignore sub-metre jitter).
@@ -1915,6 +1943,7 @@ function startRide() {
       }
       // (poor-accuracy or teleport fixes are dropped entirely)
 
+      rideLastSpd = spd;
       if (spd > rideTopSpd) rideTopSpd = spd;
       rideSpdSum += spd; rideSpdCount++;
       const avgSpd = rideSpdCount > 0 ? rideSpdSum / rideSpdCount : 0;
@@ -2518,7 +2547,7 @@ function gsSaveScooter() {
     name = s.name; meta = s.meta; range = s.range; modelIdx = gsSelectedModel;
   }
   const battPct = parseInt(document.getElementById('gs-batt-slider').value) || 80;
-  const sco = { name, meta, range, modelIdx, battPct, photo: gsPendingPhoto || null, customName: name };
+  const sco = { name, meta, range, modelIdx, maxSpd: (SCOOTERS[modelIdx] && SCOOTERS[modelIdx].maxSpd) || 0, battPct, photo: gsPendingPhoto || null, customName: name };
 
   if (gsEditId !== null) {
     const existing = state.garage[gsEditId];
@@ -2740,7 +2769,7 @@ function startCourseRide(idx) {
   toast('🏁 Course started! Acquiring GPS...', true);
 
   // ── GPS WATCH — real speed, distance, and progress along the course ──
-  let crLastLat = null, crLastLng = null, crLastTime = null;
+  let crLastLat = null, crLastLng = null, crLastTime = null, crLastSpd = 0;
   window._crideEngineGpsId = navigator.geolocation.watchPosition(
     function(pos) {
       if (!courseRiding) return;
@@ -2754,16 +2783,17 @@ function startCourseRide(idx) {
         const a = Math.sin(dLat/2)**2 + Math.cos(crLastLat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)**2;
         segMi = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       }
-      let spd = 0;
-      if (pos.coords.speed != null && pos.coords.speed >= 0) spd = pos.coords.speed * 2.23694;
-      else if (crLastLat !== null && dt > 0) spd = (segMi / dt) * 3600;
-      spd = Math.min(Math.max(spd, 0), 60);
+      let rawSpd = 0;
+      if (pos.coords.speed != null && pos.coords.speed >= 0) rawSpd = pos.coords.speed * 2.23694;
+      else if (crLastLat !== null && dt > 0) rawSpd = (segMi / dt) * 3600;
+      const spd = cleanSpeed(rawSpd, crLastSpd, dt, acc);
 
       const moved = segMi > 0.0019;
       if (crLastLat === null) { crLastLat = lat; crLastLng = lng; crLastTime = now; }
       else if (acc <= 35 && segMi < 0.5 && moved) { courseRideDist += segMi; crLastLat = lat; crLastLng = lng; crLastTime = now; }
       else if (acc <= 35 && !moved) { crLastTime = now; }
 
+      crLastSpd = spd;
       if (spd > courseRideTopSpd) courseRideTopSpd = spd;
       courseRideSpdSum += spd; courseRideSpdCount++;
 
@@ -3519,6 +3549,21 @@ function resetApp() {
     state.scooterIdx = 0;
     saveState(state);
   }
+  // Backfill each garage scooter's rated max speed from its catalog model.
+  (state.garage || []).forEach(sco => {
+    if (typeof sco.maxSpd !== 'number') {
+      sco.maxSpd = (typeof sco.modelIdx === 'number' && SCOOTERS[sco.modelIdx]) ? (SCOOTERS[sco.modelIdx].maxSpd || 0) : 0;
+    }
+  });
+  // Scrub impossible legacy top speeds (e.g. a GPS-glitch 60 mph) down to a
+  // believable bound for that scooter; can't recover the true value, but this
+  // stops a glitch from owning the headline stat. (Avg/distance untouched.)
+  let scrubbed = false;
+  (state.rides || []).forEach(r => {
+    const cap = rideSpdCap(r.scooterIdx);
+    if (typeof r.topSpd === 'number' && r.topSpd > cap) { r.topSpd = cap; scrubbed = true; }
+  });
+  if (scrubbed) saveState(state);
   // Seed lifetime odometers from existing rides the first time (so past
   // distance counts), then they increment independently per saved ride.
   if (typeof state.odometer !== 'number') {
