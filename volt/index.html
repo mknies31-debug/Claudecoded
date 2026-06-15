@@ -1208,6 +1208,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <input class="cro-name-input" id="croNameInput" type="text" placeholder="Name this course..." autocomplete="off">
       </div>
       <button class="cro-finish-btn" id="croFinishBtn" onclick="finishCourseRecording()">✅ Save Course</button>
+      <div id="croAutoSave" style="text-align:center;font-size:.62rem;color:var(--volt-dim);font-family:'JetBrains Mono',monospace;margin-top:6px;letter-spacing:.06em"></div>
       <button class="cro-cancel-btn" onclick="cancelCourseRecording()">Discard &amp; Cancel</button>
     </div>
   </div>
@@ -1314,6 +1315,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     </div>
     <button class="modal-save" onclick="saveRide()">💾 Save Ride</button>
     <button class="modal-disc" onclick="discardRide()">Discard</button>
+    <div id="mAutoSave" style="text-align:center;font-size:.64rem;color:var(--volt-dim);font-family:'JetBrains Mono',monospace;margin-top:10px;letter-spacing:.06em"></div>
   </div>
 </div>
 
@@ -2101,9 +2103,31 @@ function stopRide() {
   const now = new Date();
   document.getElementById('modalSub').textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   document.getElementById('rideModal').classList.add('open');
+  // No answer within 30s → record the ride automatically.
+  armAutoSave(30, 'mAutoSave', () => saveRide());
+}
+
+// ── Auto-confirm a pending save prompt after N seconds of no answer ──
+let _autoSaveTimer = null, _autoSaveLabel = null;
+function armAutoSave(seconds, labelId, onFire) {
+  disarmAutoSave();
+  _autoSaveLabel = labelId;
+  let left = seconds;
+  const paint = () => { const e = document.getElementById(labelId); if (e) e.textContent = '⏱ Auto-saving in ' + left + 's — tap to choose'; };
+  paint();
+  _autoSaveTimer = setInterval(() => {
+    left--;
+    if (left <= 0) { disarmAutoSave(); if (typeof onFire === 'function') onFire(); }
+    else paint();
+  }, 1000);
+}
+function disarmAutoSave() {
+  if (_autoSaveTimer) { clearInterval(_autoSaveTimer); _autoSaveTimer = null; }
+  if (_autoSaveLabel) { const e = document.getElementById(_autoSaveLabel); if (e) e.textContent = ''; _autoSaveLabel = null; }
 }
 
 function saveRide() {
+  disarmAutoSave();
   document.getElementById('rideModal').classList.remove('open');
   const avg = rideSpdCount ? rideSpdSum / rideSpdCount : 0;
   const route = window._rideRoute || null;
@@ -2125,6 +2149,7 @@ function saveRide() {
 }
 
 function discardRide() {
+  disarmAutoSave();
   document.getElementById('rideModal').classList.remove('open');
   rideDist = 0; rideSecs = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
   window._rideRoute = null;
@@ -2791,6 +2816,8 @@ function startCourseRecording() {
       if (window._courseGpsId) { navigator.geolocation.clearWatch(window._courseGpsId); window._courseGpsId = null; }
       if (typeof stopCroMapTracking === 'function') stopCroMapTracking();
       toast('🛑 Stopped — name & save your course below', true);
+      // No answer within 30s → save the course automatically (default name).
+      armAutoSave(30, 'croAutoSave', autoSaveCourse);
       return;
     }
     courseRecSecs++;
@@ -2815,8 +2842,19 @@ function startCourseRecording() {
   }, 1000);
 }
 
+// Auto-save a recorded course when the prompt goes unanswered — fills a
+// default name if none was typed.
+function autoSaveCourse() {
+  const input = document.getElementById('croNameInput');
+  if (input && !input.value.trim()) {
+    input.value = 'Course ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  finishCourseRecording();
+}
+
 function finishCourseRecording() {
   if (!courseRecording) return;
+  disarmAutoSave();
   const name = (document.getElementById('croNameInput').value || '').trim();
   if (!name) { toast('Give your course a name first'); return; }
   if (courseRecDist < 0.05) { toast('Ride a bit further first!'); return; }
@@ -2850,6 +2888,7 @@ function finishCourseRecording() {
 }
 
 function cancelCourseRecording() {
+  disarmAutoSave();
   clearInterval(courseRecTimer);
   if (window._courseGpsId) { navigator.geolocation.clearWatch(window._courseGpsId); window._courseGpsId = null; }
   courseRecording = false;
