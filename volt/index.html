@@ -367,6 +367,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .modal-save:active{opacity:.85;transform:scale(.98)}
 .modal-disc{width:100%;padding:13px;background:transparent;color:var(--muted2);border:1px solid var(--border);border-radius:14px;font-family:'JetBrains Mono',monospace;font-size:.73rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s}
 .modal-disc:active{color:var(--red);border-color:rgba(255,68,68,.35)}
+.start-opt{width:100%;display:flex;align-items:center;gap:14px;text-align:left;padding:14px 16px;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:all .2s;color:var(--text)}
+.start-opt:active{border-color:var(--volt);transform:scale(.98)}
+.start-opt .so-ic{font-size:1.5rem;flex-shrink:0}
+.start-opt b{display:block;font-size:.95rem;font-weight:600}
+.start-opt small{display:block;font-size:.68rem;color:var(--muted2);margin-top:2px}
+.start-pick{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:12px 14px;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;color:var(--text)}
+.start-pick:active{border-color:var(--volt)}
+.start-pick .sp-ic{font-size:1.2rem}
+.start-pick b{display:block;font-size:.85rem;font-weight:600}
+.start-pick small{display:block;font-size:.64rem;color:var(--muted2);font-family:'JetBrains Mono',monospace}
 
 /* TOAST */
 .toast{position:absolute;top:58px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:9px 18px;font-size:.76rem;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;white-space:nowrap;opacity:0;transition:all .28s;z-index:600;pointer-events:none}
@@ -620,21 +630,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   <div class="ob-wrap">
     <div class="ob-logo">VOLT.</div>
     <div class="ob-tagline">Your ride. Your data. Your world.</div>
-    <div class="ob-dots">
-      <div class="ob-dot active" id="dot-0"></div>
-      <div class="ob-dot" id="dot-1"></div>
-      <div class="ob-dot" id="dot-2"></div>
-    </div>
 
-    <!-- Step 0: Name -->
+    <!-- Step 0: Name (only step — scooters are added later in the Garage) -->
     <div class="ob-step active" id="ob-0">
       <div class="ob-heading">What should we call you?</div>
-      <div class="ob-sub">This shows on your profile and ride history.</div>
+      <div class="ob-sub">This shows on your profile and ride history. You'll add your scooter from the Garage once you're in.</div>
       <div class="ob-field">
         <div class="ob-label">Your name</div>
         <input class="ob-input" id="ob-name" type="text" placeholder="e.g. Alex" autocomplete="off">
       </div>
-      <button class="ob-btn" onclick="obNext(0)">Continue →</button>
+      <button class="ob-btn" onclick="obFinish()">Start Riding ⚡</button>
     </div>
 
     <!-- Step 1: Scooter model -->
@@ -1315,6 +1320,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 <!-- TOAST -->
 <div class="toast" id="toastEl"></div>
 
+<!-- START-RIDE CHOOSER -->
+<div class="modal-ov" id="startModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div id="startMain">
+      <div class="modal-title">Start a Ride</div>
+      <div class="modal-sub">How do you want to ride?</div>
+      <button class="start-opt" onclick="startFreeRide()"><span class="so-ic">⚡</span><span><b>Free Ride</b><small>Track speed, distance &amp; time</small></span></button>
+      <button class="start-opt" onclick="startPickTrail()"><span class="so-ic">🗺️</span><span><b>Ride a Trail</b><small>Follow a known path near you</small></span></button>
+      <button class="start-opt" onclick="startPickCourse()"><span class="so-ic">🏁</span><span><b>Ride a Course</b><small>Race your own best time</small></span></button>
+      <button class="start-opt" onclick="startNewCourse()"><span class="so-ic">📍</span><span><b>Create a Course</b><small>Record a new path to race later</small></span></button>
+      <button class="modal-disc" onclick="closeStartModal()">Cancel</button>
+    </div>
+    <div id="startSub" style="display:none">
+      <div class="modal-title" id="startSubTitle">Choose</div>
+      <div class="modal-sub" id="startSubHint"></div>
+      <div id="startSubList" style="max-height:48vh;overflow-y:auto;margin-bottom:10px"></div>
+      <button class="modal-disc" onclick="startBack()">← Back</button>
+    </div>
+  </div>
+</div>
+
 <!-- ACCOUNT (email) MODAL -->
 <div class="modal-ov" id="authModal">
   <div class="modal-sheet">
@@ -1639,7 +1666,71 @@ function goTo(screen) {
 
 function fabTap() {
   if (rideActive) { goTo('ride'); return; }
+  if (courseRiding) { document.getElementById('courseRideOverlay').classList.add('open'); return; }
+  if (courseRecording) { document.getElementById('courseRecOverlay').classList.add('open'); return; }
+  openStartModal();
+}
+
+// ── Start-ride chooser ──
+function openStartModal() {
+  blurActive();
+  document.getElementById('startMain').style.display = 'block';
+  document.getElementById('startSub').style.display = 'none';
+  document.getElementById('startModal').classList.add('open');
+}
+function closeStartModal() { document.getElementById('startModal').classList.remove('open'); }
+function startBack() {
+  document.getElementById('startSub').style.display = 'none';
+  document.getElementById('startMain').style.display = 'block';
+}
+function startFreeRide() {
+  window._rideRoute = null;
+  closeStartModal();
   startRide();
+}
+function startNewCourse() {
+  closeStartModal();
+  goTo('courses');
+  setTimeout(() => startCourseRecording(), 200);
+}
+function startPickTrail() {
+  document.getElementById('startSubTitle').textContent = 'Ride a Trail';
+  document.getElementById('startSubHint').textContent = 'Pick a path to ride';
+  document.getElementById('startSubList').innerHTML = TRAILS.map((t, i) =>
+    `<button class="start-pick" onclick="startTrailRide(${i})"><span class="sp-ic">${t.surfIcon}</span>` +
+    `<span><b>${esc(t.name)}</b><small>${t.dist} mi · ${t.surface} · ${t.away} away</small></span></button>`).join('');
+  document.getElementById('startMain').style.display = 'none';
+  document.getElementById('startSub').style.display = 'block';
+}
+function startTrailRide(idx) {
+  const t = TRAILS[idx];
+  window._rideRoute = t ? { type: 'trail', name: t.name } : null;
+  closeStartModal();
+  startRide();
+}
+function startPickCourse() {
+  const courses = state.courses || [];
+  document.getElementById('startSubTitle').textContent = 'Ride a Course';
+  if (!courses.length) {
+    document.getElementById('startSubHint').textContent = 'No courses yet';
+    document.getElementById('startSubList').innerHTML =
+      '<div style="color:var(--muted2);font-size:.82rem;line-height:1.6;padding:10px 0 14px">You haven\'t recorded any courses.<br>Create one to race your best time.</div>' +
+      '<button class="start-opt" onclick="startNewCourse()"><span class="so-ic">📍</span><span><b>Create a Course</b><small>Record a new path now</small></span></button>';
+  } else {
+    document.getElementById('startSubHint').textContent = 'Pick a course to race';
+    document.getElementById('startSubList').innerHTML = courses.map((c, i) => {
+      const pb = c.attempts && c.attempts.length ? Math.min(...c.attempts.map(a => a.secs)) : null;
+      return `<button class="start-pick" onclick="startCourseRideFromModal(${i})"><span class="sp-ic">🏁</span>` +
+        `<span><b>${esc(c.name)}</b><small>${c.dist.toFixed(2)} mi${pb ? ' · PB ' + fmtTime(pb) : ' · no time yet'}</small></span></button>`;
+    }).join('');
+  }
+  document.getElementById('startMain').style.display = 'none';
+  document.getElementById('startSub').style.display = 'block';
+}
+function startCourseRideFromModal(idx) {
+  closeStartModal();
+  goTo('courses');
+  setTimeout(() => startCourseRide(idx), 200);
 }
 
 // ══════════════════════════════════════════════
@@ -1681,57 +1772,23 @@ function obBattChange(val) {
 }
 
 function obFinish() {
-  if (selectedModel === 3) {
-    const cname = (document.getElementById('ob-custom-name').value || '').trim();
-    if (!cname) { toast('Please enter your scooter name'); return; }
-    const crange = parseInt(document.getElementById('ob-custom-range').value) || 30;
-    const cmax = parseInt(document.getElementById('ob-custom-maxspd').value) || 0;
-    state.customName = cname;
-    state.customRange = crange;
-    state.customMaxSpd = cmax;
-    SCOOTERS[3].name = cname;
-    SCOOTERS[3].meta = customMeta(crange, cmax);
-    SCOOTERS[3].range = crange;
-    SCOOTERS[3].maxSpd = cmax;
-  }
-  state.battPct = parseInt(document.getElementById('ob-batt-slider').value) || 72;
-  if (window._pendingPhoto) { state.scooterPhoto = window._pendingPhoto; window._pendingPhoto = null; }
+  // Name-only onboarding. The garage starts empty — the rider adds their
+  // scooter(s) themselves from the Garage; until then rides still track.
+  const n = (document.getElementById('ob-name').value || '').trim();
+  if (!n) { toast('Please enter your name'); return; }
+  state.name = n;
   state.onboarded = true;
   state.joinDate = new Date().toISOString();
-
-  // Seed garage from onboarding selection.
-  // scooterIdx is the GARAGE index of the active scooter; the catalog model
-  // the rider picked is stored per-entry as modelIdx.
-  const _sco = SCOOTERS[selectedModel] || SCOOTERS[0];
-  state.garage = [{
-    name: selectedModel === 3 ? (state.customName || 'My Scooter') : _sco.name,
-    meta: selectedModel === 3 ? customMeta(state.customRange||30, state.customMaxSpd||0) : _sco.meta,
-    range: selectedModel === 3 ? (state.customRange||30) : _sco.range,
-    modelIdx: selectedModel,
-    maxSpd: selectedModel === 3 ? (state.customMaxSpd||0) : ((SCOOTERS[selectedModel] && SCOOTERS[selectedModel].maxSpd) || 0),
-    battPct: state.battPct,
-    photo: state.scooterPhoto || null,
-    customName: state.customName || ''
-  }];
+  state.garage = [];
   state.scooterIdx = 0;
+  if (!state.rides) state.rides = [];
   if (!state.courses) state.courses = [];
-  if (!state.clubs) state.clubs = [];
-  if (!state.rideEvents) state.rideEvents = [];
-  if (!state.clubMemberships) state.clubMemberships = [];
-  if (!state.myRsvps) state.myRsvps = {};
-  if (!state.savedRoutes) state.savedRoutes = [];
 
   try { saveState(state); } catch(e) {}
-
-  // Safely transition to home
-  try {
-    document.getElementById('screen-onboard').classList.remove('active');
-  } catch(e) {}
+  try { document.getElementById('screen-onboard').classList.remove('active'); } catch(e) {}
   currentScreen = 'onboard';
-
   try { renderTrails(); } catch(e) {}
   try { goTo('home'); } catch(e) {
-    // Manual fallback if goTo fails
     const h = document.getElementById('screen-home');
     if (h) h.classList.add('active');
     currentScreen = 'home';
@@ -1793,9 +1850,28 @@ function updateBatt(val) {
   refreshHomeWidgets();
 }
 
+function activeScooter() {
+  return (state.garage && state.garage[state.scooterIdx]) || null;
+}
+
 function refreshHomeWidgets() {
   const pct = state.battPct;
-  const activeSco = (state.garage && state.garage[state.scooterIdx]) || SCOOTERS[state.scooterIdx] || SCOOTERS[0];
+  const activeSco = activeScooter();
+  if (!activeSco) {
+    // Empty garage — prompt to add a scooter instead of faking battery/range.
+    document.getElementById('homeBattPct').innerHTML = '–<small></small>';
+    document.getElementById('homeBattBar').style.width = '0%';
+    document.getElementById('homeRange').textContent = '— mi';
+    document.getElementById('homeFullRange').textContent = '— mi';
+    document.getElementById('homeScoModel').innerHTML = '<span style="color:var(--volt)">＋ Add your scooter</span>';
+    document.getElementById('profBattSlider').value = 0;
+    document.getElementById('profBattVal').textContent = '—';
+    document.getElementById('profRangeEst').textContent = 'Add a scooter to track range';
+    document.getElementById('sBatt').textContent = '— 🔋';
+    const odoEl0 = document.getElementById('homeOdo');
+    if (odoEl0) odoEl0.textContent = odoCareer().toFixed(1);
+    return;
+  }
   const activeRange = activeSco.range || 30;
   const range = (pct / 100 * activeRange).toFixed(1);
   const fullRange = activeRange.toFixed ? activeRange.toFixed(1) : activeRange;
@@ -1895,6 +1971,7 @@ function startRide() {
   let rideLastLat = null, rideLastLng = null, rideLastTime = null;
   let rideLastSpd = 0;
   let szShown = false;
+  let hasMoved = false, lastMoveTs = Date.now(); // for 30s auto-end on no movement
 
   document.getElementById('rideSpd').textContent = '0.0';
   document.getElementById('rideTop').textContent = '0.0';
@@ -1958,6 +2035,9 @@ function startRide() {
       }
       // (poor-accuracy or teleport fixes are dropped entirely)
 
+      // Movement tracking for the 30s auto-end (real motion = distance or >2 mph).
+      if ((acc <= 35 && moved) || spd > 2) { hasMoved = true; lastMoveTs = Date.now(); }
+
       rideLastSpd = spd;
       if (spd > rideTopSpd) rideTopSpd = spd;
       rideSpdSum += spd; rideSpdCount++;
@@ -1990,6 +2070,12 @@ function startRide() {
   // ── CLOCK — runs every second independently of GPS ──
   rideTimer = setInterval(() => {
     if (!rideActive) return;
+    // Auto-end the ride after 30s of no movement (once you've actually moved).
+    if (hasMoved && Date.now() - lastMoveTs > 30000) {
+      toast('🛑 Ride auto-ended — no movement for 30s', true);
+      stopRide();
+      return;
+    }
     rideSecs++;
     document.getElementById('rideTime').textContent = fmtTime(rideSecs);
     document.getElementById('rideCal').textContent = Math.round(rideDist * 35 + rideSecs * 0.01);
@@ -2131,14 +2217,16 @@ function refreshHistory() {
 // PROFILE
 // ══════════════════════════════════════════════
 function refreshProfile() {
-  const activeSco = (state.garage && state.garage[state.scooterIdx]) || SCOOTERS[state.scooterIdx] || SCOOTERS[0];
+  const activeSco = activeScooter();
   document.getElementById('profName').textContent = state.name.toUpperCase();
-  document.getElementById('profScoModel').textContent = activeSco.name || 'My Scooter';
-  document.getElementById('profScoMeta').textContent = activeSco.meta || '—';
+  document.getElementById('profScoModel').textContent = activeSco ? (activeSco.name || 'My Scooter') : 'No scooter yet';
+  document.getElementById('profScoMeta').textContent = activeSco ? (activeSco.meta || '—') : 'Add one in your Garage';
   const photoEl = document.getElementById('profScoPhoto');
   if (photoEl) {
-    const activePhoto = (activeSco && activeSco.photo) || state.scooterPhoto;
-    if (activePhoto) {
+    const activePhoto = activeSco && activeSco.photo;
+    if (!activeSco) {
+      photoEl.innerHTML = '<div class="sc-photo-placeholder" onclick="goTo(\'garage\')"><span class="spp-icon">🏎️</span><span class="spp-lbl">TAP TO ADD A SCOOTER</span></div>';
+    } else if (activePhoto) {
       photoEl.innerHTML = '<img class="sc-photo" src="' + activePhoto + '" alt="My scooter"><span class="sc-change-photo" onclick="document.getElementById(\'prof-photo-input\').click()">📷 Change photo</span>';
     } else {
       photoEl.innerHTML = '<div class="sc-photo-placeholder" onclick="document.getElementById(\'prof-photo-input\').click()"><span class="spp-icon">📷</span><span class="spp-lbl">TAP TO ADD A PHOTO</span></div>';
@@ -2578,7 +2666,9 @@ function gsSaveScooter() {
     if (state.scooterIdx === gsEditId) state.battPct = battPct;
     toast('✅ Scooter updated!', true);
   } else {
+    const wasEmpty = state.garage.length === 0;
     state.garage.push(sco);
+    if (wasEmpty) { state.scooterIdx = 0; state.battPct = battPct; } // first scooter becomes active
     toast('🛴 Added to garage!', true);
   }
   saveState(state);
@@ -2670,6 +2760,7 @@ function startCourseRecording() {
   const svg = document.getElementById('croPathSvg');
 
   let croLastLat = null, croLastLng = null;
+  let croHasMoved = false, croLastMoveTs = Date.now(); // 30s auto-end on no movement
   window._courseGpsId = navigator.geolocation ? navigator.geolocation.watchPosition(
     function(pos) {
       if (!courseRecording) return;
@@ -2681,6 +2772,7 @@ function startCourseRecording() {
         const a = Math.sin(dLat/2)**2 + Math.cos(croLastLat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)**2;
         const seg = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         if (seg < 0.5) courseRecDist += seg;
+        if (seg > 0.0019 || spd > 2) { croHasMoved = true; croLastMoveTs = Date.now(); }
       }
       croLastLat = lat; croLastLng = lng;
       document.getElementById('croDist').textContent = courseRecDist.toFixed(2);
@@ -2692,6 +2784,15 @@ function startCourseRecording() {
   ) : null;
 
   courseRecTimer = setInterval(() => {
+    // Auto-end recording after 30s of no movement; keep the overlay so the
+    // rider can name & save the course (recording stays armed for the Save).
+    if (croHasMoved && Date.now() - croLastMoveTs > 30000) {
+      clearInterval(courseRecTimer);
+      if (window._courseGpsId) { navigator.geolocation.clearWatch(window._courseGpsId); window._courseGpsId = null; }
+      if (typeof stopCroMapTracking === 'function') stopCroMapTracking();
+      toast('🛑 Stopped — name & save your course below', true);
+      return;
+    }
     courseRecSecs++;
     document.getElementById('croTime').textContent = fmtTime(courseRecSecs);
 
@@ -2792,6 +2893,7 @@ function startCourseRide(idx) {
 
   // ── GPS WATCH — real speed, distance, and progress along the course ──
   let crLastLat = null, crLastLng = null, crLastTime = null, crLastSpd = 0;
+  let crHasMoved = false, crLastMoveTs = Date.now(); // 30s auto-end on no movement
   window._crideEngineGpsId = navigator.geolocation.watchPosition(
     function(pos) {
       if (!courseRiding) return;
@@ -2815,6 +2917,7 @@ function startCourseRide(idx) {
       else if (acc <= 35 && segMi < 0.5 && moved) { courseRideDist += segMi; crLastLat = lat; crLastLng = lng; crLastTime = now; }
       else if (acc <= 35 && !moved) { crLastTime = now; }
 
+      if ((acc <= 35 && moved) || spd > 2) { crHasMoved = true; crLastMoveTs = Date.now(); }
       crLastSpd = spd;
       if (spd > courseRideTopSpd) courseRideTopSpd = spd;
       courseRideSpdSum += spd; courseRideSpdCount++;
@@ -2839,6 +2942,12 @@ function startCourseRide(idx) {
   // ── CLOCK — runs every second independently of GPS ──
   courseRideTimer = setInterval(() => {
     if (!courseRiding) return;
+    // Auto-finish the course after 30s of no movement.
+    if (crHasMoved && Date.now() - crLastMoveTs > 30000) {
+      toast('🛑 Course auto-ended — no movement for 30s', true);
+      stopCourseRide();
+      return;
+    }
     courseRideSecs++;
     document.getElementById('crideTime').textContent = fmtTime(courseRideSecs);
     document.getElementById('crideYouTime').textContent = fmtTime(courseRideSecs);
@@ -3549,23 +3658,8 @@ function resetApp() {
 (function boot() {
   if (!state.settings) state.settings = { spd: true, loc: false, cam: false };
   if (!state.courses) state.courses = [];
+  if (!state.garage) state.garage = []; // garage starts (and can stay) empty
 
-  // Migrate: if onboarded but garage is empty, seed from the saved scooter and
-  // normalise scooterIdx to a garage index (0 = the seeded scooter).
-  if (state.onboarded && (!state.garage || !state.garage.length)) {
-    const sco = SCOOTERS[state.scooterIdx] || SCOOTERS[0];
-    state.garage = [{
-      name: state.scooterIdx === 3 ? (state.customName || 'My Scooter') : sco.name,
-      meta: state.scooterIdx === 3 ? ('Custom · ' + (state.customRange||30) + ' mi range') : sco.meta,
-      range: state.scooterIdx === 3 ? (state.customRange||30) : sco.range,
-      modelIdx: state.scooterIdx,
-      battPct: state.battPct || 72,
-      photo: state.scooterPhoto || null,
-      customName: state.customName || ''
-    }];
-    state.scooterIdx = 0;
-    saveState(state);
-  }
   // Guard against a stale scooterIdx pointing past the garage.
   if (state.garage && state.garage.length && state.scooterIdx >= state.garage.length) {
     state.scooterIdx = 0;
