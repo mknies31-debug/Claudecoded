@@ -674,6 +674,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
           <div class="ob-label">Max Range (miles)</div>
           <input class="ob-input" id="ob-custom-range" type="number" placeholder="e.g. 35" min="1" max="200">
         </div>
+        <div class="ob-field">
+          <div class="ob-label">Top Speed (mph)</div>
+          <input class="ob-input" id="ob-custom-maxspd" type="number" placeholder="e.g. 40" min="1" max="80">
+        </div>
         <div class="ob-label" style="margin-bottom:8px">Scooter Photo <span style="color:var(--muted2);font-size:.58rem">(optional)</span></div>
         <div id="ob-photo-preview" style="width:100%;height:130px;background:var(--surface2);border:2px dashed var(--border);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:border-color .2s;margin-bottom:4px" onclick="document.getElementById('ob-photo-input').click()">
           <span style="font-size:2rem">📷</span>
@@ -1268,6 +1272,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div id="gs-custom-fields" style="display:none">
         <div class="ob-field"><div class="ob-label">Brand &amp; Model Name</div><input class="ob-input" id="gs-custom-name" type="text" placeholder="e.g. Dualtron Thunder" autocomplete="off"></div>
         <div class="ob-field"><div class="ob-label">Max Range (miles)</div><input class="ob-input" id="gs-custom-range" type="number" placeholder="e.g. 35" min="1" max="200"></div>
+        <div class="ob-field"><div class="ob-label">Top Speed (mph)</div><input class="ob-input" id="gs-custom-maxspd" type="number" placeholder="e.g. 40" min="1" max="80"></div>
       </div>
       <div class="ob-field">
         <div class="ob-label">Battery % right now</div>
@@ -1346,6 +1351,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div id="edit-custom-fields" style="display:none;margin-bottom:14px">
       <div class="ob-field"><div class="ob-label">Brand &amp; Model Name</div><input class="ob-input" id="edit-custom-name" type="text" placeholder="e.g. Dualtron Thunder 3" autocomplete="off"></div>
       <div class="ob-field"><div class="ob-label">Max Range (miles)</div><input class="ob-input" id="edit-custom-range" type="number" placeholder="e.g. 35" min="1" max="200"></div>
+      <div class="ob-field"><div class="ob-label">Top Speed (mph)</div><input class="ob-input" id="edit-custom-maxspd" type="number" placeholder="e.g. 40" min="1" max="80"></div>
     </div>
     <div class="ob-label" style="margin-bottom:8px">Scooter Photo <span style="color:var(--muted2);font-size:.58rem">(optional — tap to add)</span></div>
     <div id="edit-photo-preview" style="width:100%;height:150px;background:var(--surface2);border:2px dashed var(--border);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:border-color .2s;margin-bottom:16px;overflow:hidden;position:relative" onclick="document.getElementById('edit-photo-input').click()">
@@ -1507,13 +1513,19 @@ const SCOOTERS = [
   { name: 'Other / Custom',      meta: 'User-configured',              range: 30, maxSpd: 0 }
 ];
 
-// Believable top-speed bound for a ride's scooter (rated max + GPS margin).
-// Used to scrub impossible legacy records; 0/unknown falls back to the ceiling.
+// Believable top-speed bound for a ride's scooter (rated max + small GPS
+// margin). Used to scrub impossible legacy records; 0/unknown → a 35 mph
+// default so corrupt highs still get trimmed without clipping fast scooters.
 function rideSpdCap(scooterIdx) {
   const sco = (state.garage || [])[scooterIdx];
   let max = sco && typeof sco.maxSpd === 'number' ? sco.maxSpd : 0;
   if (!max && sco && typeof sco.modelIdx === 'number' && SCOOTERS[sco.modelIdx]) max = SCOOTERS[sco.modelIdx].maxSpd || 0;
-  return max > 0 ? Math.round(max * 1.25) : SPEED_CEILING;
+  return max > 0 ? Math.round(max * 1.2) : 35;
+}
+
+// Meta line for a custom scooter, e.g. "Custom · 40 mph · 35 mi range".
+function customMeta(range, maxSpd) {
+  return 'Custom · ' + (maxSpd ? maxSpd + ' mph · ' : '') + (range || 30) + ' mi range';
 }
 
 const TRAILS = [
@@ -1673,11 +1685,14 @@ function obFinish() {
     const cname = (document.getElementById('ob-custom-name').value || '').trim();
     if (!cname) { toast('Please enter your scooter name'); return; }
     const crange = parseInt(document.getElementById('ob-custom-range').value) || 30;
+    const cmax = parseInt(document.getElementById('ob-custom-maxspd').value) || 0;
     state.customName = cname;
     state.customRange = crange;
+    state.customMaxSpd = cmax;
     SCOOTERS[3].name = cname;
-    SCOOTERS[3].meta = 'Custom · ' + crange + ' mi range';
+    SCOOTERS[3].meta = customMeta(crange, cmax);
     SCOOTERS[3].range = crange;
+    SCOOTERS[3].maxSpd = cmax;
   }
   state.battPct = parseInt(document.getElementById('ob-batt-slider').value) || 72;
   if (window._pendingPhoto) { state.scooterPhoto = window._pendingPhoto; window._pendingPhoto = null; }
@@ -1690,10 +1705,10 @@ function obFinish() {
   const _sco = SCOOTERS[selectedModel] || SCOOTERS[0];
   state.garage = [{
     name: selectedModel === 3 ? (state.customName || 'My Scooter') : _sco.name,
-    meta: selectedModel === 3 ? ('Custom · ' + (state.customRange||30) + ' mi range') : _sco.meta,
+    meta: selectedModel === 3 ? customMeta(state.customRange||30, state.customMaxSpd||0) : _sco.meta,
     range: selectedModel === 3 ? (state.customRange||30) : _sco.range,
     modelIdx: selectedModel,
-    maxSpd: (SCOOTERS[selectedModel] && SCOOTERS[selectedModel].maxSpd) || 0,
+    maxSpd: selectedModel === 3 ? (state.customMaxSpd||0) : ((SCOOTERS[selectedModel] && SCOOTERS[selectedModel].maxSpd) || 0),
     battPct: state.battPct,
     photo: state.scooterPhoto || null,
     customName: state.customName || ''
@@ -1856,7 +1871,7 @@ const GPS_COORDS =['44.2930° N','44.2935° N','44.2940° N','44.2945° N','44.2
 // impossible top speed. A poor-accuracy fix is untrustworthy (coast on the last
 // good value); a real scooter can't gain tens of mph in one sample, so cap the
 // rise; and nothing on wheels here exceeds the hard ceiling.
-const SPEED_CEILING = 45; // mph
+const SPEED_CEILING = 50; // mph — backstop; the accel cap is the real glitch filter
 const SPEED_MAX_ACCEL = 6; // mph gained per second treated as plausible
 function cleanSpeed(rawSpd, lastSpd, dt, accuracy) {
   if (!(rawSpd > 0)) return 0;
@@ -2330,8 +2345,10 @@ function openScooterEdit() {
   const cf = document.getElementById('edit-custom-fields');
   if (cf) cf.style.display = editSelectedModel === 3 ? 'block' : 'none';
   if (editSelectedModel === 3) {
-    document.getElementById('edit-custom-name').value = state.customName || '';
-    document.getElementById('edit-custom-range').value = state.customRange || '';
+    const sco = (state.garage || [])[state.scooterIdx] || {};
+    document.getElementById('edit-custom-name').value = sco.customName || state.customName || '';
+    document.getElementById('edit-custom-range').value = sco.range || state.customRange || '';
+    document.getElementById('edit-custom-maxspd').value = sco.maxSpd || state.customMaxSpd || '';
   }
   const ep = document.getElementById('edit-photo-preview');
   if (ep && state.scooterPhoto) {
@@ -2362,22 +2379,24 @@ function editSelectModel(idx) {
 }
 
 function saveScooterEdit() {
-  let name, meta, range;
+  let name, meta, range, maxSpd;
   if (editSelectedModel === 3) {
     name = (document.getElementById('edit-custom-name').value || '').trim();
     if (!name) { toast('Please enter your scooter name'); return; }
     range = parseInt(document.getElementById('edit-custom-range').value) || 30;
-    meta = 'Custom · ' + range + ' mi range';
+    maxSpd = parseInt(document.getElementById('edit-custom-maxspd').value) || 0;
+    meta = customMeta(range, maxSpd);
     state.customName = name;
     state.customRange = range;
+    state.customMaxSpd = maxSpd;
   } else {
     const s = SCOOTERS[editSelectedModel];
-    name = s.name; meta = s.meta; range = s.range;
+    name = s.name; meta = s.meta; range = s.range; maxSpd = s.maxSpd || 0;
   }
   // Update the active garage entry in place — scooterIdx stays a garage index.
   const sco = (state.garage || [])[state.scooterIdx];
   if (sco) {
-    sco.name = name; sco.meta = meta; sco.range = range;
+    sco.name = name; sco.meta = meta; sco.range = range; sco.maxSpd = maxSpd;
     sco.modelIdx = editSelectedModel;
     sco.customName = editSelectedModel === 3 ? name : '';
     if (window._pendingPhoto) sco.photo = window._pendingPhoto;
@@ -2472,6 +2491,7 @@ function openGarageAdd() {
   document.getElementById('gs-custom-fields').style.display = 'none';
   document.getElementById('gs-custom-name').value = '';
   document.getElementById('gs-custom-range').value = '';
+  document.getElementById('gs-custom-maxspd').value = '';
   document.getElementById('gs-batt-slider').value = 80;
   document.getElementById('gs-batt-val').textContent = '80%';
   const pa = document.getElementById('gsPhotoArea');
@@ -2493,6 +2513,7 @@ function openGarageEdit(i) {
   cf.style.display = gsSelectedModel === 3 ? 'block' : 'none';
   document.getElementById('gs-custom-name').value = sco.customName || sco.name;
   document.getElementById('gs-custom-range').value = sco.range || '';
+  document.getElementById('gs-custom-maxspd').value = sco.maxSpd || '';
   document.getElementById('gs-batt-slider').value = sco.battPct || 80;
   document.getElementById('gs-batt-val').textContent = (sco.battPct || 80) + '%';
   const pa = document.getElementById('gsPhotoArea');
@@ -2535,19 +2556,20 @@ function gsHandlePhoto(input) {
 }
 
 function gsSaveScooter() {
-  let name, meta, range, modelIdx;
+  let name, meta, range, modelIdx, maxSpd;
   if (gsSelectedModel === 3) {
     name = (document.getElementById('gs-custom-name').value || '').trim();
     if (!name) { toast('Enter a scooter name'); return; }
     range = parseInt(document.getElementById('gs-custom-range').value) || 30;
-    meta = 'Custom · ' + range + ' mi range';
+    maxSpd = parseInt(document.getElementById('gs-custom-maxspd').value) || 0;
+    meta = customMeta(range, maxSpd);
     modelIdx = 3;
   } else {
     const s = SCOOTERS[gsSelectedModel];
-    name = s.name; meta = s.meta; range = s.range; modelIdx = gsSelectedModel;
+    name = s.name; meta = s.meta; range = s.range; modelIdx = gsSelectedModel; maxSpd = s.maxSpd || 0;
   }
   const battPct = parseInt(document.getElementById('gs-batt-slider').value) || 80;
-  const sco = { name, meta, range, modelIdx, maxSpd: (SCOOTERS[modelIdx] && SCOOTERS[modelIdx].maxSpd) || 0, battPct, photo: gsPendingPhoto || null, customName: name };
+  const sco = { name, meta, range, modelIdx, maxSpd, battPct, photo: gsPendingPhoto || null, customName: name };
 
   if (gsEditId !== null) {
     const existing = state.garage[gsEditId];
