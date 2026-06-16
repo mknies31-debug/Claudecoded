@@ -704,18 +704,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <button class="ob-btn-ghost" onclick="obSkipScooter()">Skip for now</button>
     </div>
 
-    <!-- Step 2: Battery % -->
+    <!-- Step 2: Estimated miles available -->
     <div class="ob-step" id="ob-2">
-      <div class="ob-heading">What's your battery at?</div>
-      <div class="ob-sub">You can update this anytime from your profile. It helps us estimate your range.</div>
-      <div class="ob-field" style="text-align:center;margin-bottom:24px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:5rem;color:var(--volt);line-height:1" id="ob-batt-display">72<span style="font-family:'DM Sans',sans-serif;font-size:1.5rem;color:var(--muted2)">%</span></div>
-        <input type="range" class="be-slider" id="ob-batt-slider" min="0" max="100" value="72" oninput="obBattChange(this.value)" style="width:100%;margin-top:12px">
-        <div class="be-row">
-          <span class="be-sub">0%</span>
-          <span class="be-sub" id="ob-range-est">Est. range: 18.4 mi</span>
-          <span class="be-sub">100%</span>
-        </div>
+      <div class="ob-heading">How far can it go?</div>
+      <div class="ob-sub">Estimated miles available on a full charge. VOLT counts down as you ride and warns you when range gets low. You can update this anytime.</div>
+      <div class="ob-field">
+        <div class="ob-label">Estimated miles available</div>
+        <input class="ob-input" id="ob-miles" type="number" placeholder="e.g. 25" min="1" max="200" inputmode="numeric">
       </div>
       <button class="ob-btn" onclick="obFinish()">Start Riding ⚡</button>
       <button class="ob-btn-ghost" onclick="obBack(2)">← Back</button>
@@ -745,14 +740,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   <div class="batt-widget" onclick="goTo('profile')">
     <div class="bw-top">
       <div>
-        <div class="bw-lbl">Battery Range</div>
+        <div class="bw-lbl">Range Available</div>
         <div class="bw-scooter" id="homeScoModel">Ninebot Max G2</div>
       </div>
-      <div class="bw-pct" id="homeBattPct">72<small>%</small></div>
+      <div class="bw-pct" id="homeBattPct">18<small> mi</small></div>
     </div>
     <div class="bw-track"><div class="bw-fill" id="homeBattBar" style="width:72%"></div></div>
     <div class="bw-range">
-      <div><div class="bw-rval" id="homeRange">18.4 mi</div><div class="bw-rlbl">Est. range</div></div>
+      <div><div class="bw-rval" id="homeRange">18.4 mi</div><div class="bw-rlbl">Miles left</div></div>
       <div style="text-align:right"><div class="bw-rval" id="homeFullRange">25.6 mi</div><div class="bw-rlbl">Full range</div></div>
     </div>
   </div>
@@ -944,7 +939,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="cam-hud-stats">
         <div class="cam-hud-stat"><div class="cam-hud-sv" id="camGps">37.7749° N</div><div class="cam-hud-sl">GPS</div></div>
         <div class="cam-hud-stat"><div class="cam-hud-sv" id="camDist">0.00 mi</div><div class="cam-hud-sl">Dist</div></div>
-        <div class="cam-hud-stat"><div class="cam-hud-sv" id="camBatt">--</div><div class="cam-hud-sl">Batt</div></div>
+        <div class="cam-hud-stat"><div class="cam-hud-sv" id="camBatt">--</div><div class="cam-hud-sl">Range</div></div>
       </div>
       <div class="cam-hud-spd">
         <div class="cam-hud-slbl">Speed</div>
@@ -1014,16 +1009,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <div class="sr-l"><span class="sr-icon">👤</span><span class="sr-label" id="authRowLabel">Account — sign in to sync</span></div>
         <div class="sr-r" id="authRowVal">→</div>
       </div>
-    <!-- Battery editor -->
+    <!-- Range (estimated miles available) editor -->
     <div class="batt-edit-section">
       <div class="be-top">
-        <div class="sc-title">Battery Level</div>
-        <div class="be-val" id="profBattVal">72%</div>
+        <div class="sc-title">Range Available</div>
+        <div class="be-val" id="profBattVal">— mi</div>
       </div>
-      <input type="range" class="be-slider" id="profBattSlider" min="0" max="100" value="72" oninput="updateBatt(this.value)">
+      <input type="range" class="be-slider" id="profBattSlider" min="0" max="100" value="0" oninput="updateMiles(this.value)">
       <div class="be-row">
-        <span class="be-sub">Drag to update</span>
-        <span class="be-sub" id="profRangeEst">≈ 18.4 mi range</span>
+        <span class="be-sub" id="profRangeEst">of full range</span>
+        <span class="be-sub" style="color:var(--volt);cursor:pointer" onclick="rechargeActive()">⚡ Recharged — reset to full</span>
       </div>
     </div>
 
@@ -1301,9 +1296,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <div class="ob-field"><div class="ob-label">Top Speed (mph)</div><input class="ob-input" id="gs-custom-maxspd" type="number" placeholder="e.g. 40" min="1" max="80"></div>
       </div>
       <div class="ob-field">
-        <div class="ob-label">Battery % right now</div>
-        <input type="range" class="be-slider" id="gs-batt-slider" min="0" max="100" value="80" oninput="document.getElementById('gs-batt-val').textContent=this.value+'%'">
-        <div style="display:flex;justify-content:space-between"><span class="be-sub">0%</span><span class="be-sub" id="gs-batt-val">80%</span><span class="be-sub">100%</span></div>
+        <div class="ob-label">Estimated miles available right now</div>
+        <input class="ob-input" id="gs-miles" type="number" placeholder="e.g. 20" min="0" max="200" inputmode="numeric">
+        <div class="be-sub" style="margin-top:5px">Leave blank to start at full range. VOLT warns you at 20% left.</div>
       </div>
       <button class="gs-save-btn" onclick="gsSaveScooter()">💾 Save to Garage</button>
       <button style="width:100%;margin-top:8px;padding:13px;background:transparent;color:var(--muted2);border:1px solid var(--border);border-radius:14px;font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer" onclick="closeGarageSheet()">Cancel</button>
@@ -1769,6 +1764,14 @@ function obNext(step) {
     if (!n) { toast('Please enter your name'); return; }
     state.name = n;
   }
+  if (step === 1) {
+    // Entering the miles step — prefill with the chosen scooter's known range.
+    const def = selectedModel === 3
+      ? (parseInt(document.getElementById('ob-custom-range').value) || '')
+      : (SCOOTERS[selectedModel] && SCOOTERS[selectedModel].range) || '';
+    const mi = document.getElementById('ob-miles');
+    if (mi && !mi.value) mi.value = def;
+  }
   obStep = step + 1;
   document.getElementById('ob-' + step).classList.remove('active');
   document.getElementById('ob-' + obStep).classList.add('active');
@@ -1788,13 +1791,6 @@ function selectModel(idx) {
   document.getElementById('ob-custom-fields').style.display = idx === 3 ? 'block' : 'none';
 }
 
-function obBattChange(val) {
-  document.getElementById('ob-batt-display').innerHTML = val + '<span style="font-family:\'DM Sans\',sans-serif;font-size:1.5rem;color:var(--muted2)">%</span>';
-  const customR = selectedModel === 3 ? (parseInt(document.getElementById('ob-custom-range')?.value) || 30) : SCOOTERS[selectedModel].range;
-  const range = (val / 100 * customR).toFixed(1);
-  document.getElementById('ob-range-est').textContent = 'Est. range: ' + range + ' mi';
-}
-
 // Finish onboarding having SKIPPED the scooter — garage starts empty, rides
 // still track, and Home/Profile nudge the rider to add a scooter.
 function obSkipScooter() {
@@ -1803,24 +1799,25 @@ function obSkipScooter() {
   obComplete();
 }
 
-// Finish onboarding by creating the scooter the rider picked (+ battery).
+// Finish onboarding by creating the scooter the rider picked (+ estimated miles).
 function obFinish() {
-  let name, meta, range, maxSpd, photo = null;
+  let name, meta, maxSpd, photo = null;
   if (selectedModel === 3) {
     name = (document.getElementById('ob-custom-name').value || '').trim();
     if (!name) { toast('Please enter your scooter name'); return; }
-    range = parseInt(document.getElementById('ob-custom-range').value) || 30;
     maxSpd = parseInt(document.getElementById('ob-custom-maxspd').value) || 0;
-    meta = customMeta(range, maxSpd);
     photo = window._pendingPhoto || null;
-    state.customName = name; state.customRange = range; state.customMaxSpd = maxSpd;
+    state.customName = name; state.customMaxSpd = maxSpd;
   } else {
     const s = SCOOTERS[selectedModel];
-    name = s.name; meta = s.meta; range = s.range; maxSpd = s.maxSpd || 0;
+    name = s.name; maxSpd = s.maxSpd || 0;
   }
-  state.battPct = parseInt(document.getElementById('ob-batt-slider').value) || 72;
+  // Estimated miles available = the scooter's full range. Starts full.
+  const range = parseInt(document.getElementById('ob-miles').value) || (SCOOTERS[selectedModel] && SCOOTERS[selectedModel].range) || 25;
+  if (selectedModel === 3) state.customRange = range;
+  meta = selectedModel === 3 ? customMeta(range, maxSpd) : SCOOTERS[selectedModel].meta;
   window._pendingPhoto = null;
-  state.garage = [{ name, meta, range, modelIdx: selectedModel, maxSpd, battPct: state.battPct, photo, customName: selectedModel === 3 ? name : '' }];
+  state.garage = [{ name, meta, range, modelIdx: selectedModel, maxSpd, milesLeft: range, photo, customName: selectedModel === 3 ? name : '' }];
   state.scooterIdx = 0;
   if (photo) state.scooterPhoto = photo;
   obComplete();
@@ -1880,59 +1877,76 @@ function odoAdd(miles, scooterIdx) {
 // ══════════════════════════════════════════════
 // BATTERY
 // ══════════════════════════════════════════════
-function battRange(pct) {
-  const activeSco = (state.garage && state.garage[state.scooterIdx]) || SCOOTERS[state.scooterIdx] || SCOOTERS[0];
-  const r = activeSco.range || 30;
-  return (pct / 100 * r).toFixed(1);
-}
-
-function updateBatt(val) {
-  val = parseInt(val);
-  state.battPct = val;
-  if (state.garage && state.garage[state.scooterIdx]) state.garage[state.scooterIdx].battPct = val;
-  saveState(state);
-  document.getElementById('profBattVal').textContent = val + '%';
-  document.getElementById('profRangeEst').textContent = '≈ ' + battRange(val) + ' mi range';
-  document.getElementById('sBatt').textContent = val + '% 🔋';
-  refreshHomeWidgets();
-}
-
 function activeScooter() {
   return (state.garage && state.garage[state.scooterIdx]) || null;
 }
 
+// ── Range model: track estimated MILES available (no battery %) ──
+function scoFull(sco) { return (sco && sco.range) || 0; }
+function scoMiles(sco) {
+  if (!sco) return 0;
+  const left = (typeof sco.milesLeft === 'number') ? sco.milesLeft : scoFull(sco);
+  return Math.max(0, Math.min(left, scoFull(sco) || left));
+}
+function activeMiles() { return scoMiles(activeScooter()); }
+function isLowRange(sco) {
+  sco = sco || activeScooter();
+  return !!(sco && sco.range && scoMiles(sco) <= 0.2 * sco.range);
+}
+
+// Update the active scooter's estimated miles available.
+function updateMiles(val) {
+  const sco = activeScooter();
+  if (!sco) return;
+  sco.milesLeft = Math.max(0, Math.min(parseFloat(val) || 0, sco.range || 0));
+  saveState(state);
+  refreshHomeWidgets();
+  if (window.updateRangeRing) window.updateRangeRing();
+}
+// "Recharged" — reset the active scooter to its full range.
+function rechargeActive() {
+  const sco = activeScooter();
+  if (!sco) return;
+  sco.milesLeft = sco.range || 0;
+  saveState(state);
+  refreshHomeWidgets();
+  toast('⚡ Reset to full range — ' + (sco.range || 0) + ' mi', true);
+}
+
 function refreshHomeWidgets() {
-  const pct = state.battPct;
   const activeSco = activeScooter();
+  const setOdo = () => { const e = document.getElementById('homeOdo'); if (e) e.textContent = odoCareer().toFixed(1); };
   if (!activeSco) {
-    // Empty garage — prompt to add a scooter instead of faking battery/range.
-    document.getElementById('homeBattPct').innerHTML = '–<small></small>';
+    document.getElementById('homeBattPct').innerHTML = '–';
     document.getElementById('homeBattBar').style.width = '0%';
     document.getElementById('homeRange').textContent = '— mi';
     document.getElementById('homeFullRange').textContent = '— mi';
     document.getElementById('homeScoModel').innerHTML = '<span style="color:var(--volt)">＋ Add your scooter</span>';
     document.getElementById('profBattSlider').value = 0;
+    document.getElementById('profBattSlider').max = 100;
     document.getElementById('profBattVal').textContent = '—';
     document.getElementById('profRangeEst').textContent = 'Add a scooter to track range';
     document.getElementById('sBatt').textContent = '— 🔋';
-    const odoEl0 = document.getElementById('homeOdo');
-    if (odoEl0) odoEl0.textContent = odoCareer().toFixed(1);
+    setOdo();
     return;
   }
-  const activeRange = activeSco.range || 30;
-  const range = (pct / 100 * activeRange).toFixed(1);
-  const fullRange = activeRange.toFixed ? activeRange.toFixed(1) : activeRange;
-  document.getElementById('homeBattPct').innerHTML = pct + '<small>%</small>';
-  document.getElementById('homeBattBar').style.width = pct + '%';
-  document.getElementById('homeRange').textContent = range + ' mi';
-  document.getElementById('homeFullRange').textContent = fullRange + ' mi';
+  const full = scoFull(activeSco) || 0;
+  const left = scoMiles(activeSco);
+  const pctOfFull = full ? Math.round(left / full * 100) : 0;
+  const low = isLowRange(activeSco);
+  document.getElementById('homeBattPct').innerHTML = left.toFixed(0) + '<small> mi</small>';
+  document.getElementById('homeBattPct').style.color = low ? 'var(--orange)' : 'var(--volt)';
+  document.getElementById('homeBattBar').style.width = pctOfFull + '%';
+  document.getElementById('homeBattBar').style.background = low ? 'linear-gradient(90deg,#ff8c00,#ff5c00)' : '';
+  document.getElementById('homeRange').textContent = left.toFixed(1) + ' mi';
+  document.getElementById('homeFullRange').textContent = full.toFixed(1) + ' mi';
   document.getElementById('homeScoModel').textContent = activeSco.name || 'My Scooter';
-  document.getElementById('profBattSlider').value = pct;
-  document.getElementById('profBattVal').textContent = pct + '%';
-  document.getElementById('profRangeEst').textContent = '≈ ' + range + ' mi range';
-  document.getElementById('sBatt').textContent = pct + '% 🔋';
-  const odoEl = document.getElementById('homeOdo');
-  if (odoEl) odoEl.textContent = odoCareer().toFixed(1);
+  document.getElementById('profBattSlider').max = Math.max(1, Math.round(full));
+  document.getElementById('profBattSlider').value = Math.round(left);
+  document.getElementById('profBattVal').textContent = left.toFixed(1) + ' mi';
+  document.getElementById('profRangeEst').textContent = low ? '⚠ Low range — recharge soon' : 'of ' + full.toFixed(0) + ' mi full range';
+  document.getElementById('sBatt').textContent = left.toFixed(0) + ' mi' + (low ? ' ⚠' : ' 🔋');
+  setOdo();
 }
 
 // ══════════════════════════════════════════════
@@ -1995,7 +2009,7 @@ let rideDist = 0;
 let rideTopSpd = 0;
 let rideSpdSum = 0;
 let rideSpdCount = 0;
-let rideStartBatt = 72;
+let rideStartMiles = 0, rideStartFull = 0;
 
 const GPS_COORDS =['44.2930° N','44.2935° N','44.2940° N','44.2945° N','44.2950° N','44.2953° N','44.2958° N'];
 
@@ -2023,7 +2037,9 @@ function startRide() {
 
   rideActive = true;
   rideSecs = 0; rideDist = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
-  rideStartBatt = state.battPct;
+  rideStartMiles = activeMiles();
+  rideStartFull = scoFull(activeScooter());
+  let rideLowWarned = false;
   let rideLastLat = null, rideLastLng = null, rideLastTime = null;
   let rideLastSpd = 0;
   let szShown = false;
@@ -2111,10 +2127,17 @@ function startRide() {
         setTimeout(() => { document.getElementById('szwarn').classList.remove('show'); szShown = false; }, 4000);
       }
 
-      const drained = rideDist * 2.5;
-      const nowBatt = Math.max(5, rideStartBatt - drained);
-      document.getElementById('rbFill').style.width = nowBatt + '%';
-      document.getElementById('rbRange').textContent = battRange(nowBatt) + ' mi';
+      // Estimated miles available counts down by distance ridden.
+      const full = rideStartFull || 1;
+      const milesNow = Math.max(0, rideStartMiles - rideDist);
+      document.getElementById('rbFill').style.width = Math.max(0, Math.min(100, milesNow / full * 100)) + '%';
+      document.getElementById('rbRange').textContent = milesNow.toFixed(1) + ' mi';
+      const lowNow = rideStartFull && milesNow <= 0.2 * rideStartFull;
+      document.getElementById('rbFill').style.background = lowNow ? 'linear-gradient(90deg,#ff8c00,#ff5c00)' : '';
+      if (lowNow && !rideLowWarned) {
+        rideLowWarned = true;
+        toast('⚠ Low range — about ' + milesNow.toFixed(1) + ' mi left', false);
+      }
     },
     function(err) {
       console.warn('GPS error:', err.message);
@@ -2190,16 +2213,14 @@ function saveRide() {
   odoAdd(rideDist, state.scooterIdx);
   window._rideRoute = null;
 
-  // Same drain model as the in-ride range bar: ~2.5% per mile.
-  const drained = rideDist * 2.5;
-  state.battPct = Math.max(5, state.battPct - Math.round(drained));
-  if (state.garage && state.garage[state.scooterIdx]) {
-    state.garage[state.scooterIdx].battPct = state.battPct;
-  }
+  // Estimated miles available counts down by the distance ridden.
+  const sco = activeScooter();
+  if (sco) sco.milesLeft = Math.max(0, scoMiles(sco) - rideDist);
   saveState(state);
+  const lowAfter = isLowRange();
   rideDist = 0; rideSecs = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
   goTo('home');
-  toast('✅ Ride saved!', true);
+  toast(lowAfter ? '✅ Saved — ⚠ low range, recharge soon' : '✅ Ride saved!', true);
 }
 
 function discardRide() {
@@ -2448,7 +2469,7 @@ function toggleCam() {
     btn.textContent = '⏹ STOP RECORDING'; btn.classList.add('recording');
     rec.classList.remove('off'); document.getElementById('camRecLbl').textContent = 'REC';
     hud.style.opacity = '1';
-    document.getElementById('camBatt').textContent = state.battPct + '%';
+    document.getElementById('camBatt').textContent = activeScooter() ? activeMiles().toFixed(0) + ' mi' : '--';
     let _camRealSpd = 0;
     if (navigator.geolocation) {
       window._camGpsId = navigator.geolocation.watchPosition(pos => {
@@ -2610,8 +2631,8 @@ function renderGarage() {
         </div>
         <div class="gc-meta">${esc(sco.meta)}</div>
         <div class="gc-stats">
-          <div><div class="gc-sv">${sco.battPct}%</div><div class="gc-sl">Battery</div></div>
-          <div><div class="gc-sv">${(sco.battPct/100*sco.range).toFixed(1)} mi</div><div class="gc-sl">Range est.</div></div>
+          <div><div class="gc-sv" style="${isLowRange(sco) ? 'color:var(--orange)' : ''}">${scoMiles(sco).toFixed(0)} mi</div><div class="gc-sl">Range left</div></div>
+          <div><div class="gc-sv">${scoFull(sco).toFixed(0)} mi</div><div class="gc-sl">Full range</div></div>
           <div><div class="gc-sv">${totalMi.toFixed(1)} mi</div><div class="gc-sl">Logged</div></div>
         </div>
         <div class="gc-actions">
@@ -2630,10 +2651,6 @@ function garageCardTap(i) {
 
 function switchScooter(i) {
   state.scooterIdx = i;
-  const sco = state.garage[i];
-  if (sco) {
-    state.battPct = sco.battPct;
-  }
   saveState(state);
   renderGarage();
   refreshHomeWidgets();
@@ -2659,8 +2676,7 @@ function openGarageAdd() {
   document.getElementById('gs-custom-name').value = '';
   document.getElementById('gs-custom-range').value = '';
   document.getElementById('gs-custom-maxspd').value = '';
-  document.getElementById('gs-batt-slider').value = 80;
-  document.getElementById('gs-batt-val').textContent = '80%';
+  document.getElementById('gs-miles').value = '';
   const pa = document.getElementById('gsPhotoArea');
   pa.style.backgroundImage = ''; pa.style.border = '2px dashed var(--border)';
   document.getElementById('gsPhotoLbl').textContent = 'TAP TO ADD PHOTO';
@@ -2681,8 +2697,7 @@ function openGarageEdit(i) {
   document.getElementById('gs-custom-name').value = sco.customName || sco.name;
   document.getElementById('gs-custom-range').value = sco.range || '';
   document.getElementById('gs-custom-maxspd').value = sco.maxSpd || '';
-  document.getElementById('gs-batt-slider').value = sco.battPct || 80;
-  document.getElementById('gs-batt-val').textContent = (sco.battPct || 80) + '%';
+  document.getElementById('gs-miles').value = Math.round(scoMiles(sco));
   const pa = document.getElementById('gsPhotoArea');
   if (sco.photo) {
     pa.style.backgroundImage = 'url(' + sco.photo + ')';
@@ -2735,19 +2750,20 @@ function gsSaveScooter() {
     const s = SCOOTERS[gsSelectedModel];
     name = s.name; meta = s.meta; range = s.range; modelIdx = gsSelectedModel; maxSpd = s.maxSpd || 0;
   }
-  const battPct = parseInt(document.getElementById('gs-batt-slider').value) || 80;
-  const sco = { name, meta, range, modelIdx, maxSpd, battPct, photo: gsPendingPhoto || null, customName: name };
+  // Estimated miles available now — blank means full range.
+  const milesIn = document.getElementById('gs-miles').value;
+  let milesLeft = milesIn === '' ? range : Math.max(0, Math.min(parseFloat(milesIn) || 0, range));
+  const sco = { name, meta, range, modelIdx, maxSpd, milesLeft, photo: gsPendingPhoto || null, customName: name };
 
   if (gsEditId !== null) {
     const existing = state.garage[gsEditId];
     sco.photo = gsPendingPhoto || existing.photo;
     state.garage[gsEditId] = sco;
-    if (state.scooterIdx === gsEditId) state.battPct = battPct;
     toast('✅ Scooter updated!', true);
   } else {
     const wasEmpty = state.garage.length === 0;
     state.garage.push(sco);
-    if (wasEmpty) { state.scooterIdx = 0; state.battPct = battPct; } // first scooter becomes active
+    if (wasEmpty) state.scooterIdx = 0; // first scooter becomes active
     toast('🛴 Added to garage!', true);
   }
   saveState(state);
@@ -3758,10 +3774,14 @@ function resetApp() {
     state.scooterIdx = 0;
     saveState(state);
   }
-  // Backfill each garage scooter's rated max speed from its catalog model.
+  // Backfill rated max speed and migrate battery% → estimated miles available.
   (state.garage || []).forEach(sco => {
     if (typeof sco.maxSpd !== 'number') {
       sco.maxSpd = (typeof sco.modelIdx === 'number' && SCOOTERS[sco.modelIdx]) ? (SCOOTERS[sco.modelIdx].maxSpd || 0) : 0;
+    }
+    if (typeof sco.milesLeft !== 'number') {
+      const full = sco.range || 25;
+      sco.milesLeft = (typeof sco.battPct === 'number') ? Math.round(full * sco.battPct / 100 * 10) / 10 : full;
     }
   });
   // Scrub impossible legacy top speeds (e.g. a GPS-glitch 60 mph) down to a
