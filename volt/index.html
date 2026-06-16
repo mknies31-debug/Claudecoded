@@ -686,7 +686,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
           <input class="ob-input" id="ob-custom-name" type="text" placeholder="e.g. Dualtron Thunder 3" autocomplete="off">
         </div>
         <div class="ob-field">
-          <div class="ob-label">Max Range (miles)</div>
+          <div class="ob-label">Max range on a full charge (miles)</div>
           <input class="ob-input" id="ob-custom-range" type="number" placeholder="e.g. 35" min="1" max="200">
         </div>
         <div class="ob-field">
@@ -704,13 +704,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <button class="ob-btn-ghost" onclick="obSkipScooter()">Skip for now</button>
     </div>
 
-    <!-- Step 2: Estimated miles available -->
+    <!-- Step 2: Estimated miles available right now -->
     <div class="ob-step" id="ob-2">
-      <div class="ob-heading">How far can it go?</div>
-      <div class="ob-sub">Estimated miles available on a full charge. VOLT counts down as you ride and warns you when range gets low. You can update this anytime.</div>
+      <div class="ob-heading">Miles available right now</div>
+      <div class="ob-sub">Roughly how far you can ride before recharging. It's prefilled with a full charge — lower it if you've already been riding. VOLT counts down as you ride and warns you at 20% left.</div>
       <div class="ob-field">
-        <div class="ob-label">Estimated miles available</div>
-        <input class="ob-input" id="ob-miles" type="number" placeholder="e.g. 25" min="1" max="200" inputmode="numeric">
+        <div class="ob-label">Estimated miles available now</div>
+        <input class="ob-input" id="ob-miles" type="number" placeholder="e.g. 25" min="0" max="200" inputmode="numeric">
       </div>
       <button class="ob-btn" onclick="obFinish()">Start Riding ⚡</button>
       <button class="ob-btn-ghost" onclick="obBack(2)">← Back</button>
@@ -1801,23 +1801,25 @@ function obSkipScooter() {
 
 // Finish onboarding by creating the scooter the rider picked (+ estimated miles).
 function obFinish() {
-  let name, meta, maxSpd, photo = null;
+  let name, meta, maxSpd, range, photo = null;
   if (selectedModel === 3) {
     name = (document.getElementById('ob-custom-name').value || '').trim();
     if (!name) { toast('Please enter your scooter name'); return; }
+    range = parseInt(document.getElementById('ob-custom-range').value) || 25; // full range
     maxSpd = parseInt(document.getElementById('ob-custom-maxspd').value) || 0;
+    meta = customMeta(range, maxSpd);
     photo = window._pendingPhoto || null;
-    state.customName = name; state.customMaxSpd = maxSpd;
+    state.customName = name; state.customRange = range; state.customMaxSpd = maxSpd;
   } else {
     const s = SCOOTERS[selectedModel];
-    name = s.name; maxSpd = s.maxSpd || 0;
+    name = s.name; meta = s.meta; range = s.range; maxSpd = s.maxSpd || 0;
   }
-  // Estimated miles available = the scooter's full range. Starts full.
-  const range = parseInt(document.getElementById('ob-miles').value) || (SCOOTERS[selectedModel] && SCOOTERS[selectedModel].range) || 25;
-  if (selectedModel === 3) state.customRange = range;
-  meta = selectedModel === 3 ? customMeta(range, maxSpd) : SCOOTERS[selectedModel].meta;
+  // "Miles available right now" — current estimate; defaults to a full charge.
+  let milesNow = parseInt(document.getElementById('ob-miles').value);
+  if (isNaN(milesNow)) milesNow = range;
+  milesNow = Math.max(0, Math.min(milesNow, range));
   window._pendingPhoto = null;
-  state.garage = [{ name, meta, range, modelIdx: selectedModel, maxSpd, milesLeft: range, photo, customName: selectedModel === 3 ? name : '' }];
+  state.garage = [{ name, meta, range, modelIdx: selectedModel, maxSpd, milesLeft: milesNow, photo, customName: selectedModel === 3 ? name : '' }];
   state.scooterIdx = 0;
   if (photo) state.scooterPhoto = photo;
   obComplete();
