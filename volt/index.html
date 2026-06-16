@@ -98,6 +98,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .bw-rval{font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text);font-weight:600}
 .bw-rlbl{font-size:.66rem;color:var(--muted2)}
 
+.ride-cta{margin:14px 20px;background:linear-gradient(135deg,rgba(200,255,0,.16),rgba(200,255,0,.04));border:1px solid rgba(200,255,0,.35);border-radius:20px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;transition:all .2s}
+.ride-cta:active{transform:scale(.98);border-color:var(--volt)}
+.ride-cta-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em;color:var(--volt);line-height:1}
+.ride-cta-sub{font-size:.72rem;color:var(--muted2);margin-top:3px;line-height:1.4}
+.ride-cta-btn{width:48px;height:48px;background:var(--volt);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;box-shadow:0 0 0 4px rgba(200,255,0,.12)}
 .odo-widget{margin:0 20px 14px;background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .2s}
 .odo-widget:active{border-color:var(--volt)}
 .odo-lbl{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.14em;color:var(--muted2);text-transform:uppercase}
@@ -630,22 +635,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   <div class="ob-wrap">
     <div class="ob-logo">VOLT.</div>
     <div class="ob-tagline">Your ride. Your data. Your world.</div>
+    <div class="ob-dots">
+      <div class="ob-dot active" id="dot-0"></div>
+      <div class="ob-dot" id="dot-1"></div>
+      <div class="ob-dot" id="dot-2"></div>
+    </div>
 
-    <!-- Step 0: Name (only step — scooters are added later in the Garage) -->
+    <!-- Step 0: Name -->
     <div class="ob-step active" id="ob-0">
-      <div class="ob-heading">What should we call you?</div>
-      <div class="ob-sub">This shows on your profile and ride history. You'll add your scooter from the Garage once you're in.</div>
+      <div class="ob-heading">Welcome to VOLT</div>
+      <div class="ob-sub">Let's set up your first ride. Add your name and scooter so VOLT can estimate range, track rides, and build your riding history.</div>
       <div class="ob-field">
         <div class="ob-label">Your name</div>
         <input class="ob-input" id="ob-name" type="text" placeholder="e.g. Alex" autocomplete="off">
       </div>
-      <button class="ob-btn" onclick="obFinish()">Start Riding ⚡</button>
+      <button class="ob-btn" onclick="obNext(0)">Continue →</button>
     </div>
 
-    <!-- Step 1: Scooter model -->
+    <!-- Step 1: Scooter model (skippable) -->
     <div class="ob-step" id="ob-1">
-      <div class="ob-heading">Pick your scooter</div>
-      <div class="ob-sub">We'll use this to calibrate your battery range estimates.</div>
+      <div class="ob-heading">Add your first scooter</div>
+      <div class="ob-sub">This unlocks battery range, ride stats, and maintenance reminders. You can skip and add it later.</div>
       <div class="ob-model-grid">
         <div class="ob-model-card sel" id="ob-m0" onclick="selectModel(0)">
           <div class="ob-model-icon">🛴</div>
@@ -690,8 +700,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         </div>
         <input type="file" id="ob-photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'ob-photo-preview','ob')">
       </div>
-      <button class="ob-btn" onclick="obNext(1)">Continue →</button>
-      <button class="ob-btn-ghost" onclick="obBack(1)">← Back</button>
+      <button class="ob-btn" onclick="obNext(1)">Add Scooter →</button>
+      <button class="ob-btn-ghost" onclick="obSkipScooter()">Skip for now</button>
     </div>
 
     <!-- Step 2: Battery % -->
@@ -721,6 +731,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="home-logo">VOLT.</div>
     </div>
     <div class="home-avatar" onclick="goTo('profile')">🧑</div>
+  </div>
+
+  <!-- Primary action: start a ride -->
+  <div class="ride-cta" onclick="fabTap()">
+    <div class="ride-cta-l">
+      <div class="ride-cta-title">Ready to ride?</div>
+      <div class="ride-cta-sub" id="rideCtaSub">Start tracking your speed, distance &amp; time</div>
+    </div>
+    <div class="ride-cta-btn">🛴</div>
   </div>
 
   <div class="batt-widget" onclick="goTo('profile')">
@@ -764,10 +783,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="qs-lbl">Total</div>
     </div>
     <div class="qs-card" onclick="goTo('cam')">
-      <span class="qs-icon">📹</span>
-      <div class="qs-val">VOLT</div>
-      <div class="qs-unit">cam</div>
-      <div class="qs-lbl">RideCam</div>
+      <span class="qs-icon">✦</span>
+      <div class="qs-val">AUTO</div>
+      <div class="qs-unit">reel</div>
+      <div class="qs-lbl">Highlights</div>
     </div>
   </div>
 
@@ -811,7 +830,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="ride-dot" id="rideDotEl"></div>
     <div class="map-top-bar">
       <div class="map-chip"><div class="mc-dot" id="rdot"></div><span id="rlabel">LIVE</span></div>
-      <div class="map-chip"><div class="mc-dot safe"></div>Scooter-legal</div>
+      <div class="map-chip" onclick="toast('Likely scooter-friendly. Check posted signs and local rules before riding.')" style="cursor:pointer"><div class="mc-dot safe"></div>Likely OK · check rules</div>
     </div>
     <div class="szwarn" id="szwarn">⚠ 15 mph zone in 0.3 mi</div>
   </div>
@@ -880,6 +899,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <div class="ts-surface-icon" id="tsSurfaceIcon"></div>
         <div><div class="ts-surface-lbl" id="tsSurfaceLbl"></div><div class="ts-surface-sub" id="tsSurfaceSub"></div></div>
       </div>
+      <div style="font-size:.66rem;color:var(--muted2);line-height:1.5;margin:4px 0 12px">⚠ Likely scooter-friendly. Trails and local laws change — check posted signs and local rules before riding, and ride responsibly.</div>
       <button class="ts-start-btn" onclick="startRideFromTrail()">🛴 Start Ride on This Trail</button>
     </div>
   </div>
@@ -941,7 +961,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     </div>
   </div>
   <div class="cam-controls">
-    <button class="cam-rec-btn" id="camBtn" onclick="toggleCam()">⏺ START RIDECAM</button>
+    <button class="cam-rec-btn" id="camBtn" onclick="toggleCam()">⏺ START RECORDING</button>
   </div>
   <div class="cam-hl">
     <div class="cam-hl-lbl">✦ Auto Highlights — Last Ride</div>
@@ -1024,7 +1044,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <!-- Pro -->
     <div class="pro-banner">
       <div class="pb-title">VOLT PRO — Active</div>
-      <div class="pb-sub">RideCam, offline maps, battery AI, heatmaps, and unlimited ride history.</div>
+      <div class="pb-sub">Auto Highlights, offline maps, battery AI, heatmaps, and unlimited ride history.</div>
       <button class="pb-btn" onclick="toast('Subscription management coming soon')">Manage Subscription</button>
     </div>
 
@@ -1032,7 +1052,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="settings-lbl">Preferences</div>
     <div class="srow"><div class="sr-l"><span class="sr-icon">🔔</span><span class="sr-label">Speed Zone Alerts</span></div><div class="toggle on" id="tog-spd" onclick="togSet('spd')"></div></div>
     <div class="srow"><div class="sr-l"><span class="sr-icon">📍</span><span class="sr-label">Live Location Sharing</span></div><div class="toggle" id="tog-loc" onclick="togSet('loc')"></div></div>
-    <div class="srow"><div class="sr-l"><span class="sr-icon">📹</span><span class="sr-label">Auto-start RideCam</span></div><div class="toggle" id="tog-cam" onclick="togSet('cam')"></div></div>
+    <div class="srow"><div class="sr-l"><span class="sr-icon">📹</span><span class="sr-label">Auto-start Highlights</span></div><div class="toggle" id="tog-cam" onclick="togSet('cam')"></div></div>
     <div class="srow" style="border-radius:0 0 14px 14px;border-bottom:none"><div class="sr-l"><span class="sr-icon">📏</span><span class="sr-label">Units</span></div><div class="sr-r">MPH / Miles</div></div>
 
     <div class="settings-lbl" style="margin-top:12px">Support</div>
@@ -1255,7 +1275,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="garage-sub">All your scooters in one place</div>
   </div>
   <div class="garage-list" id="garageList"></div>
-  <button class="garage-add-btn" onclick="openGarageAdd()">＋ Add Scooter</button>
+  <button class="garage-add-btn" onclick="openGarageAdd()">＋ Add My Scooter</button>
 
   <!-- Add/Edit sheet -->
   <div class="garage-sheet" id="garageSheet">
@@ -1296,9 +1316,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 <!-- NAV -->
 <div class="bnav">
   <button class="nb" id="nb-home" onclick="goTo('home')"><span class="nb-icon">🏠</span><span class="nb-lbl">Home</span></button>
-  <button class="nb nb-soon" id="nb-club" onclick="comingSoon('Scooter Club & group rides')" title="Coming soon"><span class="nb-icon">🏍️</span><span class="nb-lbl">Club · Soon</span></button>
-  <button class="fab" id="fab" onclick="fabTap()">🛴</button>
   <button class="nb" id="nb-trails" onclick="goTo('trails')"><span class="nb-icon">🗺️</span><span class="nb-lbl">Trails</span></button>
+  <button class="fab" id="fab" onclick="fabTap()">🛴</button>
+  <button class="nb" id="nb-history" onclick="goTo('history')"><span class="nb-icon">📊</span><span class="nb-lbl">History</span></button>
   <button class="nb" id="nb-profile" onclick="goTo('profile')"><span class="nb-icon">👤</span><span class="nb-lbl">Profile</span></button>
 </div>
 
@@ -1328,11 +1348,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="modal-handle"></div>
     <div id="startMain">
       <div class="modal-title">Start a Ride</div>
-      <div class="modal-sub">How do you want to ride?</div>
-      <button class="start-opt" onclick="startFreeRide()"><span class="so-ic">⚡</span><span><b>Free Ride</b><small>Track speed, distance &amp; time</small></span></button>
-      <button class="start-opt" onclick="startPickTrail()"><span class="so-ic">🗺️</span><span><b>Ride a Trail</b><small>Follow a known path near you</small></span></button>
-      <button class="start-opt" onclick="startPickCourse()"><span class="so-ic">🏁</span><span><b>Ride a Course</b><small>Race your own best time</small></span></button>
-      <button class="start-opt" onclick="startNewCourse()"><span class="so-ic">📍</span><span><b>Create a Course</b><small>Record a new path to race later</small></span></button>
+      <div class="modal-sub">Track speed, distance, time, and battery range.</div>
+      <div id="startNoScooter" style="display:none;background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:12px;padding:10px 13px;margin-bottom:14px;font-size:.72rem;color:var(--orange);line-height:1.5">⚠ Range tracking will be limited until you add a scooter. <span style="color:var(--volt);cursor:pointer;text-decoration:underline" onclick="closeStartModal();goTo('garage')">Add one</span></div>
+      <button class="modal-save" style="margin-bottom:12px" onclick="startFreeRide()">⚡ Start Free Ride</button>
+      <button class="start-opt" onclick="startPickTrail()"><span class="so-ic">🗺️</span><span><b>Pick a Trail</b><small>Follow a known path near you</small></span></button>
+      <button class="start-opt" onclick="startPickCourse()"><span class="so-ic">🏁</span><span><b>Ride a Saved Course</b><small>Race your own best time</small></span></button>
+      <div style="text-align:center;margin:6px 0 2px"><span onclick="startNewCourse()" style="font-size:.74rem;color:var(--volt);font-family:'JetBrains Mono',monospace;letter-spacing:.06em;cursor:pointer">＋ Record a New Course</span></div>
       <button class="modal-disc" onclick="closeStartModal()">Cancel</button>
     </div>
     <div id="startSub" style="display:none">
@@ -1678,6 +1699,7 @@ function openStartModal() {
   blurActive();
   document.getElementById('startMain').style.display = 'block';
   document.getElementById('startSub').style.display = 'none';
+  document.getElementById('startNoScooter').style.display = activeScooter() ? 'none' : 'block';
   document.getElementById('startModal').classList.add('open');
 }
 function closeStartModal() { document.getElementById('startModal').classList.remove('open'); }
@@ -1773,19 +1795,42 @@ function obBattChange(val) {
   document.getElementById('ob-range-est').textContent = 'Est. range: ' + range + ' mi';
 }
 
-function obFinish() {
-  // Name-only onboarding. The garage starts empty — the rider adds their
-  // scooter(s) themselves from the Garage; until then rides still track.
-  const n = (document.getElementById('ob-name').value || '').trim();
-  if (!n) { toast('Please enter your name'); return; }
-  state.name = n;
-  state.onboarded = true;
-  state.joinDate = new Date().toISOString();
+// Finish onboarding having SKIPPED the scooter — garage starts empty, rides
+// still track, and Home/Profile nudge the rider to add a scooter.
+function obSkipScooter() {
   state.garage = [];
   state.scooterIdx = 0;
+  obComplete();
+}
+
+// Finish onboarding by creating the scooter the rider picked (+ battery).
+function obFinish() {
+  let name, meta, range, maxSpd, photo = null;
+  if (selectedModel === 3) {
+    name = (document.getElementById('ob-custom-name').value || '').trim();
+    if (!name) { toast('Please enter your scooter name'); return; }
+    range = parseInt(document.getElementById('ob-custom-range').value) || 30;
+    maxSpd = parseInt(document.getElementById('ob-custom-maxspd').value) || 0;
+    meta = customMeta(range, maxSpd);
+    photo = window._pendingPhoto || null;
+    state.customName = name; state.customRange = range; state.customMaxSpd = maxSpd;
+  } else {
+    const s = SCOOTERS[selectedModel];
+    name = s.name; meta = s.meta; range = s.range; maxSpd = s.maxSpd || 0;
+  }
+  state.battPct = parseInt(document.getElementById('ob-batt-slider').value) || 72;
+  window._pendingPhoto = null;
+  state.garage = [{ name, meta, range, modelIdx: selectedModel, maxSpd, battPct: state.battPct, photo, customName: selectedModel === 3 ? name : '' }];
+  state.scooterIdx = 0;
+  if (photo) state.scooterPhoto = photo;
+  obComplete();
+}
+
+function obComplete() {
+  state.onboarded = true;
+  state.joinDate = new Date().toISOString();
   if (!state.rides) state.rides = [];
   if (!state.courses) state.courses = [];
-
   try { saveState(state); } catch(e) {}
   try { document.getElementById('screen-onboard').classList.remove('active'); } catch(e) {}
   currentScreen = 'onboard';
@@ -1895,6 +1940,15 @@ function refreshHomeWidgets() {
 // ══════════════════════════════════════════════
 function refreshHome() {
   refreshHomeWidgets();
+
+  // Primary CTA reflects current state.
+  const ctaSub = document.getElementById('rideCtaSub');
+  const ctaTitle = document.querySelector('.ride-cta-title');
+  if (ctaSub) {
+    if (rideActive) { ctaSub.textContent = 'Ride in progress — tap to return'; if (ctaTitle) ctaTitle.textContent = 'Riding now'; }
+    else if (!activeScooter()) { ctaSub.textContent = 'Add a scooter for full range tracking — or ride now'; if (ctaTitle) ctaTitle.textContent = 'Ready to ride?'; }
+    else { ctaSub.textContent = 'Start tracking your speed, distance & time'; if (ctaTitle) ctaTitle.textContent = 'Ready to ride?'; }
+  }
 
   const rides = state.rides;
   const weekAgo = Date.now() - 7*24*3600*1000;
@@ -2216,7 +2270,7 @@ function refreshHistory() {
   const wrap = document.getElementById('rideListWrap');
   const sorted = [...filtered].reverse();
   if (!sorted.length) {
-    wrap.innerHTML = '<div class="no-history"><div class="nh-icon">🛴</div>' + (filterVal !== 'all' ? 'No rides on this scooter yet.' : 'Complete your first ride to see it here.') + '</div>';
+    wrap.innerHTML = '<div class="no-history"><div class="nh-icon">🛴</div>' + (filterVal !== 'all' ? 'No rides on this scooter yet.' : 'No rides yet — your history builds as you ride.<br><span style="color:var(--volt);cursor:pointer" onclick="goTo(\'home\');setTimeout(fabTap,150)">Start your first ride →</span>') + '</div>';
     return;
   }
   let html = '';
@@ -2321,7 +2375,7 @@ function togSet(key) {
   saveState(state);
   toast(key === 'spd' ? 'Speed zone alerts ' + (state.settings.spd ? 'on' : 'off') :
         key === 'loc' ? 'Location sharing ' + (state.settings.loc ? 'on' : 'off') :
-        'Auto RideCam ' + (state.settings.cam ? 'on' : 'off'));
+        'Auto Highlights ' + (state.settings.cam ? 'on' : 'off'));
 }
 
 // ══════════════════════════════════════════════
@@ -2391,7 +2445,7 @@ function toggleCam() {
   const rec = document.getElementById('camRec');
   const hud = document.getElementById('camHud');
   if (camOn) {
-    btn.textContent = '⏹ STOP RIDECAM'; btn.classList.add('recording');
+    btn.textContent = '⏹ STOP RECORDING'; btn.classList.add('recording');
     rec.classList.remove('off'); document.getElementById('camRecLbl').textContent = 'REC';
     hud.style.opacity = '1';
     document.getElementById('camBatt').textContent = state.battPct + '%';
@@ -2410,7 +2464,7 @@ function toggleCam() {
       document.getElementById('camGps').textContent = GPS_COORDS[camIdx2 % GPS_COORDS.length];
     }, 1000);
   } else {
-    btn.textContent = '⏺ START RIDECAM'; btn.classList.remove('recording');
+    btn.textContent = '⏺ START RECORDING'; btn.classList.remove('recording');
     rec.classList.add('off'); document.getElementById('camRecLbl').textContent = 'STANDBY';
     hud.style.opacity = '0';
     clearInterval(camTimer);
@@ -2537,7 +2591,7 @@ function renderGarage() {
   if (!list) return;
   const garage = state.garage || [];
   if (!garage.length) {
-    list.innerHTML = '<div style="text-align:center;padding:28px 0;color:var(--muted2);font-size:.85rem;line-height:1.7"><div style="font-size:2.5rem;margin-bottom:10px">🏎️</div>Your garage is empty.<br>Add your first scooter below.</div>';
+    list.innerHTML = '<div style="text-align:center;padding:28px 0;color:var(--muted2);font-size:.85rem;line-height:1.7"><div style="font-size:2.5rem;margin-bottom:10px">🏎️</div><b style="color:var(--text)">Add your scooter to unlock range tracking.</b><br>Battery estimates, ride stats, and maintenance reminders work best when VOLT knows what you ride.</div>';
     return;
   }
   list.innerHTML = garage.map((sco, i) => {
