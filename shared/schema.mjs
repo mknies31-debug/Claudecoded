@@ -1,0 +1,96 @@
+// shared/schema.mjs — CLEAN API: customer + touch_log shapes and factories.
+//
+// Isomorphic: no DOM, no Node built-ins, no I/O. The browser (crm/) and the
+// cron (netlify/functions/daily-runner) both import this so a customer means
+// exactly the same thing on every surface.
+
+/** localStorage / blob keys the CRM owns (auto-synced by CARVIS snapshotStore). */
+export const KEYS = {
+  customers: 'carvis_referral_customers',
+  touchLogs: 'carvis_referral_touchlogs',
+  meta: 'carvis_referral_meta',
+};
+
+/** A short, sortable, collision-resistant id without any dependency. */
+export function makeId(prefix = 'c') {
+  return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/** Normalize a date-ish value to a YYYY-MM-DD string (local-agnostic, UTC date). */
+export function toDateStr(d) {
+  if (!d) return '';
+  if (typeof d === 'string') {
+    // already YYYY-MM-DD or ISO — keep just the date part
+    const m = d.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+  }
+  const dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  return dt.toISOString().slice(0, 10);
+}
+
+/**
+ * Build a customer from raw form input, filling safe defaults.
+ * Only the fields in the CRM data model — nothing pricing-related ever lives here.
+ */
+export function newCustomer(input = {}) {
+  const now = new Date().toISOString();
+  return {
+    id: input.id || makeId('cust'),
+    firstName: (input.firstName || '').trim(),
+    lastName: (input.lastName || '').trim(),
+    vehicle: (input.vehicle || '').trim(),
+    phone: (input.phone || '').trim(),
+    email: (input.email || '').trim(),
+    purchaseDate: toDateStr(input.purchaseDate) || toDateStr(now),
+    stage: Number.isInteger(input.stage) ? input.stage : 0,
+    optedOut: input.optedOut === true,
+    referredById: input.referredById || null,
+    pendingTexts: Array.isArray(input.pendingTexts) ? input.pendingTexts : [],
+    createdAt: input.createdAt || now,
+    updatedAt: input.updatedAt || now,
+  };
+}
+
+/** A logged touch (the audit trail). channel: 'email' | 'text'. */
+export function newTouchLog(input = {}) {
+  return {
+    id: input.id || makeId('log'),
+    customerId: input.customerId || '',
+    channel: input.channel || 'email',
+    sequenceKey: input.sequenceKey || '',
+    variant: input.variant || null,
+    subject: input.subject || '',
+    body: input.body || '',
+    // 'sent' (delivered), 'held' (engine ran but copy not approved), 'queued',
+    // 'failed' (provider rejected).
+    status: input.status || 'sent',
+    sentAt: input.sentAt || new Date().toISOString(),
+  };
+}
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// Accepts US-style phone input; we only need enough digits to build an sms: link.
+const PHONE_DIGITS_MIN = 10;
+
+/** Validate a customer for the capture form. Returns { ok, errors:{field:msg} }. */
+export function validateCustomer(c = {}) {
+  const errors = {};
+  if (!c.firstName || !c.firstName.trim()) errors.firstName = 'First name is required.';
+  if (!c.vehicle || !c.vehicle.trim()) errors.vehicle = 'Vehicle is required.';
+  if (!c.purchaseDate || !toDateStr(c.purchaseDate)) errors.purchaseDate = 'A valid purchase date is required.';
+  const hasPhone = c.phone && digits(c.phone).length >= PHONE_DIGITS_MIN;
+  const hasEmail = c.email && EMAIL_RE.test(c.email.trim());
+  if (!hasPhone && !hasEmail) errors.contact = 'Add a phone or an email so follow-ups can reach them.';
+  if (c.email && c.email.trim() && !EMAIL_RE.test(c.email.trim())) errors.email = 'That email looks off.';
+  if (c.phone && digits(c.phone).length < PHONE_DIGITS_MIN) errors.phone = 'That phone number looks too short.';
+  return { ok: Object.keys(errors).length === 0, errors };
+}
+
+export function digits(s) {
+  return String(s || '').replace(/\D+/g, '');
+}
+
+export function isValidEmail(s) {
+  return EMAIL_RE.test(String(s || '').trim());
+}

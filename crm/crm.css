@@ -1,0 +1,77 @@
+/* crm/crm.css — Referral CRM styling on the CARVIS theme tokens.
+   Reuses .overlay/.modal/.mh/.mb/.rin/.rgen/.olabel from index.html; this file
+   only adds what the dashboard needs. */
+
+/* Wider modal for the dashboard */
+#crmOverlay .modal { max-width: 760px; }
+body.hivis #crmOverlay .modal { max-width: 880px; }
+
+/* Topbar button matches .vtoggle; gold accent so it reads as the referral lane */
+#crmBtn { color: var(--gold); border-color: rgba(255,201,102,.5); }
+
+/* Tabs inside the CRM */
+.crm-tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.crm-tab { font-family:'Orbitron'; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--dim); border:1px solid var(--line); background:transparent; padding:8px 14px;
+  border-radius:9px; cursor:pointer; transition:.2s; }
+.crm-tab.on { color:var(--cyan); border-color:var(--line-strong); background:rgba(92,240,255,.06); }
+.crm-pane { display:none; }
+.crm-pane.on { display:block; }
+
+/* Section headers + counts */
+.crm-sec { margin-top:18px; }
+.crm-sec:first-child { margin-top:0; }
+.crm-sec > h4 { font-family:'Orbitron'; font-size:13px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--cyan); display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+.crm-sec > h4 .ct { margin-left:auto; font-family:var(--mono); color:var(--dim); font-size:13px;
+  border:1px solid var(--line); border-radius:20px; padding:1px 9px; }
+.crm-sec > h4 .hbar { width:4px; height:13px; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+
+/* Cards */
+.crm-card { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:13px 15px; margin-bottom:10px; }
+.crm-card.warn { border-color:rgba(255,201,102,.55); background:rgba(255,201,102,.06); }
+.crm-card.alert { border-color:var(--line-strong); }
+.crm-card .cname { font-size:17px; color:var(--text); font-weight:700; }
+.crm-card .cmeta { font-family:var(--mono); font-size:13px; color:var(--dim); margin-top:2px; letter-spacing:.4px; }
+.crm-card .cbody { font-size:16px; line-height:1.5; color:var(--text); margin:10px 0;
+  background:rgba(2,6,14,.4); border:1px solid var(--line); border-radius:9px; padding:10px 12px; white-space:pre-wrap; }
+.crm-row { display:flex; gap:9px; flex-wrap:wrap; align-items:center; }
+.crm-row.between { justify-content:space-between; }
+
+/* Pills / stages / heat */
+.pill { font-family:var(--mono); font-size:12px; letter-spacing:.6px; padding:2px 9px; border-radius:20px;
+  border:1px solid var(--line); color:var(--dim); }
+.pill.stage { color:var(--cyan); border-color:var(--line-strong); }
+.pill.opt { color:var(--red); border-color:rgba(255,121,134,.5); }
+.pill.done { color:var(--green); border-color:rgba(92,247,159,.4); }
+
+/* Variant dropdown */
+.crm-select { background:var(--panel); border:1px solid var(--line); color:var(--text);
+  font-family:var(--mono); font-size:14px; border-radius:8px; padding:7px 10px; cursor:pointer; }
+
+/* Action buttons */
+.crm-btn { font-family:'Orbitron'; font-size:13px; letter-spacing:1px; padding:9px 14px; border-radius:8px;
+  border:1px solid var(--line); background:transparent; color:var(--text); cursor:pointer; transition:.2s; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.crm-btn:hover { border-color:var(--line-strong); }
+.crm-btn.send { background:linear-gradient(135deg,var(--cyan),#1f8fa5); color:#022; border:none; font-weight:700; }
+.crm-btn.gold { background:linear-gradient(135deg,var(--gold),#b9802f); color:#1c1205; border:none; }
+.crm-btn.ghost-red { color:var(--red); border-color:rgba(255,121,134,.4); }
+.crm-btn.sm { padding:6px 10px; font-size:12px; }
+
+/* Empty + monitor readouts */
+.crm-empty { font-family:var(--mono); font-size:14px; color:var(--dim); text-align:center;
+  padding:16px; border:1px dashed var(--line); border-radius:10px; }
+.crm-readouts { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:6px; }
+.crm-ro { background:rgba(92,240,255,.04); border:1px solid var(--line); border-radius:10px; padding:11px; text-align:center; }
+.crm-ro .v { font-family:var(--mono); font-size:24px; color:var(--cyan); }
+.crm-ro .l { font-size:12px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; margin-top:3px; }
+
+/* Capture form grid */
+.crm-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.crm-form-grid .full { grid-column:1 / -1; }
+.crm-err { color:var(--red); font-family:var(--mono); font-size:13px; margin-top:4px; min-height:14px; }
+
+/* Approval banner */
+.crm-banner { font-size:14px; line-height:1.5; color:var(--gold); background:rgba(255,201,102,.08);
+  border:1px solid rgba(255,201,102,.3); border-radius:10px; padding:10px 12px; margin-bottom:14px; }

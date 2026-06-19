@@ -12,3 +12,20 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# The daily referral cron. Schedule is also declared in the function via
+# `export const config`; this block is the explicit, readable source of truth.
+[functions."daily-runner"]
+  schedule = "0 14 * * *"   # 14:00 UTC ≈ 9:00am Central
+
+# Serve ES modules (shared/*.mjs, crm/crm.js) with a JS content type so the
+# browser will import them as modules on every host.
+[[headers]]
+  for = "/*.mjs"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+
+[[headers]]
+  for = "/shared/*"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"

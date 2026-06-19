@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="crm/crm.css">
 <style>
   /* High-legibility theme: Atkinson Hyperlegible body type (designed for low
      vision), brighter near-white text, much stronger "dim" contrast, and
@@ -523,6 +524,7 @@
     <div class="clock"><div class="t" id="clk">--:--:--</div><div class="d" id="dte">—</div></div>
     <div class="tod" id="tod" title="Ambient palette follows the time of day"></div>
     <button class="vtoggle" id="hivisBtn" title="Maximum size & contrast reading mode">A⁺ VISION</button>
+    <button class="vtoggle" id="crmBtn" title="Referral CRM — timed follow-ups, one-tap texts, referral loop">⇄ REFERRALS</button>
     <button class="vtoggle" id="syncBtn" style="color:var(--cyan);border-color:var(--cyan-dim)">⇅ SYNC</button>
     <button class="vtoggle on" id="vtoggle">AUDIO ON</button>
   </header>
@@ -1924,5 +1926,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
 </script>
+<!-- Referral CRM — runs as an ES module so it can share shared/*.mjs with the cron. -->
+<script type="module" src="crm/crm.js"></script>
 </body>
 </html>

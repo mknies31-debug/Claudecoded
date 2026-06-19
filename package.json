@@ -1,8 +1,12 @@
 {
   "name": "carvis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "CARVIS — North Star Command. Static PWA + Netlify functions (Anthropic proxy, Resend email, cloud sync).",
+  "description": "CARVIS — North Star Command. Static PWA + Netlify functions (Anthropic proxy, Resend email, cloud sync, referral CRM).",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "crm:dry": "node scripts/dry-run.mjs"
+  },
   "dependencies": {
     "@netlify/blobs": "^10.7.0"
   }
