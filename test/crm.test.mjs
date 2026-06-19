@@ -185,6 +185,44 @@ test('a failing provider is logged, not thrown', async () => {
   assert.ok(touchLogs.some((l) => l.status === 'failed'));
 });
 
+test('a failed email leaves the stage put so it retries tomorrow', async () => {
+  const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', purchaseDate: daysAgo(2) });
+  const mock = new MockProvider(); mock.fail = true;
+  const { customers, report } = await runDailyCycle({ customers: [c], touchLogs: [], provider: mock, approved: true });
+  assert.equal(customers[0].stage, 0, 'stage NOT advanced on a transient failure');
+  assert.equal(report.advanced, 0);
+  assert.equal(report.emailsRetrying, 1);
+});
+
+test('after the retry cap, the engine gives up and lets the timeline advance', async () => {
+  const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', purchaseDate: daysAgo(2) });
+  // two prior failures already logged for this window → today's is the 3rd
+  const priorFails = [
+    { customerId: c.id, sequenceKey: 'welcome', channel: 'email', status: 'failed' },
+    { customerId: c.id, sequenceKey: 'welcome', channel: 'email', status: 'failed' },
+  ];
+  const mock = new MockProvider(); mock.fail = true;
+  const { customers, report } = await runDailyCycle({ customers: [c], touchLogs: priorFails, provider: mock, approved: true });
+  assert.equal(customers[0].stage, 1, 'gives up and advances after the cap');
+  assert.equal(report.emailsRetrying, 0);
+  assert.ok(report.notes.some((n) => /giving up/.test(n)));
+});
+
+test('engine never re-sends a window already marked sent (idempotent)', async () => {
+  const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', purchaseDate: daysAgo(2) });
+  const priorSent = [{ customerId: c.id, sequenceKey: 'welcome', channel: 'email', status: 'sent' }];
+  const mock = new MockProvider();
+  const { customers, report } = await runDailyCycle({ customers: [c], touchLogs: priorSent, provider: mock, approved: true });
+  assert.equal(mock.sent.length, 0, 'no duplicate send');
+  assert.equal(report.emailsSent, 0);
+  assert.equal(customers[0].stage, 1, 'still advances past the already-sent window');
+});
+
+test('hydrate falls back gracefully when vehicle is missing', () => {
+  assert.equal(hydrate('hope the {{vehicle}} is good', { firstName: 'Dale' }), 'hope the vehicle is good');
+  assert.equal(hydrate('the {{vehicle}}', { firstName: 'A', vehicle: '  ' }), 'the vehicle');
+});
+
 function strip(report) { const { date, ...rest } = report; return rest; }
 
 // ── intake (voice + photo) ───────────────────────────────────────────────────

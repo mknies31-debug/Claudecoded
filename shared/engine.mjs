@@ -14,6 +14,12 @@ import { sequenceByKey } from './sequences.mjs';
 
 const isSameDay = (a, b) => String(a).slice(0, 10) === String(b).slice(0, 10);
 
+// How many days in a row an auto-email may fail before we give up on that
+// window and let the timeline move on. Without a cap, one permanently-bad
+// address (Resend keeps 4xx-rejecting it) would freeze a customer at that
+// stage forever and block every later window. 3 ≈ retry today + 2 more days.
+const MAX_EMAIL_RETRIES = 3;
+
 /**
  * @param {object}   o
  * @param {array}    o.customers   - customer records (not mutated; copies returned)
@@ -37,6 +43,7 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
     emailsSent: 0,
     emailsHeld: 0,
     emailsFailed: 0,
+    emailsRetrying: 0,
     textsQueued: 0,
     advanced: 0,
     notes: [],
@@ -49,6 +56,10 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
     if (!due) continue;
     const seq = due.seq;
 
+    // Whether this window is "done" for good. A transient email failure flips
+    // this false so the stage is NOT advanced and the window retries tomorrow.
+    let windowResolved = true;
+
     // ── Email branch ────────────────────────────────────────────────────────
     if (seq.channels.includes('email')) {
       const variant = 'direct'; // auto-emails use the steady Direct variant
@@ -57,7 +68,13 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
       const body = hydrate(tpl.body, c);
       const lint = lintCopy(body, 'email');
 
-      if (!lint.ok) {
+      // Idempotency: if a prior cycle already logged a successful send for this
+      // exact window, never send again — at-least-once without double-sending.
+      const alreadySent = logs.some((l) => l.customerId === c.id && l.sequenceKey === seq.key && l.channel === 'email' && l.status === 'sent');
+
+      if (alreadySent) {
+        // nothing to do — this window's email is already out
+      } else if (!lint.ok) {
         // Never ship copy that breaks the guardrails — hold and flag.
         logs.push(newTouchLog({ customerId: c.id, channel: 'email', sequenceKey: seq.key, variant, subject, body, status: 'held', sentAt: new Date().toISOString() }));
         report.emailsHeld++;
@@ -78,6 +95,16 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
           logs.push(newTouchLog({ customerId: c.id, channel: 'email', sequenceKey: seq.key, variant, subject, body, status: 'failed', sentAt: new Date().toISOString() }));
           report.emailsFailed++;
           report.notes.push(`email failed ${c.id}/${seq.key}: ${err && err.message ? err.message : err}`);
+          // Count failures for THIS window (incl. the one just pushed). Under the
+          // cap → leave the stage so tomorrow retries. At the cap → give up and
+          // let the timeline advance so later windows aren't blocked forever.
+          const failures = logs.filter((l) => l.customerId === c.id && l.sequenceKey === seq.key && l.channel === 'email' && l.status === 'failed').length;
+          if (failures < MAX_EMAIL_RETRIES) {
+            windowResolved = false;
+            report.emailsRetrying++;
+          } else {
+            report.notes.push(`giving up on ${c.id}/${seq.key} after ${failures} attempts`);
+          }
         }
       }
     }
@@ -91,10 +118,14 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
       }
     }
 
-    // ── Advance state forward ────────────────────────────────────────────────
-    c.stage = (c.stage || 0) + 1;
-    c.updatedAt = new Date().toISOString();
-    report.advanced++;
+    // ── Advance state forward (only if the window is resolved) ───────────────
+    // The text branch above is idempotent (guards on sequenceKey), so a retry
+    // tomorrow re-runs this window without re-queuing the text.
+    if (windowResolved) {
+      c.stage = (c.stage || 0) + 1;
+      c.updatedAt = new Date().toISOString();
+      report.advanced++;
+    }
   }
 
   return { customers: nextCustomers, touchLogs: logs, report };

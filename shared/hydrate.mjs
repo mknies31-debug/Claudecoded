@@ -6,7 +6,10 @@
 
 const TOKENS = {
   first_name: (c) => (c.firstName || '').trim(),
-  vehicle: (c) => (c.vehicle || '').trim(),
+  // Vehicle is optional (only name + phone are required at capture). Fall back
+  // to the bare word so "the {{vehicle}}" reads "the vehicle" instead of leaving
+  // a stray double-space — graceful, never an empty gap or raw brackets.
+  vehicle: (c) => (c.vehicle || '').trim() || 'vehicle',
 };
 
 /** Replace supported tokens in `tpl` using the customer. */
