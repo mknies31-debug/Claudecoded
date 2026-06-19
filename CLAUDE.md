@@ -25,7 +25,7 @@ shared/            CLEAN API — isomorphic, dependency-free, browser + node
   sequences.mjs      the 5 timeline windows + day-delta → "what's due" logic
   hydrate.mjs        {{first_name}} / {{vehicle}} token engine
   compliance.mjs     optedOut guard + copy size/zero-value rules
-  templates.mjs      5 sequences x 3 variants (Direct|Softer|NEPQ). COPY PENDING.
+  templates.mjs      5 sequences x 3 variants (Direct|Softer|NEPQ). LIVE (Mick's voice).
   engine.mjs         runDailyCycle() — the pure daily loop (provider injected)
   intake.mjs         guided "enter customer" steps + voice/photo answer parsing
                      (parseFullName, extractPhone, photo-extraction prompt+parser)
