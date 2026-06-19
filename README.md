@@ -10,15 +10,31 @@ Sync you already use, so home and work stay in step.
 
 ---
 
-## Add a customer in under 60 seconds
-1. Open CARVIS → tap **⇄ REFERRALS** (top right).
-2. Tap **＋ Add Customer**.
-3. Type their **first name** and **vehicle**, add a **phone or email** (either is
-   fine), confirm the **purchase date** (defaults to today).
-4. If someone sent them in, pick that person under **Referred by**.
-5. Tap **◉ ADD CUSTOMER**. Done — they're now on the follow-up timeline.
+## Add a customer — three ways
+**The only things you ever have to give are a NAME and a PHONE NUMBER.**
+Everything else (vehicle, email, address, notes, purchase date) is optional —
+skip it now, fill it in later.
 
-That's the whole job. Everything after this happens on its own or with one tap.
+**1. By voice — "enter customer"**
+Say it to the mic (🎙) or type **enter customer** in the command bar. CARVIS asks
+you the questions one at a time — name, phone, car, email, address, anything else
+— and you just talk back. Say **"skip"** for anything you don't have. When it's
+done it shows you the filled-in card to check over before saving.
+
+**2. From a photo**
+Tap **⇄ REFERRALS → ＋ Add Customer → 📷 From a photo**. Snap or upload a
+driver's license, business card, buyer's order, or even a handwritten note.
+CARVIS reads it, pulls out the name, phone, address, email, and vehicle, and
+drops them into the form for you to check. *(Needs `ANTHROPIC_API_KEY` set — the
+same key that powers Ask CARVIS.)*
+
+**3. By hand**
+Tap **⇄ REFERRALS → ＋ Add Customer**, type the name and phone, add whatever else
+you've got, pick **Referred by** if someone sent them in, and tap **◉ ADD
+CUSTOMER**.
+
+Voice and photo both end at the same review form, so you always get a chance to
+fix anything before it saves. Once saved, they're on the follow-up timeline.
 
 ---
 

@@ -10,6 +10,7 @@ import { currentSequence, isComplete, isStagnant, daysSincePurchase, sequenceByK
 import { hydrate } from '../shared/hydrate.mjs';
 import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
 import { isFrozen } from '../shared/compliance.mjs';
+import { INTAKE_STEPS, isSkip, applyAnswer, EXTRACTION_PROMPT, parseExtraction } from '../shared/intake.mjs';
 
 // ── tiny local helpers (no dependency on CARVIS lexical scope) ───────────────
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -106,7 +107,7 @@ function sectionReferral(customers) {
     return `<div class="crm-card warn" data-id="${esc(c.id)}">
       <div class="crm-row between">
         <div><div class="cname">⚑ Thank ${esc(ref.firstName)} ${esc(ref.lastName || '')}</div>
-        <div class="cmeta">${esc(ref.firstName)} referred ${esc(c.firstName)} (${esc(c.vehicle)}) — send a personal thank-you. Not automated on purpose.</div></div>
+        <div class="cmeta">${esc(ref.firstName)} referred ${esc(c.firstName)}${c.vehicle ? ' (' + esc(c.vehicle) + ')' : ''} — send a personal thank-you. Not automated on purpose.</div></div>
       </div>
       <div class="crm-row" style="margin-top:10px">
         ${ref.phone ? `<a class="crm-btn send sm" href="sms:${esc(digits(ref.phone))}?body=${encodeURIComponent(thankYouText(ref, c))}">✎ Text ${esc(ref.firstName)}</a>` : ''}
@@ -137,7 +138,7 @@ function sectionTexts(customers) {
       cards.push(`<div class="crm-card" data-id="${esc(c.id)}" data-seq="${esc(pt.sequenceKey)}">
         <div class="crm-row between">
           <div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
-          <div class="cmeta">${esc(c.vehicle)} · ${esc(seq.label)}${c.phone ? '' : ' · no phone on file'}</div></div>
+          <div class="cmeta">${[c.vehicle, seq.label].filter(Boolean).map(esc).join(' · ')}${c.phone ? '' : ' · no phone on file'}</div></div>
           <select class="crm-select" data-act="variant" data-key="${esc(ckey)}">
             ${VARIANTS.map((v) => `<option value="${v}" ${v === variant ? 'selected' : ''}>${VARIANT_LABELS[v]}</option>`).join('')}
           </select>
@@ -177,27 +178,38 @@ function sectionSentList(sentToday, customers) {
   return section('✉ Emails Cleared Today', sentToday.length, body);
 }
 
-function renderAdd() {
+function renderAdd(prefill = {}) {
   const customers = getCustomers();
+  const v = (k) => esc(prefill[k] || '');
+  const filled = Object.values(prefill).some((x) => x);
   document.getElementById('crmPaneAdd').innerHTML = `
+    <div class="crm-intake-launch">
+      <button class="crm-btn gold" id="crmVoiceBtn" type="button">🎙 Voice intake</button>
+      <button class="crm-btn" id="crmPhotoBtn" type="button">📷 From a photo</button>
+      <input type="file" id="crmPhotoInput" accept="image/*" capture="environment" hidden>
+      <span class="crm-launch-or">or type it in</span>
+    </div>
+    ${filled ? '<div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">✓ Pulled this in for you — check it over, fix anything, then add. Name and phone are the only musts.</div>' : ''}
     <form id="crmAddForm" autocomplete="off">
       <div class="crm-form-grid">
-        <div><span class="olabel">First name *</span><input class="rin" name="firstName" placeholder="Dale"></div>
-        <div><span class="olabel">Last name</span><input class="rin" name="lastName" placeholder="Carlson"></div>
-        <div class="full"><span class="olabel">Vehicle *</span><input class="rin" name="vehicle" placeholder="2019 F-150"></div>
-        <div><span class="olabel">Phone</span><input class="rin" name="phone" inputmode="tel" placeholder="507-555-0101"></div>
-        <div><span class="olabel">Email</span><input class="rin" name="email" inputmode="email" placeholder="dale@email.com"></div>
-        <div><span class="olabel">Purchase date *</span><input class="rin" type="date" name="purchaseDate" value="${todayStr()}"></div>
+        <div><span class="olabel">First name *</span><input class="rin" name="firstName" placeholder="Dale" value="${v('firstName')}"></div>
+        <div><span class="olabel">Last name</span><input class="rin" name="lastName" placeholder="Carlson" value="${v('lastName')}"></div>
+        <div><span class="olabel">Phone *</span><input class="rin" name="phone" inputmode="tel" placeholder="507-555-0101" value="${v('phone')}"></div>
+        <div><span class="olabel">Email</span><input class="rin" name="email" inputmode="email" placeholder="dale@email.com" value="${v('email')}"></div>
+        <div class="full"><span class="olabel">Vehicle</span><input class="rin" name="vehicle" placeholder="2019 F-150" value="${v('vehicle')}"></div>
+        <div class="full"><span class="olabel">Address</span><input class="rin" name="address" placeholder="123 Main St, Zumbrota, MN" value="${v('address')}"></div>
+        <div><span class="olabel">Purchase date</span><input class="rin" type="date" name="purchaseDate" value="${v('purchaseDate') || todayStr()}"></div>
         <div><span class="olabel">Referred by</span>
           <select class="rin" name="referredById">
             <option value="">— nobody / walk-in —</option>
-            ${customers.map((c) => `<option value="${esc(c.id)}">${esc(c.firstName)} ${esc(c.lastName || '')} (${esc(c.vehicle)})</option>`).join('')}
+            ${customers.map((c) => `<option value="${esc(c.id)}">${esc(c.firstName)} ${esc(c.lastName || '')}${c.vehicle ? ' (' + esc(c.vehicle) + ')' : ''}</option>`).join('')}
           </select>
         </div>
+        <div class="full"><span class="olabel">Other notes</span><textarea class="rin" name="notes" rows="2" placeholder="Trade, family, how they found you…">${v('notes')}</textarea></div>
       </div>
       <div class="crm-err" id="crmAddErr"></div>
       <button class="rgen" type="submit">◉ ADD CUSTOMER</button>
-      <div class="mnote"><span>✦</span><span>Phone or email is enough to start follow-ups. Everything saves locally and rides your existing Data Sync — no separate database.</span></div>
+      <div class="mnote"><span>✦</span><span>Only <b>name</b> and <b>phone</b> are required — skip anything you don't have and fill it in later. Saves locally and rides your existing Data Sync.</span></div>
     </form>`;
 }
 
@@ -213,10 +225,15 @@ function renderPipeline() {
       const done = isComplete(c);
       const stage = done ? 'Complete' : currentSequence(c).label;
       const stale = isStagnant(c, today);
+      const line1 = [c.vehicle || 'no vehicle on file', `${daysSincePurchase(c, today)} days`].join(' · ');
+      const contact = [c.phone, c.email].filter(Boolean).join(' · ');
       return `<div class="crm-card ${stale ? 'alert' : ''}" data-id="${esc(c.id)}">
         <div class="crm-row between">
           <div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
-          <div class="cmeta">${esc(c.vehicle)} · ${daysSincePurchase(c, today)} days · ${esc(c.email || c.phone || 'no contact')}</div></div>
+          <div class="cmeta">${esc(line1)}</div>
+          ${contact ? `<div class="cmeta">${esc(contact)}</div>` : ''}
+          ${c.address ? `<div class="cmeta">${esc(c.address)}</div>` : ''}
+          ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}</div>
           <div class="crm-row">
             ${frozen ? '<span class="pill opt">OPTED OUT</span>' : done ? '<span class="pill done">complete</span>' : `<span class="pill stage">${esc(stage)}</span>`}
             ${stale ? '<span class="pill">stagnant</span>' : ''}
@@ -240,6 +257,8 @@ function section(title, count, body) {
 function onOverlayClick(e) {
   const tab = e.target.closest('.crm-tab');
   if (tab) { activeTab = tab.dataset.tab; render(); return; }
+  if (e.target.closest('#crmVoiceBtn')) { startVoiceIntake(); return; }
+  if (e.target.closest('#crmPhotoBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
   const act = e.target.closest('[data-act]');
   if (!act) return;
   const a = act.dataset.act;
@@ -254,7 +273,12 @@ function onOverlayClick(e) {
 
 function onOverlayChange(e) {
   const sel = e.target.closest('[data-act="variant"]');
-  if (sel) { variantChoice.set(sel.dataset.key, sel.value); renderDashboard(); }
+  if (sel) { variantChoice.set(sel.dataset.key, sel.value); renderDashboard(); return; }
+  if (e.target.id === 'crmPhotoInput' && e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    e.target.value = ''; // allow re-picking the same file
+    extractFromPhoto(file);
+  }
 }
 
 function onOverlaySubmit(e) {
@@ -265,8 +289,8 @@ function onOverlaySubmit(e) {
   const g = (n) => (fd.get(n) || '').toString();
   const input = {
     firstName: g('firstName'), lastName: g('lastName'), vehicle: g('vehicle'),
-    phone: g('phone'), email: g('email'), purchaseDate: g('purchaseDate'),
-    referredById: g('referredById') || null,
+    phone: g('phone'), email: g('email'), address: g('address'), notes: g('notes'),
+    purchaseDate: g('purchaseDate'), referredById: g('referredById') || null,
   };
   const v = validateCustomer(input);
   if (!v.ok) { document.getElementById('crmAddErr').textContent = Object.values(v.errors)[0]; blip(360, 0.06, 'sawtooth', 0.1); return; }
@@ -331,6 +355,195 @@ function fallbackCopy(t, done) {
   ta.remove();
 }
 
+// ── prefill hand-off (voice + photo both land here for review) ───────────────
+function openAddPrefilled(draft) {
+  buildOverlay();
+  document.getElementById('crmOverlay').classList.add('show');
+  activeTab = 'add';
+  document.querySelectorAll('#crmOverlay .crm-tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === 'add'));
+  document.getElementById('crmPaneDashboard').classList.remove('on');
+  document.getElementById('crmPanePipeline').classList.remove('on');
+  document.getElementById('crmPaneAdd').classList.add('on');
+  renderAdd(draft || {});
+}
+
+// ── voice intake: "enter customer" → CARVIS asks the questions ───────────────
+const intake = { idx: 0, draft: {}, rec: null, listening: false };
+
+function startVoiceIntake() {
+  buildIntakeOverlay();
+  intake.idx = 0; intake.draft = {};
+  document.getElementById('crmIntakeOverlay').classList.add('show');
+  blip(760, 0.06, 'sine', 0.12);
+  intakeAsk(true);
+}
+
+function buildIntakeOverlay() {
+  if (document.getElementById('crmIntakeOverlay')) return;
+  const ov = document.createElement('div');
+  ov.className = 'overlay'; ov.id = 'crmIntakeOverlay';
+  ov.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="mh">
+        <div class="av">🎙</div>
+        <div><div class="mt">ENTER CUSTOMER</div><div class="ms">CARVIS walks you through it — talk or type</div></div>
+        <button class="x" id="crmIntakeClose">✕</button>
+      </div>
+      <div class="mb">
+        <div class="crm-intake-progress" id="crmIntakeProg"></div>
+        <div class="crm-intake-q" id="crmIntakeQ"></div>
+        <div class="crm-intake-heard" id="crmIntakeHeard"></div>
+        <div class="orow">
+          <input class="rin" id="crmIntakeInput" placeholder="Speak, or type the answer here" style="margin-top:0;flex:2" autocomplete="off">
+          <button class="crm-btn gold" id="crmIntakeMic" type="button" title="Tap to talk">🎙</button>
+        </div>
+        <div class="crm-row" style="margin-top:10px">
+          <button class="crm-btn send sm" id="crmIntakeNext" type="button">Next →</button>
+          <button class="crm-btn sm" id="crmIntakeSkip" type="button">Skip</button>
+        </div>
+        <div class="crm-intake-summary" id="crmIntakeSummary"></div>
+        <div class="mnote"><span>✦</span><span>Only <b>name</b> and <b>phone</b> are required. Say or type "skip" for anything you don't have.</span></div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('crmIntakeClose').addEventListener('click', cancelIntake);
+  ov.addEventListener('click', (e) => { if (e.target === ov) cancelIntake(); });
+  document.getElementById('crmIntakeMic').addEventListener('click', toggleIntakeMic);
+  document.getElementById('crmIntakeNext').addEventListener('click', () => submitIntake(document.getElementById('crmIntakeInput').value));
+  document.getElementById('crmIntakeSkip').addEventListener('click', skipIntake);
+  document.getElementById('crmIntakeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitIntake(e.target.value); } });
+}
+
+function intakeAsk(speakIntro) {
+  const step = INTAKE_STEPS[intake.idx];
+  if (!step) return finishIntake();
+  document.getElementById('crmIntakeProg').textContent = `Question ${intake.idx + 1} of ${INTAKE_STEPS.length}${step.required ? ' · required' : ' · optional'}`;
+  document.getElementById('crmIntakeQ').textContent = step.ask;
+  document.getElementById('crmIntakeHeard').textContent = '';
+  document.getElementById('crmIntakeSkip').style.visibility = step.required ? 'hidden' : 'visible';
+  const inp = document.getElementById('crmIntakeInput'); inp.value = ''; try { inp.focus(); } catch (e) { /* noop */ }
+  renderIntakeSummary();
+  if (speakIntro !== false) say(step.ask, () => { if (hasSR()) startIntakeRec(); });
+  else if (hasSR()) startIntakeRec();
+}
+
+function submitIntake(raw) {
+  const step = INTAKE_STEPS[intake.idx];
+  if (!step) return;
+  stopIntakeRec();
+  if (step.required && isSkip(raw)) {
+    document.getElementById('crmIntakeHeard').textContent = '';
+    const msg = step.reAsk || step.ask;
+    document.getElementById('crmIntakeQ').textContent = msg;
+    say(msg, () => { if (hasSR()) startIntakeRec(); });
+    blip(360, 0.06, 'sawtooth', 0.1);
+    return;
+  }
+  if (!isSkip(raw)) intake.draft = applyAnswer(intake.draft, step.key, raw);
+  blip(820, 0.05, 'sine', 0.1);
+  intake.idx += 1;
+  intakeAsk(true);
+}
+
+function skipIntake() {
+  const step = INTAKE_STEPS[intake.idx];
+  if (step && step.required) { toast('That one is required'); return; }
+  stopIntakeRec();
+  intake.idx += 1; intakeAsk(true);
+}
+
+function renderIntakeSummary() {
+  const d = intake.draft;
+  const rows = [
+    ['Name', [d.firstName, d.lastName].filter(Boolean).join(' ')],
+    ['Phone', d.phone], ['Vehicle', d.vehicle], ['Email', d.email], ['Address', d.address], ['Notes', d.notes],
+  ].filter(([, val]) => val);
+  document.getElementById('crmIntakeSummary').innerHTML = rows.length
+    ? '<div class="crm-intake-have">So far: ' + rows.map(([k, val]) => `<span class="pill stage">${esc(k)}: ${esc(val)}</span>`).join(' ') + '</div>'
+    : '';
+}
+
+function finishIntake() {
+  stopIntakeRec();
+  document.getElementById('crmIntakeOverlay').classList.remove('show');
+  say('Got it. Look it over and add them.');
+  openAddPrefilled(intake.draft);
+}
+
+function cancelIntake() {
+  stopIntakeRec();
+  const o = document.getElementById('crmIntakeOverlay'); if (o) o.classList.remove('show');
+  try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* noop */ }
+}
+
+// speech helpers (reuse CARVIS's global speak/TTS; degrade silently)
+function say(text, after) {
+  try { window.speak && window.speak(text); } catch (e) { /* noop */ }
+  if (after) setTimeout(after, Math.min(2600, 700 + text.length * 45));
+}
+function hasSR() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+function toggleIntakeMic() { if (intake.listening) stopIntakeRec(); else startIntakeRec(); }
+function startIntakeRec() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast("Voice input isn't supported here — type the answer"); return; }
+  stopIntakeRec();
+  const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+  intake.rec = rec; intake.listening = true;
+  const mic = document.getElementById('crmIntakeMic'); if (mic) mic.classList.add('on');
+  rec.onresult = (e) => {
+    const t = (e.results[0][0].transcript || '').trim();
+    document.getElementById('crmIntakeHeard').textContent = t ? '“' + t + '”' : '';
+    const inp = document.getElementById('crmIntakeInput'); if (inp) inp.value = t;
+    intake.listening = false; if (mic) mic.classList.remove('on');
+    if (t) submitIntake(t);
+  };
+  rec.onerror = () => { intake.listening = false; if (mic) mic.classList.remove('on'); };
+  rec.onend = () => { intake.listening = false; if (mic) mic.classList.remove('on'); };
+  try { rec.start(); } catch (e) { intake.listening = false; }
+}
+function stopIntakeRec() {
+  if (intake.rec) { try { intake.rec.stop(); } catch (e) { /* noop */ } intake.rec = null; }
+  intake.listening = false;
+  const mic = document.getElementById('crmIntakeMic'); if (mic) mic.classList.remove('on');
+}
+
+// ── photo intake: snap/upload a card or paperwork → extract fields ──────────
+async function extractFromPhoto(file) {
+  if (!/^image\//.test(file.type)) { toast('That is not an image'); return; }
+  toast('Reading the photo…'); blip(620, 0.06, 'sine', 0.12);
+  let dataUrl;
+  try { dataUrl = await readFileAsDataURL(file); } catch (e) { toast('Could not read that file'); return; }
+  const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/.exec(dataUrl);
+  if (!m) { toast('Unsupported image format'); return; }
+  const [, mediaType, b64] = m;
+  try {
+    const r = await fetch('/.netlify/functions/carvis', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+        { type: 'text', text: EXTRACTION_PROMPT },
+      ] }] }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { toast('Photo read failed — set ANTHROPIC_API_KEY, or type it in'); return; }
+    const text = Array.isArray(d.content) ? d.content.map((p) => p.text || '').join('') : '';
+    const draft = parseExtraction(text);
+    if (!draft || !(draft.firstName || draft.phone || draft.vehicle || draft.email)) {
+      toast("Couldn't make out the details — type them in"); openAddPrefilled({}); return;
+    }
+    toast('Pulled the details — check them over'); blip(900, 0.06, 'sine', 0.12);
+    openAddPrefilled(draft);
+  } catch (e) { toast('Photo read needs the CARVIS function deployed — type it in instead'); }
+}
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result || ''));
+    fr.onerror = () => reject(fr.error || new Error('read error'));
+    fr.readAsDataURL(file);
+  });
+}
+
 // ── open / close + lifecycle ─────────────────────────────────────────────────
 function openReferrals() { buildOverlay(); render(); document.getElementById('crmOverlay').classList.add('show'); blip(760, 0.06, 'sine', 0.12); }
 function closeReferrals() { const o = document.getElementById('crmOverlay'); if (o) o.classList.remove('show'); }
@@ -349,14 +562,33 @@ function hookSync() {
   document.addEventListener('carvis:storeupdated', () => { if (isOpen()) render(); });
 }
 
+// "enter customer" (spoken via the mic or typed in the command bar) should
+// launch the guided intake instead of the chat brain. The mic's transcript and
+// the command bar both funnel through CARVIS's global openAI(), so wrapping it
+// once is the single clean hook.
+const ENTER_CUSTOMER_RE = /^\s*(?:hey\s+carvis,?\s+)?(?:enter|add|new|create|start)\s+(?:a\s+|new\s+)?(?:customer|client|profile|contact)\b/i;
+function hookEnterCustomer() {
+  const orig = window.openAI;
+  if (typeof orig === 'function' && orig.__crmWrapped) return;
+  const wrapped = function (seed) {
+    if (typeof seed === 'string' && ENTER_CUSTOMER_RE.test(seed)) { startVoiceIntake(); return; }
+    return orig ? orig.apply(this, arguments) : undefined;
+  };
+  wrapped.__crmWrapped = true;
+  if (typeof orig === 'function') window.openAI = wrapped;
+  else window.openAI = wrapped; // safe even if Ask CARVIS isn't present
+}
+
 function init() {
   buildOverlay();
   hookSync();
+  hookEnterCustomer();
   // Wire the topbar button (added in index.html). Esc closes, matching CARVIS.
   const btn = document.getElementById('crmBtn');
   if (btn) btn.addEventListener('click', openReferrals);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReferrals(); });
-  window.openReferrals = openReferrals; // let CARVIS command bar reach it later
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { cancelIntake(); closeReferrals(); } });
+  window.openReferrals = openReferrals;       // let CARVIS command bar reach it
+  window.crmEnterCustomer = startVoiceIntake;  // direct programmatic entry
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

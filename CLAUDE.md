@@ -27,9 +27,12 @@ shared/            CLEAN API — isomorphic, dependency-free, browser + node
   compliance.mjs     optedOut guard + copy size/zero-value rules
   templates.mjs      5 sequences x 3 variants (Direct|Softer|NEPQ). COPY PENDING.
   engine.mjs         runDailyCycle() — the pure daily loop (provider injected)
+  intake.mjs         guided "enter customer" steps + voice/photo answer parsing
+                     (parseFullName, extractPhone, photo-extraction prompt+parser)
 
 crm/               ROBUST VIEWS — runs in the CARVIS shell (ES module)
-  crm.js             mounts the overlay, capture form, dashboard, text queue
+  crm.js             mounts the overlay, capture form, dashboard, text queue,
+                     voice intake ("enter customer") + photo capture
   crm.css            CRM-scoped styling on the CARVIS theme tokens
 
 netlify/functions/ ISOLATED SERVICES — secrets + I/O only
@@ -54,6 +57,19 @@ cron opens the **same** blob using `CRM_SYNC_KEY`.
 - `carvis_referral_meta`      — `{ lastRun, templatesApproved }`
 
 See `shared/schema.mjs` for field-by-field shapes.
+
+## Capture (voice + photo)
+Three ways in, all funneling to one review form before save:
+- **Voice** — "enter customer" (mic or command bar) is caught by wrapping
+  CARVIS's global `openAI()`; `startVoiceIntake()` walks `INTAKE_STEPS`, speaking
+  each question via CARVIS's `speak()` and listening with the Web Speech API.
+  Spoken answers are parsed by `shared/intake.mjs` (name split, phone digits,
+  email "at/dot"). A typed fallback always works (no mic / unsupported browser).
+- **Photo** — a driver's license / card / paperwork image is sent as a base64
+  vision block to the existing `carvis.js` Anthropic proxy with `EXTRACTION_PROMPT`;
+  `parseExtraction()` turns the JSON reply into a draft.
+- **The only required fields are NAME and PHONE** (`validateCustomer`). Everything
+  else is optional and editable on the review form.
 
 ## The daily loop (cron)
 Once a day the scheduled function:

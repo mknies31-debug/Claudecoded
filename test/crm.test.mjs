@@ -14,6 +14,7 @@ import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
 import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
 import { runDailyCycle } from '../shared/engine.mjs';
+import { INTAKE_STEPS, isSkip, parseFullName, extractPhone, parseSpokenEmail, applyAnswer, parseExtraction } from '../shared/intake.mjs';
 
 // ── helpers ───────────────────────────────────────────────────────────────
 function daysAgo(n) {
@@ -41,12 +42,20 @@ test('newCustomer fills safe defaults', () => {
   assert.match(c.purchaseDate, /^\d{4}-\d{2}-\d{2}$/);
 });
 
-test('validateCustomer requires name, vehicle, and a contact method', () => {
+test('validateCustomer requires only name + phone (everything else optional)', () => {
   assert.equal(validateCustomer({}).ok, false);
-  assert.equal(validateCustomer({ firstName: 'A', vehicle: 'B', purchaseDate: '2025-01-01' }).ok, false); // no contact
-  assert.equal(validateCustomer({ firstName: 'A', vehicle: 'B', purchaseDate: '2025-01-01', email: 'x@y.com' }).ok, true);
-  assert.equal(validateCustomer({ firstName: 'A', vehicle: 'B', purchaseDate: '2025-01-01', phone: '5075551212' }).ok, true);
-  assert.equal(validateCustomer({ firstName: 'A', vehicle: 'B', purchaseDate: '2025-01-01', email: 'bad' }).ok, false);
+  assert.equal(validateCustomer({ firstName: 'A' }).ok, false); // no phone
+  assert.equal(validateCustomer({ phone: '5075551212' }).ok, false); // no name
+  assert.equal(validateCustomer({ firstName: 'A', phone: '5075551212' }).ok, true); // name + phone is enough
+  assert.equal(validateCustomer({ firstName: 'A', phone: '123' }).ok, false); // too short
+  assert.equal(validateCustomer({ firstName: 'A', phone: '5075551212', email: 'bad' }).ok, false); // bad email
+  assert.equal(validateCustomer({ firstName: 'A', phone: '5075551212', email: 'a@b.com', vehicle: '', address: '' }).ok, true);
+});
+
+test('newCustomer carries address + notes', () => {
+  const c = newCustomer({ firstName: 'A', phone: '5075551212', address: '123 Main', notes: 'trade-in' });
+  assert.equal(c.address, '123 Main');
+  assert.equal(c.notes, 'trade-in');
 });
 
 test('CRM owns its own namespaced keys', () => {
@@ -177,3 +186,48 @@ test('a failing provider is logged, not thrown', async () => {
 });
 
 function strip(report) { const { date, ...rest } = report; return rest; }
+
+// ── intake (voice + photo) ───────────────────────────────────────────────────
+test('intake steps: only name + phone are required', () => {
+  const req = INTAKE_STEPS.filter((s) => s.required).map((s) => s.key);
+  assert.deepEqual(req, ['name', 'phone']);
+});
+
+test('isSkip recognizes skip words and blanks', () => {
+  ['skip', 'none', 'no', 'n/a', "I don't have it", 'nothing', '', '  '].forEach((w) => assert.equal(isSkip(w), true, w));
+  ['Dale', '5075551212', 'F-150'].forEach((w) => assert.equal(isSkip(w), false, w));
+});
+
+test('parseFullName splits first/last and strips filler', () => {
+  assert.deepEqual(parseFullName('Dale Carlson'), { firstName: 'Dale', lastName: 'Carlson' });
+  assert.deepEqual(parseFullName('his name is Mary Jo Smith'), { firstName: 'Mary', lastName: 'Jo Smith' });
+  assert.deepEqual(parseFullName('Dale'), { firstName: 'Dale', lastName: '' });
+});
+
+test('extractPhone handles digits and spoken numbers', () => {
+  assert.equal(extractPhone('507-555-0101'), '(507) 555-0101');
+  assert.equal(extractPhone('1 507 555 0101'), '(507) 555-0101');
+  assert.equal(extractPhone('five oh seven five five five oh one oh one'), '(507) 555-0101');
+});
+
+test('parseSpokenEmail rebuilds an address', () => {
+  assert.equal(parseSpokenEmail('dale at gmail dot com'), 'dale@gmail.com');
+});
+
+test('applyAnswer routes each field to the right parser', () => {
+  let d = {};
+  d = applyAnswer(d, 'name', 'Dale Carlson');
+  d = applyAnswer(d, 'phone', '507 555 0101');
+  d = applyAnswer(d, 'vehicle', '2019 F-150');
+  assert.equal(d.firstName, 'Dale'); assert.equal(d.lastName, 'Carlson');
+  assert.equal(d.phone, '(507) 555-0101'); assert.equal(d.vehicle, '2019 F-150');
+});
+
+test('parseExtraction reads JSON from a photo reply (even fenced/with prose)', () => {
+  const reply = 'Here you go:\n```json\n{"firstName":"Dale","lastName":"Carlson","phone":"507-555-0101","email":"d@x.com","address":"123 Main","vehicle":"F-150","notes":""}\n```';
+  const d = parseExtraction(reply);
+  assert.equal(d.firstName, 'Dale');
+  assert.equal(d.phone, '(507) 555-0101');
+  assert.equal(d.vehicle, 'F-150');
+  assert.equal(parseExtraction('no json here'), null);
+});

@@ -72,6 +72,22 @@ body.hivis #crmOverlay .modal { max-width: 880px; }
 .crm-form-grid .full { grid-column:1 / -1; }
 .crm-err { color:var(--red); font-family:var(--mono); font-size:13px; margin-top:4px; min-height:14px; }
 
+/* Voice / photo launch row on the Add tab */
+.crm-intake-launch { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.crm-launch-or { font-family:var(--mono); font-size:13px; color:var(--dim); letter-spacing:.5px; }
+textarea.rin { resize:vertical; min-height:46px; font-family:inherit; }
+
+/* Guided intake overlay */
+#crmIntakeOverlay .modal { max-width:560px; }
+.crm-intake-progress { font-family:'Orbitron'; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--cyan); margin-bottom:8px; }
+.crm-intake-q { font-size:22px; line-height:1.35; color:var(--text); margin-bottom:6px; }
+body.hivis .crm-intake-q { font-size:26px; }
+.crm-intake-heard { font-family:var(--mono); font-size:15px; color:var(--gold); min-height:20px; margin-bottom:12px; }
+.crm-intake-summary { margin-top:14px; }
+.crm-intake-have { font-size:13px; color:var(--dim); line-height:2; }
+.crm-btn.on { border-color:var(--gold); color:var(--gold); box-shadow:0 0 12px rgba(255,201,102,.4); animation:pulse 1.4s infinite; }
+#crmIntakeMic { font-size:18px; flex:0 0 auto; }
+
 /* Approval banner */
 .crm-banner { font-size:14px; line-height:1.5; color:var(--gold); background:rgba(255,201,102,.08);
   border:1px solid rgba(255,201,102,.3); border-radius:10px; padding:10px 12px; margin-bottom:14px; }
