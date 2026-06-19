@@ -30,6 +30,7 @@ function saveLogs(list) { localStorage.setItem(KEYS.touchLogs, JSON.stringify(li
 // per-card chosen variant, keyed `${id}:${seqKey}`
 const variantChoice = new Map();
 let activeTab = 'dashboard';
+let editingId = null; // when set, the Add pane is editing an existing customer
 
 // ── overlay scaffold (built once, appended to body) ──────────────────────────
 function buildOverlay() {
@@ -179,17 +180,21 @@ function sectionSentList(sentToday, customers) {
 }
 
 function renderAdd(prefill = {}) {
-  const customers = getCustomers();
+  const editing = !!editingId;
+  const customers = getCustomers().filter((c) => c.id !== editingId); // can't refer yourself
   const v = (k) => esc(prefill[k] || '');
   const filled = Object.values(prefill).some((x) => x);
+  const banner = editing
+    ? '<div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">✎ Editing this customer — their timeline, stage, and queued texts stay put. Change what you need and save.</div>'
+    : (filled ? '<div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">✓ Pulled this in for you — check it over, fix anything, then add. Name and phone are the only musts.</div>' : '');
   document.getElementById('crmPaneAdd').innerHTML = `
-    <div class="crm-intake-launch">
+    ${editing ? '' : `<div class="crm-intake-launch">
       <button class="crm-btn gold" id="crmVoiceBtn" type="button">🎙 Voice intake</button>
       <button class="crm-btn" id="crmPhotoBtn" type="button">📷 From a photo</button>
       <input type="file" id="crmPhotoInput" accept="image/*" capture="environment" hidden>
       <span class="crm-launch-or">or type it in</span>
-    </div>
-    ${filled ? '<div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">✓ Pulled this in for you — check it over, fix anything, then add. Name and phone are the only musts.</div>' : ''}
+    </div>`}
+    ${banner}
     <form id="crmAddForm" autocomplete="off">
       <div class="crm-form-grid">
         <div><span class="olabel">First name *</span><input class="rin" name="firstName" placeholder="Dale" value="${v('firstName')}"></div>
@@ -202,13 +207,16 @@ function renderAdd(prefill = {}) {
         <div><span class="olabel">Referred by</span>
           <select class="rin" name="referredById">
             <option value="">— nobody / walk-in —</option>
-            ${customers.map((c) => `<option value="${esc(c.id)}">${esc(c.firstName)} ${esc(c.lastName || '')}${c.vehicle ? ' (' + esc(c.vehicle) + ')' : ''}</option>`).join('')}
+            ${customers.map((c) => `<option value="${esc(c.id)}" ${prefill.referredById === c.id ? 'selected' : ''}>${esc(c.firstName)} ${esc(c.lastName || '')}${c.vehicle ? ' (' + esc(c.vehicle) + ')' : ''}</option>`).join('')}
           </select>
         </div>
         <div class="full"><span class="olabel">Other notes</span><textarea class="rin" name="notes" rows="2" placeholder="Trade, family, how they found you…">${v('notes')}</textarea></div>
       </div>
       <div class="crm-err" id="crmAddErr"></div>
-      <button class="rgen" type="submit">◉ ADD CUSTOMER</button>
+      <div class="crm-row">
+        <button class="rgen" type="submit" style="flex:1">◉ ${editing ? 'UPDATE CUSTOMER' : 'ADD CUSTOMER'}</button>
+        ${editing ? '<button class="crm-btn sm" type="button" id="crmEditCancel">Cancel</button>' : ''}
+      </div>
       <div class="mnote"><span>✦</span><span>Only <b>name</b> and <b>phone</b> are required — skip anything you don't have and fill it in later. Saves locally and rides your existing Data Sync.</span></div>
     </form>`;
 }
@@ -240,6 +248,7 @@ function renderPipeline() {
           </div>
         </div>
         <div class="crm-row" style="margin-top:10px">
+          <button class="crm-btn sm" data-act="edit" data-id="${esc(c.id)}">✎ Edit</button>
           <button class="crm-btn ${frozen ? 'gold' : 'ghost-red'} sm" data-act="optout" data-id="${esc(c.id)}">${frozen ? '↺ Re-enable follow-ups' : '⓪ Opt out (stop all)'}</button>
           <button class="crm-btn sm" data-act="del" data-id="${esc(c.id)}">✕ Remove</button>
         </div>
@@ -256,9 +265,10 @@ function section(title, count, body) {
 // ── events ───────────────────────────────────────────────────────────────────
 function onOverlayClick(e) {
   const tab = e.target.closest('.crm-tab');
-  if (tab) { activeTab = tab.dataset.tab; render(); return; }
+  if (tab) { editingId = null; activeTab = tab.dataset.tab; render(); return; }
   if (e.target.closest('#crmVoiceBtn')) { startVoiceIntake(); return; }
   if (e.target.closest('#crmPhotoBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmEditCancel')) { editingId = null; activeTab = 'pipeline'; render(); return; }
   const act = e.target.closest('[data-act]');
   if (!act) return;
   const a = act.dataset.act;
@@ -267,6 +277,7 @@ function onOverlayClick(e) {
   if (a === 'opensms') { logTextSent(act.dataset.id, act.dataset.seq, act.dataset.variant); setTimeout(render, 50); /* anchor still navigates to sms: */ return; }
   if (a === 'marktext') { e.preventDefault(); logTextSent(act.dataset.id, act.dataset.seq, act.dataset.variant); render(); return; }
   if (a === 'thanked') { markThanked(act.dataset.id); render(); return; }
+  if (a === 'edit') { openEditCustomer(act.dataset.id); return; }
   if (a === 'optout') { toggleOptOut(act.dataset.id); render(); return; }
   if (a === 'del') { removeCustomer(act.dataset.id); render(); return; }
 }
@@ -295,6 +306,22 @@ function onOverlaySubmit(e) {
   const v = validateCustomer(input);
   if (!v.ok) { document.getElementById('crmAddErr').textContent = Object.values(v.errors)[0]; blip(360, 0.06, 'sawtooth', 0.1); return; }
   const list = getCustomers();
+
+  if (editingId) {
+    const cur = list.find((x) => x.id === editingId);
+    if (cur) {
+      // Rebuild through newCustomer to normalize, but preserve the lifecycle
+      // fields the timeline depends on (id, stage, optedOut, queued texts, etc.).
+      const updated = newCustomer({ ...input, id: cur.id, stage: cur.stage, optedOut: cur.optedOut, pendingTexts: cur.pendingTexts, createdAt: cur.createdAt });
+      if (cur.referrerThanked) updated.referrerThanked = true;
+      list[list.indexOf(cur)] = updated;
+      saveCustomers(list);
+      blip(900, 0.06, 'sine', 0.12); toast('Customer updated');
+    }
+    editingId = null; activeTab = 'pipeline'; render();
+    return;
+  }
+
   list.push(newCustomer(input));
   saveCustomers(list);
   blip(900, 0.06, 'sine', 0.12); toast('Customer added');
@@ -356,7 +383,7 @@ function fallbackCopy(t, done) {
 }
 
 // ── prefill hand-off (voice + photo both land here for review) ───────────────
-function openAddPrefilled(draft) {
+function showAddPane(prefill) {
   buildOverlay();
   document.getElementById('crmOverlay').classList.add('show');
   activeTab = 'add';
@@ -364,7 +391,20 @@ function openAddPrefilled(draft) {
   document.getElementById('crmPaneDashboard').classList.remove('on');
   document.getElementById('crmPanePipeline').classList.remove('on');
   document.getElementById('crmPaneAdd').classList.add('on');
-  renderAdd(draft || {});
+  renderAdd(prefill || {});
+}
+
+function openAddPrefilled(draft) { editingId = null; showAddPane(draft); }
+
+function openEditCustomer(id) {
+  const c = getCustomers().find((x) => x.id === id);
+  if (!c) return;
+  editingId = id;
+  showAddPane({
+    firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email,
+    vehicle: c.vehicle, address: c.address, notes: c.notes,
+    purchaseDate: c.purchaseDate, referredById: c.referredById || '',
+  });
 }
 
 // ── voice intake: "enter customer" → CARVIS asks the questions ───────────────
@@ -545,8 +585,8 @@ function readFileAsDataURL(file) {
 }
 
 // ── open / close + lifecycle ─────────────────────────────────────────────────
-function openReferrals() { buildOverlay(); render(); document.getElementById('crmOverlay').classList.add('show'); blip(760, 0.06, 'sine', 0.12); }
-function closeReferrals() { const o = document.getElementById('crmOverlay'); if (o) o.classList.remove('show'); }
+function openReferrals() { editingId = null; buildOverlay(); render(); document.getElementById('crmOverlay').classList.add('show'); blip(760, 0.06, 'sine', 0.12); }
+function closeReferrals() { editingId = null; const o = document.getElementById('crmOverlay'); if (o) o.classList.remove('show'); }
 
 function isOpen() { const o = document.getElementById('crmOverlay'); return o && o.classList.contains('show'); }
 
