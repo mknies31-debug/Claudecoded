@@ -562,21 +562,27 @@ function hookSync() {
   document.addEventListener('carvis:storeupdated', () => { if (isOpen()) render(); });
 }
 
-// "enter customer" (spoken via the mic or typed in the command bar) should
-// launch the guided intake instead of the chat brain. The mic's transcript and
-// the command bar both funnel through CARVIS's global openAI(), so wrapping it
-// once is the single clean hook.
+// "enter customer" should launch the guided intake from every entry point:
+//  - the mic transcript and Ask CARVIS both call openAI()
+//  - the "⇄ Enter Customer" chip, the typed command bar, and ➤ send all call
+//    runCmd() — wrapping it also dodges runCmd's name heuristics (e.g. a lead
+//    named "Tom" matching because "cusTOMer" contains it).
+// Both are global function declarations, so wrapping each once is the clean hook.
 const ENTER_CUSTOMER_RE = /^\s*(?:hey\s+carvis,?\s+)?(?:enter|add|new|create|start)\s+(?:a\s+|new\s+)?(?:customer|client|profile|contact)\b/i;
-function hookEnterCustomer() {
-  const orig = window.openAI;
+function wrapGlobal(name, onMatch) {
+  const orig = window[name];
   if (typeof orig === 'function' && orig.__crmWrapped) return;
-  const wrapped = function (seed) {
-    if (typeof seed === 'string' && ENTER_CUSTOMER_RE.test(seed)) { startVoiceIntake(); return; }
-    return orig ? orig.apply(this, arguments) : undefined;
+  const wrapped = function (arg) {
+    if (typeof arg === 'string' && ENTER_CUSTOMER_RE.test(arg)) { onMatch(); return; }
+    return typeof orig === 'function' ? orig.apply(this, arguments) : undefined;
   };
   wrapped.__crmWrapped = true;
-  if (typeof orig === 'function') window.openAI = wrapped;
-  else window.openAI = wrapped; // safe even if Ask CARVIS isn't present
+  window[name] = wrapped;
+}
+function hookEnterCustomer() {
+  const launch = () => { const cmd = document.getElementById('cmd'); if (cmd) cmd.value = ''; startVoiceIntake(); };
+  wrapGlobal('openAI', launch);  // mic + Ask CARVIS
+  wrapGlobal('runCmd', launch);  // chip + command bar + send button
 }
 
 function init() {
