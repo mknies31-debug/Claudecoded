@@ -8,6 +8,9 @@ one-tap **texts** it hands you to fire by hand.
 No new app to learn, no spreadsheet, no separate login. It rides the same Data
 Sync you already use, so home and work stay in step.
 
+> **Going live?** Follow **[`GO-LIVE.md`](GO-LIVE.md)** — the step-by-step setup
+> checklist (deploy, keys, sync, copy, cron test, real-device test).
+
 ---
 
 ## Add a customer — three ways
