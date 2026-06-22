@@ -26,13 +26,21 @@ their variable is present.
 | Variable | Powers | Required for |
 | --- | --- | --- |
 | `CRM_SYNC_KEY` | lets the daily cron find your data | the auto-follow-up loop |
-| `RESEND_API_KEY` | outbound email | auto-emails actually sending |
-| `MAIL_FROM` | sender identity, e.g. `Mick Knies <mick@northstarcarguy.com>` | email |
-| `MAIL_REPLY_TO` | where replies land, e.g. `mick@northstarcarguy.com` | email |
+| `EMAIL_PROVIDER` | `gmail` to send from your Gmail (or `resend` / `mailerlite`) | choosing the sender |
+| `GMAIL_USER` | your Gmail address, `mknies31@gmail.com` | sending via Gmail |
+| `GMAIL_APP_PASSWORD` | the 16-char Google **App Password** (NOT your login password) | sending via Gmail |
+| `MAIL_REPLY_TO` *(optional)* | where replies land (defaults to `GMAIL_USER`) | email |
 | `ANTHROPIC_API_KEY` | photo intake + Ask CARVIS | the 📷 From-a-photo feature |
 | `CRON_SECRET` | guards the cron's public URL — manual triggers must send this | keeping the send loop private |
-| `EMAIL_PROVIDER` *(optional)* | `resend` (default) or `mailerlite` | swapping vendors |
-| `MAILERLITE_API_KEY` *(optional)* | MailerLite send | only if you switch |
+| `RESEND_API_KEY` / `MAIL_FROM` | only if `EMAIL_PROVIDER=resend` (domain sending) | the Resend path |
+| `MAILERLITE_API_KEY` *(optional)* | only if `EMAIL_PROVIDER=mailerlite` | the MailerLite path |
+
+> **Sending from your Gmail (`mknies31@gmail.com`).** Set `EMAIL_PROVIDER=gmail`,
+> `GMAIL_USER=mknies31@gmail.com`, and `GMAIL_APP_PASSWORD`. Get that password from
+> **Google Account → Security → 2-Step Verification (turn on) → App passwords →**
+> generate one for "Mail." Emails then come from your real address, **land in your
+> Sent folder**, and replies hit your normal inbox. No domain needed — you can
+> **skip Step 4**.
 
 > **Set `CRON_SECRET`** to any long random string. The daily scheduled run
 > doesn't need it, but it blocks strangers from triggering your email loop by
@@ -80,9 +88,9 @@ run them together. They are the same site sharing one cloud blob.
 
 ---
 
-## 4. Verify your Resend sending domain
-Until a domain is verified, Resend only delivers to **your own** Resend account
-email — fine for testing the wiring, not for real customers.
+## 4. Verify your Resend sending domain  *(skip if you're using Gmail — Step 2)*
+Only needed for `EMAIL_PROVIDER=resend`. Until a domain is verified, Resend only
+delivers to **your own** Resend account email — fine for testing, not customers.
 
 - [ ] In Resend (resend.com): add and verify your domain (e.g.
       `northstarcarguy.com`) via the DNS records they give you.

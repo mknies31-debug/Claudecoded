@@ -92,9 +92,53 @@ export class MailerLiteProvider extends EmailProvider {
   }
 }
 
+/**
+ * Gmail — sends straight from Mick's own inbox over Gmail's SMTP using a Google
+ * "App Password" (not the account password). Because it goes through
+ * smtp.gmail.com, Gmail drops a copy in his Sent folder automatically, and the
+ * email arrives from his real address with replies landing in his normal inbox.
+ *
+ * Setup (one time): the Google account needs 2-Step Verification on, then
+ * generate an App Password (Google Account → Security → App passwords) and set
+ * GMAIL_USER + GMAIL_APP_PASSWORD. nodemailer is imported lazily so it only
+ * loads when this provider is actually used.
+ */
+export class GmailProvider extends EmailProvider {
+  constructor(env = process.env) {
+    super();
+    this.user = env.GMAIL_USER || env.MAIL_FROM_EMAIL;
+    this.pass = env.GMAIL_APP_PASSWORD;
+    this.fromName = env.MAIL_FROM_NAME || 'Mick Knies';
+    this.replyTo = env.MAIL_REPLY_TO || this.user;
+  }
+  get name() { return 'gmail'; }
+  get configured() { return !!(this.user && this.pass); }
+
+  async send({ to, toName, subject, html, text }) {
+    if (!this.user || !this.pass) throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD are not set');
+    const { default: nodemailer } = await import('nodemailer');
+    const transport = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user: this.user, pass: this.pass },
+    });
+    const info = await transport.sendMail({
+      from: `${this.fromName} <${this.user}>`,
+      to: toName ? `${toName} <${to}>` : to,
+      replyTo: this.replyTo,
+      subject,
+      text: text || undefined,
+      html: html || undefined,
+    });
+    return { ok: true, id: info && info.messageId ? info.messageId : null };
+  }
+}
+
 /** Factory — pick a provider from env. Defaults to Resend. */
 export function getEmailProvider(env = process.env) {
   const choice = (env.EMAIL_PROVIDER || 'resend').toLowerCase();
+  if (choice === 'gmail') return new GmailProvider(env);
   if (choice === 'mailerlite') return new MailerLiteProvider(env);
   return new ResendProvider(env);
 }

@@ -86,10 +86,11 @@ Once a day the scheduled function:
 
 ## Provider swap (Resend now, MailerLite ready)
 `_lib/email-provider.mjs` exposes `getEmailProvider()`. Default is
-`ResendProvider` (already deployed). Set `EMAIL_PROVIDER=mailerlite` +
-`MAILERLITE_API_KEY` to switch — no engine changes. Adding a new provider = one
-class implementing `send({to,toName,subject,html,text})`. See README "Swap the
-email provider".
+`ResendProvider` (already deployed). Set `EMAIL_PROVIDER=gmail` (+ `GMAIL_USER` /
+`GMAIL_APP_PASSWORD`) to send straight from a Gmail inbox via SMTP, or
+`EMAIL_PROVIDER=mailerlite` (+ `MAILERLITE_API_KEY`) — no engine changes. Adding a
+new provider = one class implementing `send({to,toName,subject,html,text})`. See
+README "Swap the email provider".
 
 ## Build / run / deploy
 - **No build step.** Static files + auto-bundled functions (esbuild). Deploy =
@@ -105,7 +106,8 @@ email provider".
 | `MAIL_FROM` / `MAIL_REPLY_TO` | sender identity | email |
 | `CRM_SYNC_KEY` | lets the cron find the user's blob | the daily loop |
 | `CRON_SECRET` | `x-cron-key` header required for manual cron triggers (scheduled run exempt) | keeping the send loop private |
-| `EMAIL_PROVIDER` | `resend` (default) or `mailerlite` | provider swap |
+| `EMAIL_PROVIDER` | `resend` (default), `gmail`, or `mailerlite` | provider swap |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | send from a Gmail inbox via SMTP app password | only if `EMAIL_PROVIDER=gmail` |
 | `MAILERLITE_API_KEY` | MailerLite send | only if `EMAIL_PROVIDER=mailerlite` |
 | `ANTHROPIC_API_KEY` | (CARVIS, pre-existing) | the Ask CARVIS brain |
 

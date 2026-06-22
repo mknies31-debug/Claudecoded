@@ -81,14 +81,17 @@ To change any wording later: edit `shared/templates.mjs`, run `npm test`, redepl
 ---
 
 ## 5. OPEN ITEMS — these need you
+- [ ] **Gmail App Password.** Email now sends **from `mknies31@gmail.com`** (lands
+      in your Sent). Turn on 2-Step Verification, generate an App Password
+      (Google Account → Security → App passwords → "Mail"), and set
+      `EMAIL_PROVIDER=gmail`, `GMAIL_USER=mknies31@gmail.com`,
+      `GMAIL_APP_PASSWORD=<that 16-char code>` in Netlify. (No domain / Resend
+      needed.)
 - [ ] **Google review link.** Send me your Google review URL and I'll wire it into
       the day-45 referral message as a `{{review_link}}` token (~5 min).
-- [ ] **Go live.** Follow `GO-LIVE.md` — deploy to Netlify, set the env vars
-      (`CRM_SYNC_KEY`, `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_REPLY_TO`,
-      `ANTHROPIC_API_KEY`), verify your Resend sending domain, match the in-app
+- [ ] **Go live.** Follow `GO-LIVE.md` — deploy to Netlify, set the env vars above
+      plus `CRM_SYNC_KEY`, `ANTHROPIC_API_KEY`, `CRON_SECRET`, match the in-app
       sync key to `CRM_SYNC_KEY`, then run the 10-minute real-device smoke test.
-- [ ] **(Optional) Decide on features.** Tell me if you want any of the other
-      app's features brought into CARVIS.
 
 ---
 
