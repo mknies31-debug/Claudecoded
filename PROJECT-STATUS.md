@@ -18,7 +18,7 @@ app, no database — it rides CARVIS's existing Data Sync.
 ---
 
 ## 2. Current status: BUILD COMPLETE ✅
-The software is feature-complete and green (32/32 tests). Real copy is loaded and
+The software is feature-complete and green (36/36 tests). Real copy is loaded and
 auto-emails are switched on. What remains is mechanical setup (deploy + keys) and
 two small items that need input from you (Section 5).
 
@@ -28,7 +28,8 @@ two small items that need input from you (Section 5).
 | Pipeline + dashboard + text queue | ✅ Done |
 | Edit customer (preserves timeline) | ✅ Done |
 | Daily cron loop (email auto-send + text queue) | ✅ Done |
-| Compliance guardrails + test suite | ✅ Done (32/32) |
+| Recurring 90-day follow-ups (rotating call/text/email/video/gift) | ✅ Done |
+| Compliance guardrails + test suite | ✅ Done (36/36) |
 | **Message copy (your real voice)** | ✅ **Live** |
 | **Auto-emails on** (`APPROVED = true`) | ✅ **On** |
 | Deploy + env vars + Resend domain | ⏳ Your setup — see `GO-LIVE.md` |
@@ -48,6 +49,12 @@ your voice and phrasing into this engine's structure — 5 time-windows × 3 ton
 | Referral Ask | day 45 | email + text |
 | Service Reminder | day 180 | email |
 | One-Year Anniversary | day 365 | email + text |
+
+**After the first year it never stops** — an ongoing touch every 90 days that
+rotates the type: **Call → Text → Email → Video → Gift/Card**, then repeats. Email
+auto-sends and text queues a draft as before; call, video, and gift land in a new
+**To-Do** list on the dashboard with a ready-to-use script (the app can't place a
+call or mail a gift, so you mark those done by hand).
 
 Your signature lines carried over: _"send them my way — I'll take care of them the
 same way I took care of you,"_ _"no pressure, just wanted to stay on your radar,"_

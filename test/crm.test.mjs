@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { newCustomer, validateCustomer, KEYS } from '../shared/schema.mjs';
-import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isComplete, localDateStr } from '../shared/sequences.mjs';
+import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isComplete, isThroughFixedSequence, followupForStage, localDateStr } from '../shared/sequences.mjs';
 import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
 import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
@@ -77,11 +77,20 @@ test('nextDueSequence respects stage order and day thresholds', () => {
   assert.equal(nextDueSequence(c3, new Date()).seq.key, 'referral');
 });
 
-test('opted-out and completed customers are never due', () => {
+test('opted-out never due; the sequence rolls into recurring follow-ups', () => {
   const base = newCustomer({ firstName: 'A', vehicle: 'B', email: 'a@b.com', purchaseDate: daysAgo(400) });
   assert.equal(nextDueSequence({ ...base, optedOut: true }, new Date()), null);
-  assert.equal(isComplete({ ...base, stage: SEQUENCES.length }), true);
+  assert.equal(isThroughFixedSequence({ ...base, stage: SEQUENCES.length }), true);
+  assert.equal(isComplete({ ...base, stage: SEQUENCES.length }), false, 'never permanently complete while recurring');
+  // stage 5, day 400 < first recurring touch (455) → not due yet
   assert.equal(nextDueSequence({ ...base, stage: SEQUENCES.length }, new Date()), null);
+});
+
+test('recurring 90-day follow-ups rotate Call → Text → Email → Video → Gift', () => {
+  const base = newCustomer({ firstName: 'A', vehicle: 'B', email: 'a@b.com', purchaseDate: daysAgo(1000) });
+  const types = [0, 1, 2, 3, 4, 5].map((k) => nextDueSequence({ ...base, stage: SEQUENCES.length + k }, new Date()).seq.type);
+  assert.deepEqual(types, ['call', 'text', 'email', 'video', 'gift', 'call']);
+  assert.equal(followupForStage(SEQUENCES.length).day, 455); // 90 days after the anniversary
 });
 
 test('isStagnant flags a due record that has not advanced in >7 days', () => {
@@ -175,6 +184,35 @@ test('localDateStr returns the calendar date in the business timezone (H1)', () 
   // 02:30 UTC on Jun 22 is still 21:30 (9:30pm) on Jun 21 in Central time.
   assert.equal(localDateStr(new Date('2026-06-22T02:30:00Z')), '2026-06-21');
   assert.equal(localDateStr(new Date('2026-06-22T18:00:00Z')), '2026-06-22');
+});
+
+test('engine queues a task (not an email) for a call follow-up', async () => {
+  // stage = SEQUENCES.length → first recurring touch is "call", due at day 455
+  const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', purchaseDate: daysAgo(500), stage: SEQUENCES.length });
+  const mock = new MockProvider();
+  const { customers, report } = await runDailyCycle({ customers: [c], touchLogs: [], today: daysAgo(0), provider: mock, approved: true });
+  assert.equal(mock.sent.length, 0, 'a call is never auto-emailed');
+  assert.equal(report.tasksQueued, 1);
+  assert.equal(customers[0].pendingTasks[0].type, 'call');
+  assert.ok(customers[0].pendingTasks[0].script.includes('F-150'), 'script is hydrated');
+  assert.equal(customers[0].stage, SEQUENCES.length + 1, 'advances to the next recurring touch');
+});
+
+test('engine auto-sends the recurring email touch', async () => {
+  // stage = SEQUENCES.length + 2 → "email" recurring touch, due at day 635
+  const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', purchaseDate: daysAgo(700), stage: SEQUENCES.length + 2 });
+  const mock = new MockProvider();
+  const { report } = await runDailyCycle({ customers: [c], touchLogs: [], today: daysAgo(0), provider: mock, approved: true });
+  assert.equal(mock.sent.length, 1);
+  assert.equal(report.tasksQueued, 0);
+  assert.ok(mock.sent[0].subject.length > 0);
+});
+
+test('recurring follow-up copy obeys the compliance rules', () => {
+  for (const v of VARIANTS) {
+    assert.ok(lintCopy(getText('followup_text', v), 'text').ok, `followup text/${v}`);
+    assert.ok(lintCopy(getEmail('followup_email', v).body, 'email').ok, `followup email/${v}`);
+  }
 });
 
 test('engine sends via the injected provider when approved', async () => {

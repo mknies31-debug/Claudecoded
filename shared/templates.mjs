@@ -84,18 +84,49 @@ export const TEMPLATES = {
   },
 };
 
+// ── Recurring 90-day follow-up copy (evergreen, reused each cycle) ───────────
+// The text touch pulls from FOLLOWUP_TEMPLATES.text, the email touch from
+// .email. Call / video / gift use SCRIPTS — those are talking points for Mick,
+// not sent to the customer, so they speak to him ("ask how…", "record a…").
+export const FOLLOWUP_TEMPLATES = {
+  text: {
+    direct: "Hey {{first_name}} — Mick here, just checking in on the {{vehicle}}. Hope it's still treating you right. Holler if you ever need anything.",
+    softer: "Hey {{first_name}} — thinking of you today. Hope all's well with the {{vehicle}} and the family. No reason for the message, just staying in touch.",
+    nepq: "Hey {{first_name}} — Mick here. How's the {{vehicle}} holding up for what you need these days? I'm always here if anything's changed.",
+  },
+  email: {
+    direct: { subject: "Checking in, {{first_name}}", body: "Hey {{first_name}} — Mick here. It's been a little while, so I wanted to see how the {{vehicle}} is treating you. I like to stay in touch with the people I've worked with, not just at the start. If there's ever anything you need, I'm a phone call away. And if someone you know is looking, send them my way and I'll take good care of them." },
+    softer: { subject: "Thinking of you, {{first_name}}", body: "Hey {{first_name}} — Mick here, no agenda on this one. I just wanted to say I appreciate you and hope the {{vehicle}} is still serving you well. Life gets busy, so I figured I'd reach out and stay on your radar. You know where to find me whenever you need anything." },
+    nepq: { subject: "How's the {{vehicle}} fitting these days?", body: "Hey {{first_name}} — Mick here. A lot can change in a few months, so I wanted to ask how the {{vehicle}} is fitting the life you're living now. If it's still right for you, that's great to hear. If anything has shifted, I'd rather you hear it from me than wonder. Just reply and we'll talk it through." },
+  },
+};
+
+// Action scripts for the manual touches (read by Mick, not sent).
+export const SCRIPTS = {
+  call: "Quick call to {{first_name}}: ask how the {{vehicle}} is treating them and how the family is doing. Keep it short and personal, no pitch. Before you hang up, let them know you're always here and happy to help anyone they send your way.",
+  video: "Record a short personal video for {{first_name}} — twenty seconds, one take. Say hi by name, mention the {{vehicle}}, and that you were thinking of them. Keep it casual and send it by text.",
+  gift: "Send {{first_name}} a small gift or a handwritten card. A note that mentions the {{vehicle}} and thanks them for their trust goes a long way. Keep it personal, never promotional.",
+};
+
 function safeVariant(v) {
   return VARIANTS.includes(v) ? v : 'direct';
 }
 
 /** Raw (un-hydrated) text template for a sequence + variant. */
 export function getText(sequenceKey, variant = 'direct') {
+  if (sequenceKey === 'followup_text') return FOLLOWUP_TEMPLATES.text[safeVariant(variant)];
   const blk = TEMPLATES[sequenceKey];
   return blk ? blk.text[safeVariant(variant)] : '';
 }
 
 /** Raw (un-hydrated) email template { subject, body } for a sequence + variant. */
 export function getEmail(sequenceKey, variant = 'direct') {
+  if (sequenceKey === 'followup_email') return FOLLOWUP_TEMPLATES.email[safeVariant(variant)];
   const blk = TEMPLATES[sequenceKey];
   return blk ? blk.email[safeVariant(variant)] : { subject: '', body: '' };
+}
+
+/** Raw (un-hydrated) action script for a manual follow-up type (call/video/gift). */
+export function getScript(type) {
+  return SCRIPTS[type] || '';
 }

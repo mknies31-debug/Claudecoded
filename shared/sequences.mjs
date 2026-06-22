@@ -46,9 +46,57 @@ export const SEQUENCES = [
   },
 ];
 
-/** Look up a window by key. */
+/** Look up a window by key (handles the fixed windows AND recurring follow-ups). */
 export function sequenceByKey(key) {
-  return SEQUENCES.find((s) => s.key === key) || null;
+  const fixed = SEQUENCES.find((s) => s.key === key);
+  if (fixed) return fixed;
+  if (typeof key === 'string' && key.startsWith('followup_')) {
+    const type = key.slice('followup_'.length);
+    const meta = FOLLOWUP_TYPES[type];
+    if (meta) return { key, label: meta.label, channels: [meta.channel], type, recurring: true };
+  }
+  return null;
+}
+
+// ── Recurring 90-day follow-ups (after the structured first year) ───────────
+// Once a customer clears the five fixed windows, the relationship doesn't end —
+// it settles into an ongoing touch every 90 days that ROTATES the type, so each
+// contact feels different. Email auto-sends; text queues a draft; call / video /
+// gift queue a reminder + script for the user to do by hand (the app can't place
+// a call or mail a gift). Rotation order is the user's: Call → Text → Email →
+// Video → Gift/Card, then repeat forever.
+export const FOLLOWUP_TYPES = {
+  call: { label: '90-Day Call', channel: 'task', verb: 'Call' },
+  text: { label: '90-Day Text', channel: 'text', verb: 'Text' },
+  email: { label: '90-Day Email', channel: 'email', verb: 'Email' },
+  video: { label: '90-Day Video', channel: 'task', verb: 'Record a video' },
+  gift: { label: '90-Day Gift / Card', channel: 'task', verb: 'Send a gift or card' },
+};
+export const FOLLOWUP_ROTATION = ['call', 'text', 'email', 'video', 'gift'];
+export const FOLLOWUP = { startDay: 365, everyDays: 90 };
+
+/** The recurring follow-up window for a stage past the fixed sequence, or null. */
+export function followupForStage(stage) {
+  const i = (stage || 0) - SEQUENCES.length; // 0-based recurring index
+  if (i < 0) return null;
+  const type = FOLLOWUP_ROTATION[i % FOLLOWUP_ROTATION.length];
+  const meta = FOLLOWUP_TYPES[type];
+  return {
+    key: `followup_${type}`,
+    label: meta.label,
+    blurb: `Every-90-day touch — ${meta.verb.toLowerCase()} to stay top of mind.`,
+    day: FOLLOWUP.startDay + FOLLOWUP.everyDays * (i + 1),
+    channels: [meta.channel],
+    type,
+    recurring: true,
+    recurringIndex: i,
+  };
+}
+
+/** The window at a given stage — fixed window or the recurring follow-up. */
+export function windowForStage(stage) {
+  const idx = stage || 0;
+  return idx < SEQUENCES.length ? SEQUENCES[idx] : followupForStage(idx);
 }
 
 const MS_PER_DAY = 86400000;
@@ -83,19 +131,27 @@ function toUTCDate(d) {
   return dt.toISOString().slice(0, 10) + 'T00:00:00Z';
 }
 
-/** Has the customer finished every window? */
-export function isComplete(customer) {
+/**
+ * The follow-up never truly "completes" now — after the five fixed windows it
+ * rolls into the recurring 90-day cadence forever. Kept as a helper for "has
+ * finished the structured first year" (used for display), NOT "no more touches".
+ */
+export function isThroughFixedSequence(customer) {
   return (customer.stage || 0) >= SEQUENCES.length;
+}
+// Back-compat alias: nothing is ever permanently done while recurring runs.
+export function isComplete() {
+  return false;
 }
 
 /**
  * The next window that is DUE for this customer, or null.
- * Due = the window at `stage` exists and enough days have passed.
+ * Due = the window at `stage` (fixed or recurring) exists and enough days passed.
  */
 export function nextDueSequence(customer, today = new Date()) {
-  if (!customer || customer.optedOut || isComplete(customer)) return null;
+  if (!customer || customer.optedOut) return null;
   const idx = customer.stage || 0;
-  const seq = SEQUENCES[idx];
+  const seq = windowForStage(idx);
   if (!seq) return null;
   if (daysSincePurchase(customer, today) >= seq.day) return { index: idx, seq };
   return null;
@@ -103,8 +159,7 @@ export function nextDueSequence(customer, today = new Date()) {
 
 /** The window a customer is currently sitting in (for display), due or not. */
 export function currentSequence(customer) {
-  const idx = Math.min(customer.stage || 0, SEQUENCES.length - 1);
-  return SEQUENCES[idx];
+  return windowForStage(customer.stage || 0);
 }
 
 /**

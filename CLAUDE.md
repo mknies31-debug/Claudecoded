@@ -22,7 +22,8 @@ new `⇄ REFERRALS` overlay — same shell, same theme, same sync.
 ```
 shared/            CLEAN API — isomorphic, dependency-free, browser + node
   schema.mjs         customer + touch_log shapes, factories, validation
-  sequences.mjs      the 5 timeline windows + day-delta → "what's due" logic
+  sequences.mjs      5 fixed windows + recurring 90-day follow-ups (rotating
+                     call/text/email/video/gift) + day-delta → "what's due" logic
   hydrate.mjs        {{first_name}} / {{vehicle}} token engine
   compliance.mjs     optedOut guard + copy size/zero-value rules
   templates.mjs      5 sequences x 3 variants (Direct|Softer|NEPQ). LIVE (Mick's voice).

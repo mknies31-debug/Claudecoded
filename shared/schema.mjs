@@ -53,6 +53,7 @@ export function newCustomer(input = {}) {
     optedOut: input.optedOut === true,
     referredById: input.referredById || null,
     pendingTexts: Array.isArray(input.pendingTexts) ? input.pendingTexts : [],
+    pendingTasks: Array.isArray(input.pendingTasks) ? input.pendingTasks : [],
     createdAt: input.createdAt || now,
     updatedAt: input.updatedAt || now,
   };

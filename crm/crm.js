@@ -94,6 +94,7 @@ function renderDashboard() {
     </div>
     ${sectionReferral(customers)}
     ${sectionTexts(customers)}
+    ${sectionTasks(customers)}
     ${sectionStagnant(customers, today)}
     ${sectionSentList(sentToday, customers)}
   `;
@@ -155,6 +156,34 @@ function sectionTexts(customers) {
   });
   const body = cards.length ? cards.join('') : '<div class="crm-empty">No texts queued. The daily run drops compliant text drafts here as customers hit their windows.</div>';
   return section('✆ Texts Ready to Send', cards.length, body);
+}
+
+// To-Dos — recurring call / video / gift reminders (the app can't do these for
+// you; it hands you the task + a script and you mark it done).
+const TASK_ICON = { call: '✆', video: '🎥', gift: '🎁' };
+function sectionTasks(customers) {
+  const cards = [];
+  customers.forEach((c) => {
+    if (isFrozen(c) || !Array.isArray(c.pendingTasks)) return;
+    c.pendingTasks.forEach((tk) => {
+      const icon = TASK_ICON[tk.type] || '◷';
+      const callHref = tk.type === 'call' && c.phone ? `tel:${digits(c.phone)}` : '';
+      cards.push(`<div class="crm-card" data-id="${esc(c.id)}">
+        <div class="crm-row between">
+          <div><div class="cname">${icon} ${esc(c.firstName)} ${esc(c.lastName || '')}</div>
+          <div class="cmeta">${[c.vehicle, tk.label || tk.type].filter(Boolean).map(esc).join(' · ')}</div></div>
+        </div>
+        <div class="cbody">${esc(tk.script || '')}</div>
+        <div class="crm-row">
+          ${callHref ? `<a class="crm-btn send sm" href="${callHref}">✆ Call now</a>` : ''}
+          ${tk.script ? `<button class="crm-btn sm" data-act="copy" data-text="${esc(tk.script)}">⎘ Copy script</button>` : ''}
+          <button class="crm-btn gold sm" data-act="marktask" data-id="${esc(c.id)}" data-seq="${esc(tk.sequenceKey)}">✓ Mark done</button>
+        </div>
+      </div>`);
+    });
+  });
+  const body = cards.length ? cards.join('') : '<div class="crm-empty">No calls, videos, or gifts due. After the first year, the every-90-day touches land here.</div>';
+  return section('◷ To-Do — Calls · Videos · Gifts', cards.length, body);
 }
 
 function sectionStagnant(customers, today) {
@@ -276,6 +305,7 @@ function onOverlayClick(e) {
   if (a === 'copy') { copyText(act.dataset.text); return; }
   if (a === 'opensms') { logTextSent(act.dataset.id, act.dataset.seq, act.dataset.variant); setTimeout(render, 50); /* anchor still navigates to sms: */ return; }
   if (a === 'marktext') { e.preventDefault(); logTextSent(act.dataset.id, act.dataset.seq, act.dataset.variant); render(); return; }
+  if (a === 'marktask') { markTaskDone(act.dataset.id, act.dataset.seq); render(); return; }
   if (a === 'thanked') { markThanked(act.dataset.id); render(); return; }
   if (a === 'edit') { openEditCustomer(act.dataset.id); return; }
   if (a === 'optout') { toggleOptOut(act.dataset.id); render(); return; }
@@ -312,7 +342,7 @@ function onOverlaySubmit(e) {
     if (cur) {
       // Rebuild through newCustomer to normalize, but preserve the lifecycle
       // fields the timeline depends on (id, stage, optedOut, queued texts, etc.).
-      const updated = newCustomer({ ...input, id: cur.id, stage: cur.stage, optedOut: cur.optedOut, pendingTexts: cur.pendingTexts, createdAt: cur.createdAt });
+      const updated = newCustomer({ ...input, id: cur.id, stage: cur.stage, optedOut: cur.optedOut, pendingTexts: cur.pendingTexts, pendingTasks: cur.pendingTasks, createdAt: cur.createdAt });
       if (cur.referrerThanked) updated.referrerThanked = true;
       list[list.indexOf(cur)] = updated;
       saveCustomers(list);
@@ -341,6 +371,20 @@ function logTextSent(id, seqKey, variant) {
   logs.push({ id: 'log_' + Date.now().toString(36), customerId: id, channel: 'text', sequenceKey: seqKey, variant, subject: '', body: hydrate(getText(seqKey, variant), c), status: 'sent', sentAt: new Date().toISOString() });
   saveLogs(logs);
   toast('Text logged as sent');
+}
+
+function markTaskDone(id, seqKey) {
+  const list = getCustomers();
+  const c = list.find((x) => x.id === id);
+  if (!c) return;
+  const task = (c.pendingTasks || []).find((p) => p.sequenceKey === seqKey);
+  c.pendingTasks = (c.pendingTasks || []).filter((p) => p.sequenceKey !== seqKey);
+  c.updatedAt = new Date().toISOString();
+  saveCustomers(list);
+  const logs = getLogs();
+  logs.push({ id: 'log_' + Date.now().toString(36), customerId: id, channel: task ? task.type : 'task', sequenceKey: seqKey, variant: '', subject: task ? task.label : '', body: task ? task.script : '', status: 'sent', sentAt: new Date().toISOString() });
+  saveLogs(logs);
+  toast('Marked done');
 }
 
 function markThanked(id) {

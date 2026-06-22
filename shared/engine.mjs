@@ -7,7 +7,7 @@
 
 import { nextDueSequence } from './sequences.mjs';
 import { hydrate } from './hydrate.mjs';
-import { getText, getEmail, APPROVED as TEMPLATES_APPROVED } from './templates.mjs';
+import { getText, getEmail, getScript, APPROVED as TEMPLATES_APPROVED } from './templates.mjs';
 import { newTouchLog } from './schema.mjs';
 import { isFrozen, lintCopy } from './compliance.mjs';
 import { sequenceByKey } from './sequences.mjs';
@@ -40,7 +40,7 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
   const approveSend = approved === undefined ? TEMPLATES_APPROVED : approved;
   const todayStr = (typeof today === 'string' ? today : today.toISOString()).slice(0, 10);
 
-  const nextCustomers = customers.map((c) => ({ ...c, pendingTexts: [...(c.pendingTexts || [])] }));
+  const nextCustomers = customers.map((c) => ({ ...c, pendingTexts: [...(c.pendingTexts || [])], pendingTasks: [...(c.pendingTasks || [])] }));
   const logs = [...touchLogs];
   const report = {
     date: todayStr,
@@ -51,6 +51,7 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
     emailsFailed: 0,
     emailsRetrying: 0,
     textsQueued: 0,
+    tasksQueued: 0,
     advanced: 0,
     logsPruned: 0,
     notes: [],
@@ -129,6 +130,17 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
       if (!already) {
         c.pendingTexts.push({ sequenceKey: seq.key, createdAt: new Date().toISOString() });
         report.textsQueued++;
+      }
+    }
+
+    // ── Task branch (call / video / gift — reminder + script, never auto-done) ─
+    // The app can't place a call or mail a gift; it queues a to-do with a draft
+    // script for the user to act on, then logs it done from the dashboard.
+    if (seq.channels.includes('task')) {
+      const already = c.pendingTasks.some((p) => p.sequenceKey === seq.key);
+      if (!already) {
+        c.pendingTasks.push({ type: seq.type, sequenceKey: seq.key, label: seq.label, script: hydrate(getScript(seq.type), c), createdAt: new Date().toISOString() });
+        report.tasksQueued++;
       }
     }
 
