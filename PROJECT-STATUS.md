@@ -18,18 +18,19 @@ app, no database — it rides CARVIS's existing Data Sync.
 ---
 
 ## 2. Current status: BUILD COMPLETE ✅
-The software is feature-complete and green (36/36 tests). Real copy is loaded and
+The software is feature-complete and green (40/40 tests). Real copy is loaded and
 auto-emails are switched on. What remains is mechanical setup (deploy + keys) and
 two small items that need input from you (Section 5).
 
 | Piece | State |
 | --- | --- |
-| Capture (type / voice / photo) | ✅ Done |
+| Capture (type / voice / photo / file+PDF) | ✅ Done |
+| Bulk import (CSV of your whole book) | ✅ Done |
 | Pipeline + dashboard + text queue | ✅ Done |
 | Edit customer (preserves timeline) | ✅ Done |
 | Daily cron loop (email auto-send + text queue) | ✅ Done |
 | Recurring 90-day follow-ups (rotating call/text/email/video/gift) | ✅ Done |
-| Compliance guardrails + test suite | ✅ Done (36/36) |
+| Compliance guardrails + test suite | ✅ Done (40/40) |
 | **Message copy (your real voice)** | ✅ **Live** |
 | **Auto-emails on** (`APPROVED = true`) | ✅ **On** |
 | Deploy + env vars + Resend domain | ⏳ Your setup — see `GO-LIVE.md` |

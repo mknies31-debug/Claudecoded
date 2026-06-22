@@ -30,6 +30,8 @@ shared/            CLEAN API — isomorphic, dependency-free, browser + node
   engine.mjs         runDailyCycle() — the pure daily loop (provider injected)
   intake.mjs         guided "enter customer" steps + voice/photo answer parsing
                      (parseFullName, extractPhone, photo-extraction prompt+parser)
+  import.mjs         bulk CSV import — parseCSV, flexible header mapping, dedupe
+                     by phone, stage-by-purchase-date planning (planImport)
 
 crm/               ROBUST VIEWS — runs in the CARVIS shell (ES module)
   crm.js             mounts the overlay, capture form, dashboard, text queue,
@@ -73,6 +75,11 @@ Four ways in, all funneling to one review form before save:
   **PDF** chosen from storage; PDFs go up as a base64 `document` block (multi-page
   read). Capped ~4.5MB (Netlify body limit). The proxy forwards content blocks
   as-is, so no server change was needed.
+- **Bulk import** — "⇪ Import list (CSV)" parses a whole spreadsheet (exported to
+  CSV) via `shared/import.mjs`: flexible headers, dedupe by phone, and a
+  `Purchase Date` column slots older customers into the right stage
+  (`stageForElapsedDays`) so they don't get the welcome sequence. Shows a
+  reviewable plan (ready / duplicate / invalid) before anything is saved.
 - **The only required fields are NAME and PHONE** (`validateCustomer`). Everything
   else is optional and editable on the review form.
 

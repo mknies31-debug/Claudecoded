@@ -11,6 +11,7 @@ import { hydrate } from '../shared/hydrate.mjs';
 import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
 import { isFrozen } from '../shared/compliance.mjs';
 import { INTAKE_STEPS, isSkip, applyAnswer, EXTRACTION_PROMPT, parseExtraction } from '../shared/intake.mjs';
+import { planImport, IMPORT_COLUMNS } from '../shared/import.mjs';
 
 // ── tiny local helpers (no dependency on CARVIS lexical scope) ───────────────
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -31,6 +32,7 @@ function saveLogs(list) { localStorage.setItem(KEYS.touchLogs, JSON.stringify(li
 const variantChoice = new Map();
 let activeTab = 'dashboard';
 let editingId = null; // when set, the Add pane is editing an existing customer
+let importPlan = null; // when set, the Add pane shows the CSV import review
 
 // ── overlay scaffold (built once, appended to body) ──────────────────────────
 function buildOverlay() {
@@ -209,6 +211,7 @@ function sectionSentList(sentToday, customers) {
 }
 
 function renderAdd(prefill = {}) {
+  if (importPlan) { renderImportPreview(); return; }
   const editing = !!editingId;
   const customers = getCustomers().filter((c) => c.id !== editingId); // can't refer yourself
   const v = (k) => esc(prefill[k] || '');
@@ -221,8 +224,10 @@ function renderAdd(prefill = {}) {
       <button class="crm-btn gold" id="crmVoiceBtn" type="button">🎙 Voice intake</button>
       <button class="crm-btn" id="crmPhotoBtn" type="button">📷 From a photo</button>
       <button class="crm-btn" id="crmFileBtn" type="button">📄 From a file / PDF</button>
+      <button class="crm-btn" id="crmImportBtn" type="button">⇪ Import list (CSV)</button>
       <input type="file" id="crmPhotoInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="crmFileInput" accept="image/*,application/pdf,.pdf" hidden>
+      <input type="file" id="crmImportInput" accept=".csv,text/csv,text/plain" hidden>
       <span class="crm-launch-or">or type it in</span>
     </div>`}
     ${banner}
@@ -296,10 +301,13 @@ function section(title, count, body) {
 // ── events ───────────────────────────────────────────────────────────────────
 function onOverlayClick(e) {
   const tab = e.target.closest('.crm-tab');
-  if (tab) { editingId = null; activeTab = tab.dataset.tab; render(); return; }
+  if (tab) { editingId = null; importPlan = null; activeTab = tab.dataset.tab; render(); return; }
   if (e.target.closest('#crmVoiceBtn')) { startVoiceIntake(); return; }
   if (e.target.closest('#crmPhotoBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmFileBtn')) { const inp = document.getElementById('crmFileInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmImportBtn')) { const inp = document.getElementById('crmImportInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmImportConfirm')) { doImport(); return; }
+  if (e.target.closest('#crmImportCancel')) { importPlan = null; renderAdd(); return; }
   if (e.target.closest('#crmEditCancel')) { editingId = null; activeTab = 'pipeline'; render(); return; }
   const act = e.target.closest('[data-act]');
   if (!act) return;
@@ -322,6 +330,11 @@ function onOverlayChange(e) {
     const file = e.target.files[0];
     e.target.value = ''; // allow re-picking the same file
     extractFromFile(file);
+  }
+  if (e.target.id === 'crmImportInput' && e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    loadImportFile(file);
   }
 }
 
@@ -431,6 +444,7 @@ function fallbackCopy(t, done) {
 
 // ── prefill hand-off (voice + photo both land here for review) ───────────────
 function showAddPane(prefill) {
+  importPlan = null;
   buildOverlay();
   document.getElementById('crmOverlay').classList.add('show');
   activeTab = 'add';
@@ -638,9 +652,62 @@ function readFileAsDataURL(file) {
   });
 }
 
+// ── bulk CSV import ──────────────────────────────────────────────────────────
+function loadImportFile(file) {
+  if (!/\.csv$/i.test(file.name || '') && !/(csv|plain)/.test(file.type || '')) {
+    toast('Use a .csv file — export your spreadsheet as CSV'); return;
+  }
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      importPlan = planImport(String(fr.result || ''), getCustomers(), localDateStr());
+      editingId = null;
+      if (!importPlan.items.length) { importPlan = null; toast('No rows found in that CSV'); return; }
+      renderImportPreview();
+    } catch (e) { importPlan = null; toast('Could not read that CSV'); }
+  };
+  fr.onerror = () => toast('Could not read that file');
+  fr.readAsText(file);
+}
+
+function renderImportPreview() {
+  const p = importPlan; const c = p.counts;
+  const ready = p.items.filter((x) => x.status === 'ready');
+  const sample = ready.slice(0, 8).map((x) => {
+    const nm = [x.input.firstName, x.input.lastName].filter(Boolean).join(' ');
+    const where = Number.isInteger(x.input.stage) && x.input.stage > 0 ? ` · <span class="pill stage">${esc(currentSequence({ stage: x.input.stage }).label)}</span>` : '';
+    return `<div class="cmeta">• ${esc(nm)} — ${esc(x.input.phone)}${x.input.vehicle ? ' · ' + esc(x.input.vehicle) : ''}${where}</div>`;
+  }).join('');
+  document.getElementById('crmPaneAdd').innerHTML = `
+    <div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">⇪ Import review — nothing is saved until you confirm.</div>
+    <div class="crm-readouts">
+      <div class="crm-ro"><div class="v">${c.ready}</div><div class="l">Ready to add</div></div>
+      <div class="crm-ro"><div class="v">${c.duplicate}</div><div class="l">Duplicates (skipped)</div></div>
+      <div class="crm-ro"><div class="v">${c.invalid}</div><div class="l">Missing name/phone</div></div>
+    </div>
+    ${sample ? `<div class="crm-card"><div class="cname">First few:</div>${sample}</div>` : '<div class="crm-empty">No valid rows — every row needs at least a name and a phone.</div>'}
+    <div class="crm-row">
+      <button class="rgen" id="crmImportConfirm" type="button" style="flex:1" ${c.ready ? '' : 'disabled'}>◉ IMPORT ${c.ready} CUSTOMER${c.ready === 1 ? '' : 'S'}</button>
+      <button class="crm-btn sm" id="crmImportCancel" type="button">Cancel</button>
+    </div>
+    <div class="mnote"><span>✦</span><span>Columns I read: <b>${IMPORT_COLUMNS.join('</b>, <b>')}</b>. A <b>Purchase Date</b> column slots older customers into the right spot on the timeline so they don't get the welcome messages. Duplicates are matched by phone.</span></div>`;
+}
+
+function doImport() {
+  if (!importPlan) return;
+  const ready = importPlan.items.filter((x) => x.status === 'ready');
+  if (!ready.length) { toast('Nothing to import'); return; }
+  const list = getCustomers();
+  ready.forEach((x) => list.push(newCustomer(x.input)));
+  saveCustomers(list);
+  const n = ready.length; importPlan = null;
+  blip(900, 0.06, 'sine', 0.12); toast(`Imported ${n} customer${n === 1 ? '' : 's'}`);
+  activeTab = 'pipeline'; render();
+}
+
 // ── open / close + lifecycle ─────────────────────────────────────────────────
-function openReferrals() { editingId = null; buildOverlay(); render(); document.getElementById('crmOverlay').classList.add('show'); blip(760, 0.06, 'sine', 0.12); }
-function closeReferrals() { editingId = null; const o = document.getElementById('crmOverlay'); if (o) o.classList.remove('show'); }
+function openReferrals() { editingId = null; importPlan = null; buildOverlay(); render(); document.getElementById('crmOverlay').classList.add('show'); blip(760, 0.06, 'sine', 0.12); }
+function closeReferrals() { editingId = null; importPlan = null; const o = document.getElementById('crmOverlay'); if (o) o.classList.remove('show'); }
 
 function isOpen() { const o = document.getElementById('crmOverlay'); return o && o.classList.contains('show'); }
 

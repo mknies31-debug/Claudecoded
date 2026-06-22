@@ -9,7 +9,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { newCustomer, validateCustomer, KEYS } from '../shared/schema.mjs';
-import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isComplete, isThroughFixedSequence, followupForStage, localDateStr } from '../shared/sequences.mjs';
+import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isComplete, isThroughFixedSequence, followupForStage, stageForElapsedDays, localDateStr } from '../shared/sequences.mjs';
+import { parseCSV, planImport } from '../shared/import.mjs';
 import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
 import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
@@ -213,6 +214,48 @@ test('recurring follow-up copy obeys the compliance rules', () => {
     assert.ok(lintCopy(getText('followup_text', v), 'text').ok, `followup text/${v}`);
     assert.ok(lintCopy(getEmail('followup_email', v).body, 'email').ok, `followup email/${v}`);
   }
+});
+
+// ── bulk CSV import ───────────────────────────────────────────────────────────
+test('parseCSV handles quoted fields with commas and newlines', () => {
+  const rows = parseCSV('a,b\n"x,y","line1\nline2"');
+  assert.deepEqual(rows[0], ['a', 'b']);
+  assert.equal(rows[1][0], 'x,y');
+  assert.ok(rows[1][1].includes('\n'));
+});
+
+test('planImport maps flexible headers, dedupes, validates, and stages by date', () => {
+  const existing = [newCustomer({ firstName: 'Existing', phone: '5075550000' })];
+  const csv = [
+    'First Name,Last Name,Cell,Email,Vehicle,Purchase Date',
+    'Dale,Carlson,507-555-0101,dale@x.com,2019 F-150,2026-06-01',
+    'Brenda,Smith,(507) 555-0102,,2020 RAV4,2024-01-01',
+    'NoPhone,Person,,,,',
+    'Dup,Again,5075550000,,,',
+  ].join('\n');
+  const p = planImport(csv, existing, '2026-06-22');
+  assert.equal(p.counts.total, 4);
+  assert.equal(p.counts.ready, 2);
+  assert.equal(p.counts.invalid, 1);
+  assert.equal(p.counts.duplicate, 1);
+  // Dale bought 21 days ago → welcome(1) + checkin(14) passed, next is referral → stage 2
+  assert.equal(p.items[0].input.stage, 2);
+  // Brenda bought ~2.4 years ago → past all five fixed windows
+  assert.ok(p.items[1].input.stage >= SEQUENCES.length);
+});
+
+test('planImport falls back to positional columns with no header', () => {
+  const p = planImport('Dale,Carlson,5075550101', [], '2026-06-22');
+  assert.equal(p.counts.ready, 1);
+  assert.equal(p.items[0].input.firstName, 'Dale');
+  assert.equal(p.items[0].input.lastName, 'Carlson');
+});
+
+test('stageForElapsedDays slots elapsed customers to the next due window', () => {
+  assert.equal(stageForElapsedDays(0), 0);
+  assert.equal(stageForElapsedDays(21), 2);   // past welcome + checkin
+  assert.equal(stageForElapsedDays(200), 4);  // past welcome/checkin/referral/service
+  assert.ok(stageForElapsedDays(1000) >= SEQUENCES.length);
 });
 
 test('engine sends via the injected provider when approved', async () => {

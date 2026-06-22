@@ -99,6 +99,20 @@ export function windowForStage(stage) {
   return idx < SEQUENCES.length ? SEQUENCES[idx] : followupForStage(idx);
 }
 
+/**
+ * The stage an already-elapsed customer should start at, given how many days
+ * since purchase. Used by bulk import so importing an old customer doesn't blast
+ * them through the welcome/check-in messages — they slot in at the NEXT window
+ * that hasn't come due yet (fixed windows first, then the recurring cadence).
+ */
+export function stageForElapsedDays(days) {
+  let stage = 0;
+  for (const s of SEQUENCES) { if (days >= s.day) stage++; else return stage; }
+  let i = 0;
+  while (days >= FOLLOWUP.startDay + FOLLOWUP.everyDays * (i + 1)) i++;
+  return SEQUENCES.length + i;
+}
+
 const MS_PER_DAY = 86400000;
 
 // The business runs on Central time (Zumbrota, MN). Stamping and comparing
