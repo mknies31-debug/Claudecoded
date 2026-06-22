@@ -1329,7 +1329,7 @@ function runCmd(raw){
   if(l){ openDraft(l.id); $('#cmd').value=''; return; }
   { const looksMsg=/\?/.test(q)||q.split(/\s+/).length>6; const ms=findVehicles(q);
     if(ms.length && !looksMsg && (isCarQuery(q)||q.split(/\s+/).length<=4)){ openVehicle(ms); $('#cmd').value=''; return; }
-    if(isCarQuery(q) && !looksMsg && INVENTORY.length){ toast(`No local match for "${q}" — opening mosaicautos.com`); window.open(MOSAIC_SITE,'_blank','noopener'); $('#cmd').value=''; return; } }
+    if(isCarQuery(q) && !looksMsg && INVENTORY.length){ const u='https://www.google.com/search?q='+encodeURIComponent('site:mosaicautos.com '+q); toast(`No local match — searching mosaicautos.com for "${q}"`); window.open(u,'_blank','noopener'); $('#cmd').value=''; return; } }
   // exact-match shortcuts only — full sentences fall through to the live brain
   if(low==='market'){ $('#mkList').scrollIntoView({behavior:'smooth'}); toast('Market pulse — see left panel'); $('#cmd').value=''; return; }
   if(low==='directives'||low==='directive'){ toast(`${DATA.leads.length} directives queued — see right`); $('#cmd').value=''; return; }
