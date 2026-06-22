@@ -4,6 +4,8 @@
 // cron (netlify/functions/daily-runner) both import this so a customer means
 // exactly the same thing on every surface.
 
+import { localDateStr } from './sequences.mjs';
+
 /** localStorage / blob keys the CRM owns (auto-synced by CARVIS snapshotStore). */
 export const KEYS = {
   customers: 'carvis_referral_customers',
@@ -44,7 +46,9 @@ export function newCustomer(input = {}) {
     email: (input.email || '').trim(),
     address: (input.address || '').trim(),
     notes: (input.notes || '').trim(),
-    purchaseDate: toDateStr(input.purchaseDate) || toDateStr(now),
+    // purchaseDate default uses the Central-time calendar date, not UTC, so an
+    // evening entry isn't dated to tomorrow (see localDateStr).
+    purchaseDate: toDateStr(input.purchaseDate) || localDateStr(),
     stage: Number.isInteger(input.stage) ? input.stage : 0,
     optedOut: input.optedOut === true,
     referredById: input.referredById || null,

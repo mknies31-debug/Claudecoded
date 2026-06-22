@@ -6,7 +6,7 @@
 // writes the same blob, so what the engine does shows up here on next pull.
 
 import { KEYS, newCustomer, validateCustomer, digits } from '../shared/schema.mjs';
-import { currentSequence, isComplete, isStagnant, daysSincePurchase, sequenceByKey } from '../shared/sequences.mjs';
+import { currentSequence, isComplete, isStagnant, daysSincePurchase, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { hydrate } from '../shared/hydrate.mjs';
 import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
 import { isFrozen } from '../shared/compliance.mjs';
@@ -17,7 +17,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': 
 const toast = (m) => { try { window.toast ? window.toast(m) : 0; } catch (e) { /* noop */ } };
 const blip = (...a) => { try { window.blip && window.blip(...a); } catch (e) { /* noop */ } };
 const pushCloud = () => { try { window.scheduleCloudPush && window.scheduleCloudPush(); } catch (e) { /* noop */ } };
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const todayStr = () => localDateStr(); // Central-time calendar date, not UTC
 
 // ── store access ─────────────────────────────────────────────────────────────
 function loadArr(key) { try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }

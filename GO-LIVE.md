@@ -30,8 +30,14 @@ their variable is present.
 | `MAIL_FROM` | sender identity, e.g. `Mick Knies <mick@northstarcarguy.com>` | email |
 | `MAIL_REPLY_TO` | where replies land, e.g. `mick@northstarcarguy.com` | email |
 | `ANTHROPIC_API_KEY` | photo intake + Ask CARVIS | the 📷 From-a-photo feature |
+| `CRON_SECRET` | guards the cron's public URL — manual triggers must send this | keeping the send loop private |
 | `EMAIL_PROVIDER` *(optional)* | `resend` (default) or `mailerlite` | swapping vendors |
 | `MAILERLITE_API_KEY` *(optional)* | MailerLite send | only if you switch |
+
+> **Set `CRON_SECRET`** to any long random string. The daily scheduled run
+> doesn't need it, but it blocks strangers from triggering your email loop by
+> hitting the function URL. To trigger the job by hand, send that value as an
+> `x-cron-key` header (see Step 6).
 
 **Confirm:** after redeploy, the variables show under Site settings with values set.
 
@@ -109,10 +115,11 @@ Right now every message is placeholder text and auto-emails are **held**.
 The job runs automatically once a day (`0 14 * * *` ≈ 9:00am Central). You don't
 have to wait to test it.
 
-- [ ] Trigger it: `POST https://YOUR-SITE/.netlify/functions/daily-runner`
-      (any REST client, or `curl -X POST`).
+- [ ] Trigger it with your secret header:
+      `curl -X POST https://YOUR-SITE/.netlify/functions/daily-runner -H "x-cron-key: YOUR_CRON_SECRET"`
 - [ ] Read the JSON it returns:
-      - `{ "ok": true, "provider": "resend", "report": {...} }` → it ran.
+      - `{ "ok": true, "provider": "resend", "wrote": true, "report": {...} }` → it ran.
+      - `{ "ok": false, "error": "unauthorized..." }` → the `x-cron-key` header is missing or doesn't match `CRON_SECRET`.
       - `{ "skipped": true, "reason": "CRM_SYNC_KEY is not set..." }` → fix Step 3.
 - [ ] In the app, open **⇄ REFERRALS → ◉ Daily Ops** and confirm the
       **Emails Sent Today** / **Texts Ready to Send** counts reflect the run.

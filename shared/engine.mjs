@@ -20,6 +20,12 @@ const isSameDay = (a, b) => String(a).slice(0, 10) === String(b).slice(0, 10);
 // stage forever and block every later window. 3 ≈ retry today + 2 more days.
 const MAX_EMAIL_RETRIES = 3;
 
+// Touch logs are an audit trail, not permanent storage — they ride the synced
+// blob (which has a size ceiling) and the dashboard re-scans them every render.
+// Drop routine logs older than this so history stays useful without growing
+// forever. ~13 months keeps a full year-long sequence plus a margin.
+const LOG_RETENTION_DAYS = 400;
+
 /**
  * @param {object}   o
  * @param {array}    o.customers   - customer records (not mutated; copies returned)
@@ -46,6 +52,7 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
     emailsRetrying: 0,
     textsQueued: 0,
     advanced: 0,
+    logsPruned: 0,
     notes: [],
   };
 
@@ -71,17 +78,24 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
       // Idempotency: if a prior cycle already logged a successful send for this
       // exact window, never send again — at-least-once without double-sending.
       const alreadySent = logs.some((l) => l.customerId === c.id && l.sequenceKey === seq.key && l.channel === 'email' && l.status === 'sent');
+      // A window already logged as held just stays held — don't re-log it every
+      // day while we wait, or a long pause would bloat the audit trail.
+      const alreadyHeld = logs.some((l) => l.customerId === c.id && l.sequenceKey === seq.key && l.channel === 'email' && l.status === 'held');
+      const logHeld = () => { if (!alreadyHeld) { logs.push(newTouchLog({ customerId: c.id, channel: 'email', sequenceKey: seq.key, variant, subject, body, status: 'held', sentAt: new Date().toISOString() })); report.emailsHeld++; } };
 
       if (alreadySent) {
         // nothing to do — this window's email is already out
       } else if (!lint.ok) {
-        // Never ship copy that breaks the guardrails — hold and flag.
-        logs.push(newTouchLog({ customerId: c.id, channel: 'email', sequenceKey: seq.key, variant, subject, body, status: 'held', sentAt: new Date().toISOString() }));
-        report.emailsHeld++;
-        report.notes.push(`held ${c.id}/${seq.key}: ${lint.problems.join('; ')}`);
+        // Hydrated copy broke a guardrail (usually odd customer data). Hold and
+        // flag, and DON'T advance — a held window must wait, never skip ahead.
+        logHeld();
+        if (!alreadyHeld) report.notes.push(`held ${c.id}/${seq.key}: ${lint.problems.join('; ')}`);
+        windowResolved = false;
       } else if (!approveSend) {
-        logs.push(newTouchLog({ customerId: c.id, channel: 'email', sequenceKey: seq.key, variant, subject, body, status: 'held', sentAt: new Date().toISOString() }));
-        report.emailsHeld++;
+        // Copy not approved yet = a genuine pause. Hold WITHOUT advancing so the
+        // email actually goes out once approved, instead of marching past it.
+        logHeld();
+        windowResolved = false;
       } else if (!c.email) {
         report.notes.push(`no email on file for ${c.id}, skipped email branch`);
       } else if (dryRun || !provider) {
@@ -128,7 +142,15 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
     }
   }
 
-  return { customers: nextCustomers, touchLogs: logs, report };
+  // ── Prune the audit trail (retention window) ────────────────────────────────
+  const cutoff = Date.parse(todayStr + 'T00:00:00Z') - LOG_RETENTION_DAYS * 86400000;
+  const keptLogs = logs.filter((l) => {
+    const t = Date.parse(l.sentAt || '');
+    return isNaN(t) || t >= cutoff; // keep anything undated or inside the window
+  });
+  report.logsPruned = logs.length - keptLogs.length;
+
+  return { customers: nextCustomers, touchLogs: keptLogs, report };
 }
 
 /** Minimal, safe plain-text → HTML for the email body (keeps line breaks). */

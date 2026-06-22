@@ -44,9 +44,23 @@ export async function openStore(event, env = process.env) {
     customers: parseArr(snap[KEYS.customers]),
     touchLogs: parseArr(snap[KEYS.touchLogs]),
     meta: parseObj(snap[KEYS.meta]),
-    /** Persist mutated CRM arrays back into the shared snapshot. */
+    /**
+     * Persist mutated CRM arrays back into the shared snapshot.
+     *
+     * Re-reads the blob immediately before writing and merges ONLY the three
+     * CRM keys onto the freshest snapshot. The cron and the PWA both write this
+     * whole blob (last-writer-wins), so a phone edit to contacts / hot prospects
+     * / monthly stats made while the job runs would otherwise be clobbered by
+     * the older copy the job read at the start. Merging at write-time protects
+     * everything the CRM doesn't own.
+     */
     async save({ customers, touchLogs, meta }) {
-      const nextSnap = { ...snap };
+      let base = snap;
+      try {
+        const fresh = await blobs.get(id, { type: 'json' });
+        if (fresh && fresh.store) base = fresh.store;
+      } catch { /* fall back to the snapshot read at open */ }
+      const nextSnap = { ...base };
       if (customers) nextSnap[KEYS.customers] = JSON.stringify(customers);
       if (touchLogs) nextSnap[KEYS.touchLogs] = JSON.stringify(touchLogs);
       if (meta) nextSnap[KEYS.meta] = JSON.stringify(meta);

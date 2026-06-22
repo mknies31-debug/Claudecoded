@@ -103,6 +103,7 @@ email provider".
 | `RESEND_API_KEY` | outbound email | auto-emails to actually send |
 | `MAIL_FROM` / `MAIL_REPLY_TO` | sender identity | email |
 | `CRM_SYNC_KEY` | lets the cron find the user's blob | the daily loop |
+| `CRON_SECRET` | `x-cron-key` header required for manual cron triggers (scheduled run exempt) | keeping the send loop private |
 | `EMAIL_PROVIDER` | `resend` (default) or `mailerlite` | provider swap |
 | `MAILERLITE_API_KEY` | MailerLite send | only if `EMAIL_PROVIDER=mailerlite` |
 | `ANTHROPIC_API_KEY` | (CARVIS, pre-existing) | the Ask CARVIS brain |

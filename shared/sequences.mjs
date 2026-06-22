@@ -53,6 +53,20 @@ export function sequenceByKey(key) {
 
 const MS_PER_DAY = 86400000;
 
+// The business runs on Central time (Zumbrota, MN). Stamping and comparing
+// dates in UTC mis-dates any evening entry (after ~7pm CT it rolls to tomorrow)
+// and fires the day-1/14/45 windows off by a day. localDateStr() returns the
+// calendar date *in the given zone* as YYYY-MM-DD so capture and the cron agree.
+export const BUSINESS_TZ = 'America/Chicago';
+export function localDateStr(date = new Date(), tz = BUSINESS_TZ) {
+  try {
+    // en-CA formats as YYYY-MM-DD, which is exactly the shape we store.
+    return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date instanceof Date ? date : new Date(date));
+  } catch {
+    return new Date(date).toISOString().slice(0, 10);
+  }
+}
+
 /** Whole calendar days from purchaseDate to `today` (both date-only). */
 export function daysSincePurchase(customer, today = new Date()) {
   if (!customer || !customer.purchaseDate) return 0;

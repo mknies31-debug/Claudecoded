@@ -1,4 +1,4 @@
-const CACHE = 'carvis-v6';
+const CACHE = 'carvis-v7';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 // Install — cache the offline shell

@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { newCustomer, validateCustomer, KEYS } from '../shared/schema.mjs';
-import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isComplete } from '../shared/sequences.mjs';
+import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isComplete, localDateStr } from '../shared/sequences.mjs';
 import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
 import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
@@ -141,9 +141,40 @@ test('engine holds emails when copy is not approved, but still queues texts', as
   assert.equal(mock.sent.length, 0, 'nothing sent while unapproved');
   assert.equal(report.emailsHeld, 1);
   assert.equal(report.textsQueued, 1);
-  assert.equal(customers[0].stage, 1, 'stage advanced');
+  assert.equal(customers[0].stage, 0, 'a held window does NOT advance — it waits (C1)');
   assert.ok(touchLogs.some((l) => l.channel === 'email' && l.status === 'held'));
   assert.equal(customers[0].pendingTexts.length, 1);
+});
+
+test('a held email actually sends once approved (pause, not skip) — C1', async () => {
+  let c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', phone: '5075551212', purchaseDate: daysAgo(2) });
+  // Day 1: copy held → window waits, no send, stage stays put.
+  let r1 = await runDailyCycle({ customers: [c], touchLogs: [], provider: new MockProvider(), approved: false });
+  assert.equal(r1.customers[0].stage, 0);
+  // Day 2: still held → don't re-log the hold (no audit-trail bloat).
+  let r2 = await runDailyCycle({ customers: r1.customers, touchLogs: r1.touchLogs, provider: new MockProvider(), approved: false });
+  assert.equal(r2.report.emailsHeld, 0, 'held window is not re-logged every day');
+  // Day 3: approved → the previously-held welcome email finally goes out.
+  const mock = new MockProvider();
+  let r3 = await runDailyCycle({ customers: r2.customers, touchLogs: r2.touchLogs, provider: mock, approved: true });
+  assert.equal(mock.sent.length, 1, 'the held email sends after approval');
+  assert.equal(r3.customers[0].stage, 1, 'and only now does it advance');
+});
+
+test('engine prunes touch logs past the retention window (H3)', async () => {
+  const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', purchaseDate: daysAgo(2) });
+  const old = { customerId: 'old', sequenceKey: 'welcome', channel: 'email', status: 'sent', sentAt: daysAgo(500) + 'T12:00:00Z' };
+  const recent = { customerId: 'rec', sequenceKey: 'welcome', channel: 'email', status: 'sent', sentAt: daysAgo(30) + 'T12:00:00Z' };
+  const { touchLogs, report } = await runDailyCycle({ customers: [c], touchLogs: [old, recent], today: daysAgo(0), provider: new MockProvider(), approved: true });
+  assert.equal(report.logsPruned, 1, 'the 500-day-old log is pruned');
+  assert.ok(!touchLogs.some((l) => l.customerId === 'old'), 'old log gone');
+  assert.ok(touchLogs.some((l) => l.customerId === 'rec'), 'recent log kept');
+});
+
+test('localDateStr returns the calendar date in the business timezone (H1)', () => {
+  // 02:30 UTC on Jun 22 is still 21:30 (9:30pm) on Jun 21 in Central time.
+  assert.equal(localDateStr(new Date('2026-06-22T02:30:00Z')), '2026-06-21');
+  assert.equal(localDateStr(new Date('2026-06-22T18:00:00Z')), '2026-06-22');
 });
 
 test('engine sends via the injected provider when approved', async () => {

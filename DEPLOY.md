@@ -28,6 +28,7 @@ Features stay dark until their variables are present.
 | `MAIL_FROM` | Email sender identity | `Mick Knies <mick@northstarcarguy.com>` |
 | `MAIL_REPLY_TO` | Where replies land | `mick@northstarcarguy.com` |
 | `CRM_SYNC_KEY` | Lets the daily referral cron find your data — set it to the **same** key you saved under ⇅ SYNC | your private sync key (6+ chars) |
+| `CRON_SECRET` | Guards the `daily-runner` URL — manual triggers must send it as an `x-cron-key` header (the scheduled run is exempt) | any long random string |
 | `EMAIL_PROVIDER` *(optional)* | `resend` (default) or `mailerlite` | swap the email vendor |
 | `MAILERLITE_API_KEY` *(optional)* | MailerLite send (only if `EMAIL_PROVIDER=mailerlite`) | from mailerlite.com |
 
