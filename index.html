@@ -76,7 +76,9 @@
   .vtoggle.on{color:var(--gold);border-color:var(--gold)}
 
   /* ============ MAIN GRID ============ */
-  .main{display:grid;grid-template-columns:300px 1fr 348px;gap:18px;padding:18px 26px;min-height:0;overflow:hidden}
+  /* Side columns (System Status left, Performance right) get the lion's share of
+     the width; the center reactor is clamped to a safe minimum so it never clips. */
+  .main{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(360px,0.9fr) minmax(0,1.45fr);gap:18px;padding:18px 26px;min-height:0;overflow:hidden}
   .col{display:flex;flex-direction:column;gap:16px;min-height:0}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(4px);position:relative;overflow:hidden}
   .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.5}
