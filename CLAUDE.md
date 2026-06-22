@@ -59,16 +59,20 @@ cron opens the **same** blob using `CRM_SYNC_KEY`.
 
 See `shared/schema.mjs` for field-by-field shapes.
 
-## Capture (voice + photo)
-Three ways in, all funneling to one review form before save:
+## Capture (voice + photo + file/PDF)
+Four ways in, all funneling to one review form before save:
 - **Voice** — "enter customer" (mic or command bar) is caught by wrapping
   CARVIS's global `openAI()`; `startVoiceIntake()` walks `INTAKE_STEPS`, speaking
   each question via CARVIS's `speak()` and listening with the Web Speech API.
   Spoken answers are parsed by `shared/intake.mjs` (name split, phone digits,
   email "at/dot"). A typed fallback always works (no mic / unsupported browser).
-- **Photo** — a driver's license / card / paperwork image is sent as a base64
-  vision block to the existing `carvis.js` Anthropic proxy with `EXTRACTION_PROMPT`;
-  `parseExtraction()` turns the JSON reply into a draft.
+- **Photo** — a driver's license / card / paperwork image (camera capture) is sent
+  as a base64 image block to the existing `carvis.js` Anthropic proxy with
+  `EXTRACTION_PROMPT`; `parseExtraction()` turns the JSON reply into a draft.
+- **File / PDF** — same flow via `extractFromFile()` for an existing image OR a
+  **PDF** chosen from storage; PDFs go up as a base64 `document` block (multi-page
+  read). Capped ~4.5MB (Netlify body limit). The proxy forwards content blocks
+  as-is, so no server change was needed.
 - **The only required fields are NAME and PHONE** (`validateCustomer`). Everything
   else is optional and editable on the review form.
 

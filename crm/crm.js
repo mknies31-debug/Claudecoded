@@ -220,7 +220,9 @@ function renderAdd(prefill = {}) {
     ${editing ? '' : `<div class="crm-intake-launch">
       <button class="crm-btn gold" id="crmVoiceBtn" type="button">🎙 Voice intake</button>
       <button class="crm-btn" id="crmPhotoBtn" type="button">📷 From a photo</button>
+      <button class="crm-btn" id="crmFileBtn" type="button">📄 From a file / PDF</button>
       <input type="file" id="crmPhotoInput" accept="image/*" capture="environment" hidden>
+      <input type="file" id="crmFileInput" accept="image/*,application/pdf,.pdf" hidden>
       <span class="crm-launch-or">or type it in</span>
     </div>`}
     ${banner}
@@ -297,6 +299,7 @@ function onOverlayClick(e) {
   if (tab) { editingId = null; activeTab = tab.dataset.tab; render(); return; }
   if (e.target.closest('#crmVoiceBtn')) { startVoiceIntake(); return; }
   if (e.target.closest('#crmPhotoBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmFileBtn')) { const inp = document.getElementById('crmFileInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmEditCancel')) { editingId = null; activeTab = 'pipeline'; render(); return; }
   const act = e.target.closest('[data-act]');
   if (!act) return;
@@ -315,10 +318,10 @@ function onOverlayClick(e) {
 function onOverlayChange(e) {
   const sel = e.target.closest('[data-act="variant"]');
   if (sel) { variantChoice.set(sel.dataset.key, sel.value); renderDashboard(); return; }
-  if (e.target.id === 'crmPhotoInput' && e.target.files && e.target.files[0]) {
+  if ((e.target.id === 'crmPhotoInput' || e.target.id === 'crmFileInput') && e.target.files && e.target.files[0]) {
     const file = e.target.files[0];
     e.target.value = ''; // allow re-picking the same file
-    extractFromPhoto(file);
+    extractFromFile(file);
   }
 }
 
@@ -592,24 +595,31 @@ function stopIntakeRec() {
 }
 
 // ── photo intake: snap/upload a card or paperwork → extract fields ──────────
-async function extractFromPhoto(file) {
-  if (!/^image\//.test(file.type)) { toast('That is not an image'); return; }
-  toast('Reading the photo…'); blip(620, 0.06, 'sine', 0.12);
+async function extractFromFile(file) {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  const isImage = /^image\//.test(file.type);
+  if (!isPdf && !isImage) { toast('Use a photo, image, or PDF'); return; }
+  // Netlify function bodies cap ~6MB and base64 inflates ~33%, so guard the raw size.
+  if (file.size && file.size > 4.5 * 1024 * 1024) { toast('That file is too big — use a photo or a smaller PDF'); return; }
+  toast(isPdf ? 'Reading the PDF…' : 'Reading the photo…'); blip(620, 0.06, 'sine', 0.12);
   let dataUrl;
   try { dataUrl = await readFileAsDataURL(file); } catch (e) { toast('Could not read that file'); return; }
-  const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/.exec(dataUrl);
-  if (!m) { toast('Unsupported image format'); return; }
+  const m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
+  if (!m) { toast('Unsupported file format'); return; }
   const [, mediaType, b64] = m;
+  const block = isPdf
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }
+    : { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } };
   try {
     const r = await fetch('/.netlify/functions/carvis', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+        block,
         { type: 'text', text: EXTRACTION_PROMPT },
       ] }] }),
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) { toast('Photo read failed — set ANTHROPIC_API_KEY, or type it in'); return; }
+    if (!r.ok) { toast('Read failed — set ANTHROPIC_API_KEY, or type it in'); return; }
     const text = Array.isArray(d.content) ? d.content.map((p) => p.text || '').join('') : '';
     const draft = parseExtraction(text);
     if (!draft || !(draft.firstName || draft.phone || draft.vehicle || draft.email)) {
@@ -617,7 +627,7 @@ async function extractFromPhoto(file) {
     }
     toast('Pulled the details — check them over'); blip(900, 0.06, 'sine', 0.12);
     openAddPrefilled(draft);
-  } catch (e) { toast('Photo read needs the CARVIS function deployed — type it in instead'); }
+  } catch (e) { toast('Read needs the CARVIS function deployed — type it in instead'); }
 }
 function readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {

@@ -87,7 +87,7 @@ export function applyAnswer(draft, stepKey, raw) {
 }
 
 // ── photo extraction ─────────────────────────────────────────────────────────
-export const EXTRACTION_PROMPT = `Look at this image and pull out the customer's contact details. It might be a driver's license, a business card, a deal sheet, a buyer's order, an insurance card, or a handwritten note.
+export const EXTRACTION_PROMPT = `Look at this image or document and pull out the customer's contact details. It might be a driver's license, a business card, a deal sheet, a buyer's order, an insurance card, a PDF of paperwork, or a handwritten note. If it has multiple pages, read all of them.
 
 Return ONLY a JSON object, no prose, no markdown, with exactly these keys:
 {"firstName":"","lastName":"","phone":"","email":"","address":"","vehicle":"","notes":""}
