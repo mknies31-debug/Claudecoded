@@ -49,6 +49,29 @@ must use the **exact same string**.
 **Confirm:** add a test customer on one device; open the same key on another →
 it appears. That proves sync is live.
 
+### Running on phone + desktop at the same time
+Yes — install it on both (browser menu → **Install / Add to Home Screen**) and
+run them together. They are the same site sharing one cloud blob.
+
+- **Everything saves to the same place.** Typed, voice, and photo capture, edits,
+  opt-outs, and the nightly cron all write the same data set — there is no
+  separate store per device or per input method.
+- **Saving up is immediate.** Any change pushes to the cloud about 1.5 seconds
+  after you stop — effectively right away.
+- **Pulling down happens on open + refocus, not continuously.** A device fetches
+  the latest when the app loads and each time you switch back to it (plus a
+  manual **⬇ Pull now** button under ⇅ SYNC). It does *not* live-refresh while
+  sitting idle. So if both are open and you add someone on the phone, the desktop
+  shows it once you click back into it or hit **Pull now**. The cron's nightly
+  work appears the same way — next time a device opens or refocuses.
+- **Use the same key on every device.** A different key = a separate, empty data
+  set. If a device looks empty, it's almost always a mismatched key.
+- **Don't edit the same customer on two devices in the same moment.** Sync is
+  last-writer-wins on the whole snapshot (no field-level merge). In normal solo
+  use — one device at a time — this never bites; just don't have both open and
+  editing the same record simultaneously.
+
+
 ---
 
 ## 4. Verify your Resend sending domain
