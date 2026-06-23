@@ -121,6 +121,26 @@ test('countSentences basics', () => {
   assert.equal(countSentences('Just one'), 1);
 });
 
+test('countSentences does not split on titles, initials, or decimals', () => {
+  // A customer named with a title must not inflate the count and wrongly hold copy.
+  assert.equal(countSentences('Mr. Smith bought it. He loves it.'), 2);
+  assert.equal(countSentences('J. Dale picked it up today.'), 1);
+  // Spec numbers in a vehicle/notes merge stay one sentence.
+  assert.equal(countSentences('3.5L V6, runs great.'), 1);
+  assert.equal(countSentences('Stop by 100 Main St. anytime.'), 1);
+});
+
+test('valueViolations lists every offending word, not just the first', () => {
+  const hits = valueViolations('the price and the trade and the credit');
+  assert.ok(hits.includes('price') && hits.includes('trade') && hits.includes('credit'));
+});
+
+test('hydrate degrades gracefully when name or vehicle is blank', () => {
+  // No naked double-space or empty greeting from a thin import row.
+  assert.equal(hydrate('Hey {{first_name}} — Mick here.', { firstName: '' }), 'Hey there — Mick here.');
+  assert.equal(hydrate('the {{vehicle}} is solid', { vehicle: '' }), 'the vehicle is solid');
+});
+
 test('ALL text templates obey size + zero-value + tone rules', () => {
   for (const key of Object.keys(TEMPLATES)) {
     for (const v of VARIANTS) {

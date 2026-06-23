@@ -11,10 +11,23 @@
 export const TEXT_MAX_SENTENCES = 3;
 export const EMAIL_MAX_SENTENCES = 6;
 
+// Periods that do NOT end a sentence: titles, common abbreviations, single
+// initials, and decimals. Without masking these, "Mr. Smith bought it." counts
+// as two sentences and a clean email gets wrongly held. The list is small and
+// car-lot-flavored on purpose (Mr/Mrs/Ms/Dr for names, in./ft for specs).
+const NON_TERMINAL_ABBR = /\b(?:mr|mrs|ms|dr|jr|sr|st|ave|rd|blvd|apt|no|vs|approx|in|ft|cyl|hp|mi|qt|gal|lb|oz)\.(?=\s)/gi;
+const SINGLE_INITIAL = /\b[a-z]\.(?=\s)/gi;     // "J. Smith"
+const DECIMAL = /\d\.\d/g;                       // "3.5L", "1.5 cyl"
+
 /** Count sentences by terminal punctuation, tolerant of trailing whitespace. */
 export function countSentences(str) {
-  const s = String(str || '').trim();
+  let s = String(str || '').trim();
   if (!s) return 0;
+  // Mask non-terminal periods so the splitter only sees real sentence ends.
+  s = s
+    .replace(DECIMAL, (m) => m.replace('.', '\u0001'))
+    .replace(NON_TERMINAL_ABBR, (m) => m.replace('.', '\u0001'))
+    .replace(SINGLE_INITIAL, (m) => m.replace('.', '\u0001'));
   const parts = s.split(/[.!?]+(?:\s|$)/).filter((p) => p.trim().length > 0);
   return parts.length;
 }
@@ -47,8 +60,13 @@ export function valueViolations(str) {
   const s = String(str || '');
   const hits = [];
   for (const re of VALUE_PATTERNS) {
-    const m = s.match(re);
-    if (m) hits.push(m[0]);
+    // Scan globally so a template with two price words flags both, not one.
+    const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
+    let m;
+    while ((m = g.exec(s)) !== null) {
+      hits.push(m[0]);
+      if (m.index === g.lastIndex) g.lastIndex++; // guard against zero-width
+    }
   }
   return hits;
 }
