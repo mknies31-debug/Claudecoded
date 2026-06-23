@@ -10,9 +10,6 @@ import { hydrate } from './hydrate.mjs';
 import { getText, getEmail, getScript, APPROVED as TEMPLATES_APPROVED } from './templates.mjs';
 import { newTouchLog } from './schema.mjs';
 import { isFrozen, lintCopy } from './compliance.mjs';
-import { sequenceByKey } from './sequences.mjs';
-
-const isSameDay = (a, b) => String(a).slice(0, 10) === String(b).slice(0, 10);
 
 // How many days in a row an auto-email may fail before we give up on that
 // window and let the timeline move on. Without a cap, one permanently-bad
@@ -170,5 +167,3 @@ export function toHtml(text) {
   const esc = String(text || '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.55;color:#1a1a1a">${esc.replace(/\n/g, '<br>')}</div>`;
 }
-
-export { isSameDay, sequenceByKey };

@@ -6,7 +6,7 @@
 // writes the same blob, so what the engine does shows up here on next pull.
 
 import { KEYS, newCustomer, validateCustomer, digits } from '../shared/schema.mjs';
-import { currentSequence, isComplete, isStagnant, daysSincePurchase, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
+import { currentSequence, isStagnant, daysSincePurchase, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { hydrate } from '../shared/hydrate.mjs';
 import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
 import { isFrozen } from '../shared/compliance.mjs';
@@ -22,7 +22,6 @@ const todayStr = () => localDateStr(); // Central-time calendar date, not UTC
 
 // ── store access ─────────────────────────────────────────────────────────────
 function loadArr(key) { try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
-function loadObj(key) { try { const v = JSON.parse(localStorage.getItem(key) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } }
 const getCustomers = () => loadArr(KEYS.customers);
 const getLogs = () => loadArr(KEYS.touchLogs);
 function saveCustomers(list) { localStorage.setItem(KEYS.customers, JSON.stringify(list)); pushCloud(); }
@@ -276,8 +275,7 @@ function renderPipeline() {
   } else {
     body = customers.map((c) => {
       const frozen = isFrozen(c);
-      const done = isComplete(c);
-      const stage = done ? 'Complete' : currentSequence(c).label;
+      const stage = currentSequence(c).label;
       const stale = isStagnant(c, today);
       const line1 = [c.vehicle || 'no vehicle on file', `${daysSincePurchase(c, today)} days`].join(' · ');
       const contact = [c.phone, c.email].filter(Boolean).join(' · ');
@@ -289,7 +287,7 @@ function renderPipeline() {
           ${c.address ? `<div class="cmeta">${esc(c.address)}</div>` : ''}
           ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}</div></div>
           <div class="crm-row">
-            ${frozen ? '<span class="pill opt">OPTED OUT</span>' : done ? '<span class="pill done">complete</span>' : `<span class="pill stage">${esc(stage)}</span>`}
+            ${frozen ? '<span class="pill opt">OPTED OUT</span>' : `<span class="pill stage">${esc(stage)}</span>`}
             ${stale ? '<span class="pill">stagnant</span>' : ''}
           </div>
         </div>

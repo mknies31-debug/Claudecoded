@@ -1244,9 +1244,6 @@ async function sendOutreach(){
 const vmoney = n => '$'+(+n||0).toLocaleString();
 const MAKES=['ford','chevrolet','chevy','gmc','ram','dodge','jeep','chrysler','toyota','honda','kia','hyundai','nissan','subaru','mazda','buick','cadillac','lincoln','volkswagen','vw','tesla','lexus','acura','volvo','audi','bmw'];
 let INVENTORY=[], vCur=null, vMatches=[];
-// The lot's site — the single source for live car info. Every inventory listing
-// links here, and any car lookup with no local match points back to it.
-const MOSAIC_SITE='https://mosaicautos.com';
 // Real inventory only (inventory.json, scraped from mosaicautos.com).
 // No sample fallback — if it can't load, car lookups simply report no match.
 async function loadInventory(){

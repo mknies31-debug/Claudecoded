@@ -57,7 +57,6 @@ body.hivis #crmOverlay .modal { max-width: 880px; }
   border:1px solid var(--line); color:var(--dim); }
 .pill.stage { color:var(--cyan); border-color:var(--line-strong); }
 .pill.opt { color:var(--red); border-color:rgba(255,121,134,.5); }
-.pill.done { color:var(--green); border-color:rgba(92,247,159,.4); }
 
 /* Variant dropdown */
 .crm-select { background:var(--panel); border:1px solid var(--line); color:var(--text);

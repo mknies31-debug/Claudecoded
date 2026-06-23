@@ -100,7 +100,3 @@ export function validateCustomer(c = {}) {
 export function digits(s) {
   return String(s || '').replace(/\D+/g, '');
 }
-
-export function isValidEmail(s) {
-  return EMAIL_RE.test(String(s || '').trim());
-}

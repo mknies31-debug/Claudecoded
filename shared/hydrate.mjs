@@ -28,5 +28,3 @@ export function tokensIn(tpl) {
   String(tpl || '').replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, n) => (out.push(n.toLowerCase()), ''));
   return out;
 }
-
-export const SUPPORTED_TOKENS = Object.keys(TOKENS);

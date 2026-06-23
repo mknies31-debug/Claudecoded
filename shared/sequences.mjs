@@ -153,10 +153,6 @@ function toUTCDate(d) {
 export function isThroughFixedSequence(customer) {
   return (customer.stage || 0) >= SEQUENCES.length;
 }
-// Back-compat alias: nothing is ever permanently done while recurring runs.
-export function isComplete() {
-  return false;
-}
 
 /**
  * The next window that is DUE for this customer, or null.
@@ -177,13 +173,12 @@ export function currentSequence(customer) {
 }
 
 /**
- * Stagnant = not opted out, not complete, and the record hasn't advanced a
- * stage in more than `thresholdDays` while a window is already due to fire.
- * That means the cron should have moved it but the user-side state is stuck —
- * worth surfacing.
+ * Stagnant = not opted out and the record hasn't advanced a stage in more than
+ * `thresholdDays` while a window is already due to fire. That means the cron
+ * should have moved it but the user-side state is stuck — worth surfacing.
  */
 export function isStagnant(customer, today = new Date(), thresholdDays = 7) {
-  if (!customer || customer.optedOut || isComplete(customer)) return false;
+  if (!customer || customer.optedOut) return false;
   if (!nextDueSequence(customer, today)) return false;
   const updated = Date.parse(customer.updatedAt || customer.createdAt || '');
   if (isNaN(updated)) return false;

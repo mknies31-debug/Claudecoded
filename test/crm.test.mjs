@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { newCustomer, validateCustomer, KEYS } from '../shared/schema.mjs';
-import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isComplete, isThroughFixedSequence, followupForStage, stageForElapsedDays, localDateStr } from '../shared/sequences.mjs';
+import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isThroughFixedSequence, followupForStage, stageForElapsedDays, localDateStr } from '../shared/sequences.mjs';
 import { parseCSV, planImport } from '../shared/import.mjs';
 import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
@@ -90,7 +90,6 @@ test('opted-out never due; the sequence rolls into recurring follow-ups', () => 
   const base = newCustomer({ firstName: 'A', vehicle: 'B', email: 'a@b.com', purchaseDate: daysAgo(400) });
   assert.equal(nextDueSequence({ ...base, optedOut: true }, new Date()), null);
   assert.equal(isThroughFixedSequence({ ...base, stage: SEQUENCES.length }), true);
-  assert.equal(isComplete({ ...base, stage: SEQUENCES.length }), false, 'never permanently complete while recurring');
   // stage 5, day 400 < first recurring touch (455) → not due yet
   assert.equal(nextDueSequence({ ...base, stage: SEQUENCES.length }, new Date()), null);
 });
