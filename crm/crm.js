@@ -141,8 +141,8 @@ function sectionTexts(customers) {
       const smsHref = c.phone ? `sms:${digits(c.phone)}?body=${encodeURIComponent(msg)}` : '';
       cards.push(`<div class="crm-card" data-id="${esc(c.id)}" data-seq="${esc(pt.sequenceKey)}">
         <div class="crm-row between">
-          <div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
-          <div class="cmeta">${[c.vehicle, seq.label].filter(Boolean).map(esc).join(' · ')}${c.phone ? '' : ' · no phone on file'}</div></div>
+          <div class="crm-idrow">${avatarHTML(c)}<div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
+          <div class="cmeta">${[c.vehicle, seq.label].filter(Boolean).map(esc).join(' · ')}${c.phone ? '' : ' · no phone on file'}</div></div></div>
           <select class="crm-select" data-act="variant" data-key="${esc(ckey)}">
             ${VARIANTS.map((v) => `<option value="${v}" ${v === variant ? 'selected' : ''}>${VARIANT_LABELS[v]}</option>`).join('')}
           </select>
@@ -172,8 +172,8 @@ function sectionTasks(customers) {
       const callHref = tk.type === 'call' && c.phone ? `tel:${digits(c.phone)}` : '';
       cards.push(`<div class="crm-card" data-id="${esc(c.id)}">
         <div class="crm-row between">
-          <div><div class="cname">${icon} ${esc(c.firstName)} ${esc(c.lastName || '')}</div>
-          <div class="cmeta">${[c.vehicle, tk.label || tk.type].filter(Boolean).map(esc).join(' · ')}</div></div>
+          <div class="crm-idrow">${avatarHTML(c)}<div><div class="cname">${icon} ${esc(c.firstName)} ${esc(c.lastName || '')}</div>
+          <div class="cmeta">${[c.vehicle, tk.label || tk.type].filter(Boolean).map(esc).join(' · ')}</div></div></div>
         </div>
         <div class="cbody">${esc(tk.script || '')}</div>
         <div class="crm-row">
@@ -232,6 +232,16 @@ function renderAdd(prefill = {}) {
     </div>`}
     ${banner}
     <form id="crmAddForm" autocomplete="off">
+      <div class="crm-photo-row">
+        <div class="crm-avatar lg" id="crmAvatarPrev">${prefill.photo ? `<img src="${esc(prefill.photo)}" alt="">` : esc(((prefill.firstName || '?')[0] + ((prefill.lastName || '')[0] || '')).toUpperCase() || '?')}</div>
+        <div class="crm-photo-actions">
+          <button class="crm-btn sm" id="crmAvatarBtn" type="button">📷 ${prefill.photo ? 'Change' : 'Add'} photo</button>
+          <button class="crm-btn sm" id="crmAvatarClear" type="button" ${prefill.photo ? '' : 'style="display:none"'}>Remove</button>
+          <input type="file" id="crmAvatarInput" accept="image/*" hidden>
+          <input type="hidden" name="photo" id="crmPhotoField" value="${esc(prefill.photo || '')}">
+          <div class="crm-photo-hint">Optional — a face makes the card easy to spot.</div>
+        </div>
+      </div>
       <div class="crm-form-grid">
         <div><span class="olabel">First name *</span><input class="rin" name="firstName" placeholder="Dale" value="${v('firstName')}"></div>
         <div><span class="olabel">Last name</span><input class="rin" name="lastName" placeholder="Carlson" value="${v('lastName')}"></div>
@@ -273,11 +283,11 @@ function renderPipeline() {
       const contact = [c.phone, c.email].filter(Boolean).join(' · ');
       return `<div class="crm-card ${stale ? 'alert' : ''}" data-id="${esc(c.id)}">
         <div class="crm-row between">
-          <div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
+          <div class="crm-idrow">${avatarHTML(c, 'md')}<div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
           <div class="cmeta">${esc(line1)}</div>
           ${contact ? `<div class="cmeta">${esc(contact)}</div>` : ''}
           ${c.address ? `<div class="cmeta">${esc(c.address)}</div>` : ''}
-          ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}</div>
+          ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}</div></div>
           <div class="crm-row">
             ${frozen ? '<span class="pill opt">OPTED OUT</span>' : done ? '<span class="pill done">complete</span>' : `<span class="pill stage">${esc(stage)}</span>`}
             ${stale ? '<span class="pill">stagnant</span>' : ''}
@@ -305,6 +315,8 @@ function onOverlayClick(e) {
   if (e.target.closest('#crmVoiceBtn')) { startVoiceIntake(); return; }
   if (e.target.closest('#crmPhotoBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmFileBtn')) { const inp = document.getElementById('crmFileInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmAvatarBtn')) { const inp = document.getElementById('crmAvatarInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmAvatarClear')) { setFormPhoto(''); return; }
   if (e.target.closest('#crmImportBtn')) { const inp = document.getElementById('crmImportInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmImportConfirm')) { doImport(); return; }
   if (e.target.closest('#crmImportCancel')) { importPlan = null; renderAdd(); return; }
@@ -336,6 +348,12 @@ function onOverlayChange(e) {
     e.target.value = '';
     loadImportFile(file);
   }
+  if (e.target.id === 'crmAvatarInput' && e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!/^image\//.test(file.type)) { toast('Pick an image for the photo'); return; }
+    downscaleImage(file).then((url) => setFormPhoto(url)).catch(() => toast('Could not read that image'));
+  }
 }
 
 function onOverlaySubmit(e) {
@@ -348,6 +366,7 @@ function onOverlaySubmit(e) {
     firstName: g('firstName'), lastName: g('lastName'), vehicle: g('vehicle'),
     phone: g('phone'), email: g('email'), address: g('address'), notes: g('notes'),
     purchaseDate: g('purchaseDate'), referredById: g('referredById') || null,
+    photo: g('photo'),
   };
   const v = validateCustomer(input);
   if (!v.ok) { document.getElementById('crmAddErr').textContent = Object.values(v.errors)[0]; blip(360, 0.06, 'sawtooth', 0.1); return; }
@@ -464,7 +483,7 @@ function openEditCustomer(id) {
   showAddPane({
     firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email,
     vehicle: c.vehicle, address: c.address, notes: c.notes,
-    purchaseDate: c.purchaseDate, referredById: c.referredById || '',
+    purchaseDate: c.purchaseDate, referredById: c.referredById || '', photo: c.photo || '',
   });
 }
 
@@ -647,6 +666,51 @@ function readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(String(fr.result || ''));
+    fr.onerror = () => reject(fr.error || new Error('read error'));
+    fr.readAsDataURL(file);
+  });
+}
+
+// ── profile picture ──────────────────────────────────────────────────────────
+/** Small avatar block — the photo if present, else the customer's initials. */
+function avatarHTML(c, cls = 'sm') {
+  const initials = (((c.firstName || '?')[0] || '?') + ((c.lastName || '')[0] || '')).toUpperCase();
+  return `<div class="crm-avatar ${cls}">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : esc(initials)}</div>`;
+}
+
+/** Update the add/edit form's photo (hidden field + live preview + buttons). */
+function setFormPhoto(dataUrl) {
+  const field = document.getElementById('crmPhotoField');
+  const prev = document.getElementById('crmAvatarPrev');
+  const clear = document.getElementById('crmAvatarClear');
+  const btn = document.getElementById('crmAvatarBtn');
+  if (!field) return;
+  field.value = dataUrl || '';
+  if (prev) prev.innerHTML = dataUrl ? `<img src="${esc(dataUrl)}" alt="">` : esc((((document.querySelector('#crmAddForm [name=firstName]') || {}).value || '?')[0] || '?').toUpperCase());
+  if (clear) clear.style.display = dataUrl ? '' : 'none';
+  if (btn) btn.textContent = `📷 ${dataUrl ? 'Change' : 'Add'} photo`;
+}
+
+/** Read an image file and return a small (~160px) JPEG data URL for storage. */
+function downscaleImage(file, max = 160) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const src = String(fr.result || '');
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, max / Math.max(img.width || 1, img.height || 1));
+          const w = Math.max(1, Math.round((img.width || max) * scale));
+          const h = Math.max(1, Math.round((img.height || max) * scale));
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(cv.toDataURL('image/jpeg', 0.82));
+        } catch (e) { resolve(src); } // no canvas (rare) → keep original
+      };
+      img.onerror = () => resolve(src);
+      img.src = src;
+    };
     fr.onerror = () => reject(fr.error || new Error('read error'));
     fr.readAsDataURL(file);
   });

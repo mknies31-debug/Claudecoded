@@ -40,7 +40,15 @@ test('newCustomer fills safe defaults', () => {
   assert.equal(c.stage, 0);
   assert.equal(c.optedOut, false);
   assert.deepEqual(c.pendingTexts, []);
+  assert.deepEqual(c.pendingTasks, []);
+  assert.equal(c.photo, ''); // optional profile picture defaults empty
   assert.match(c.purchaseDate, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('newCustomer keeps a provided profile photo data URL', () => {
+  const url = 'data:image/jpeg;base64,abc123';
+  assert.equal(newCustomer({ firstName: 'A', phone: '5075551212', photo: url }).photo, url);
+  assert.equal(newCustomer({ firstName: 'A', phone: '5075551212', photo: 42 }).photo, ''); // non-string ignored
 });
 
 test('validateCustomer requires only name + phone (everything else optional)', () => {

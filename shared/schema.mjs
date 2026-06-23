@@ -46,6 +46,9 @@ export function newCustomer(input = {}) {
     email: (input.email || '').trim(),
     address: (input.address || '').trim(),
     notes: (input.notes || '').trim(),
+    // Optional profile picture as a small data URL (downscaled client-side before
+    // it ever reaches here, so it stays light in the synced blob).
+    photo: typeof input.photo === 'string' ? input.photo : '',
     // purchaseDate default uses the Central-time calendar date, not UTC, so an
     // evening entry isn't dated to tomorrow (see localDateStr).
     purchaseDate: toDateStr(input.purchaseDate) || localDateStr(),
