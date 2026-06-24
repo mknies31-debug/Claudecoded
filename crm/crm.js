@@ -19,6 +19,7 @@ const toast = (m) => { try { window.toast ? window.toast(m) : 0; } catch (e) { /
 const blip = (...a) => { try { window.blip && window.blip(...a); } catch (e) { /* noop */ } };
 const pushCloud = () => { try { window.scheduleCloudPush && window.scheduleCloudPush(); } catch (e) { /* noop */ } };
 const todayStr = () => localDateStr(); // Central-time calendar date, not UTC
+const MOSAIC_SITE = 'https://mosaicautos.com';
 
 // ── store access ─────────────────────────────────────────────────────────────
 function loadArr(key) { try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
@@ -278,12 +279,14 @@ function renderPipeline() {
       const frozen = isFrozen(c);
       const stage = currentSequence(c).label;
       const stale = isStagnant(c, today);
-      const line1 = [c.vehicle || 'no vehicle on file', c.stockNumber ? `Stock ${c.stockNumber}` : '', `${daysSincePurchase(c, today)} days`].filter(Boolean).join(' · ');
+      const line1 = [c.vehicle || 'no vehicle on file', `${daysSincePurchase(c, today)} days`].join(' · ');
       const contact = [c.phone, c.email].filter(Boolean).join(' · ');
+      const stockLine = c.stockNumber ? `<div class="cmeta">Stock <button class="crm-stock-link" type="button" data-act="stocksearch" data-stock="${esc(c.stockNumber)}" title="Copy stock # and open mosaicautos.com">${esc(c.stockNumber)} ⧉↗</button></div>` : '';
       return `<div class="crm-card ${stale ? 'alert' : ''}" data-id="${esc(c.id)}">
         <div class="crm-row between">
           <div class="crm-idrow">${avatarHTML(c, 'md')}<div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
           <div class="cmeta">${esc(line1)}</div>
+          ${stockLine}
           ${contact ? `<div class="cmeta">${esc(contact)}</div>` : ''}
           ${c.address ? `<div class="cmeta">${esc(c.address)}</div>` : ''}
           ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}</div></div>
@@ -325,6 +328,7 @@ function onOverlayClick(e) {
   const a = act.dataset.act;
 
   if (a === 'copy') { copyText(act.dataset.text); return; }
+  if (a === 'stocksearch') { openStockSearch(act.dataset.stock); return; }
   if (a === 'opensms') { logTextSent(act.dataset.id, act.dataset.seq, act.dataset.variant); setTimeout(render, 50); /* anchor still navigates to sms: */ return; }
   if (a === 'marktext') { e.preventDefault(); logTextSent(act.dataset.id, act.dataset.seq, act.dataset.variant); render(); return; }
   if (a === 'marktask') { markTaskDone(act.dataset.id, act.dataset.seq); render(); return; }
@@ -452,6 +456,18 @@ function copyText(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
   } else { fallbackCopy(t, done); }
+}
+
+// Copy the stock number AND open mosaicautos.com so it can be pasted straight
+// into the lot's own search. window.open runs synchronously in the click so it
+// isn't popup-blocked; the clipboard write rides alongside.
+function openStockSearch(stock) {
+  const s = String(stock || '');
+  const done = () => { toast(`Stock ${s} copied — paste it into the search on mosaicautos.com`); blip(820, 0.05, 'sine', 0.1); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(s).then(done).catch(() => fallbackCopy(s, done));
+  } else { fallbackCopy(s, done); }
+  try { window.open(MOSAIC_SITE, '_blank', 'noopener'); } catch (e) { /* noop */ }
 }
 function fallbackCopy(t, done) {
   const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
