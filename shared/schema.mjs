@@ -42,6 +42,7 @@ export function newCustomer(input = {}) {
     firstName: (input.firstName || '').trim(),
     lastName: (input.lastName || '').trim(),
     vehicle: (input.vehicle || '').trim(),
+    stockNumber: (input.stockNumber || '').trim(),
     phone: (input.phone || '').trim(),
     email: (input.email || '').trim(),
     address: (input.address || '').trim(),

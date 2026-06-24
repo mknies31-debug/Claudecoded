@@ -246,7 +246,8 @@ function renderAdd(prefill = {}) {
         <div><span class="olabel">Last name</span><input class="rin" name="lastName" placeholder="Carlson" value="${v('lastName')}"></div>
         <div><span class="olabel">Phone *</span><input class="rin" name="phone" inputmode="tel" placeholder="507-555-0101" value="${v('phone')}"></div>
         <div><span class="olabel">Email</span><input class="rin" name="email" inputmode="email" placeholder="dale@email.com" value="${v('email')}"></div>
-        <div class="full"><span class="olabel">Vehicle</span><input class="rin" name="vehicle" placeholder="2019 F-150" value="${v('vehicle')}"></div>
+        <div><span class="olabel">Vehicle</span><input class="rin" name="vehicle" placeholder="2019 F-150" value="${v('vehicle')}"></div>
+        <div><span class="olabel">Stock #</span><input class="rin" name="stockNumber" placeholder="e.g. B4567" value="${v('stockNumber')}"></div>
         <div class="full"><span class="olabel">Address</span><input class="rin" name="address" placeholder="123 Main St, Zumbrota, MN" value="${v('address')}"></div>
         <div><span class="olabel">Purchase date</span><input class="rin" type="date" name="purchaseDate" value="${v('purchaseDate') || todayStr()}"></div>
         <div><span class="olabel">Referred by</span>
@@ -277,7 +278,7 @@ function renderPipeline() {
       const frozen = isFrozen(c);
       const stage = currentSequence(c).label;
       const stale = isStagnant(c, today);
-      const line1 = [c.vehicle || 'no vehicle on file', `${daysSincePurchase(c, today)} days`].join(' · ');
+      const line1 = [c.vehicle || 'no vehicle on file', c.stockNumber ? `Stock ${c.stockNumber}` : '', `${daysSincePurchase(c, today)} days`].filter(Boolean).join(' · ');
       const contact = [c.phone, c.email].filter(Boolean).join(' · ');
       return `<div class="crm-card ${stale ? 'alert' : ''}" data-id="${esc(c.id)}">
         <div class="crm-row between">
@@ -361,7 +362,7 @@ function onOverlaySubmit(e) {
   const fd = new FormData(f);
   const g = (n) => (fd.get(n) || '').toString();
   const input = {
-    firstName: g('firstName'), lastName: g('lastName'), vehicle: g('vehicle'),
+    firstName: g('firstName'), lastName: g('lastName'), vehicle: g('vehicle'), stockNumber: g('stockNumber'),
     phone: g('phone'), email: g('email'), address: g('address'), notes: g('notes'),
     purchaseDate: g('purchaseDate'), referredById: g('referredById') || null,
     photo: g('photo'),
@@ -480,7 +481,7 @@ function openEditCustomer(id) {
   editingId = id;
   showAddPane({
     firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email,
-    vehicle: c.vehicle, address: c.address, notes: c.notes,
+    vehicle: c.vehicle, stockNumber: c.stockNumber, address: c.address, notes: c.notes,
     purchaseDate: c.purchaseDate, referredById: c.referredById || '', photo: c.photo || '',
   });
 }
@@ -504,7 +505,7 @@ function buildIntakeOverlay() {
     <div class="modal" role="dialog" aria-modal="true">
       <div class="mh">
         <div class="av">🎙</div>
-        <div><div class="mt">ENTER CUSTOMER</div><div class="ms">CARVIS walks you through it — talk or type</div></div>
+        <div><div class="mt">ENTER CUSTOMER</div><div class="ms">Say it out loud, then say “complete” to lock it in</div></div>
         <button class="x" id="crmIntakeClose">✕</button>
       </div>
       <div class="mb">
@@ -512,15 +513,15 @@ function buildIntakeOverlay() {
         <div class="crm-intake-q" id="crmIntakeQ"></div>
         <div class="crm-intake-heard" id="crmIntakeHeard"></div>
         <div class="orow">
-          <input class="rin" id="crmIntakeInput" placeholder="Speak, or type the answer here" style="margin-top:0;flex:2" autocomplete="off">
+          <input class="rin" id="crmIntakeInput" placeholder="Speak, then say “complete” — or type and press enter" style="margin-top:0;flex:2" autocomplete="off">
           <button class="crm-btn gold" id="crmIntakeMic" type="button" title="Tap to talk">🎙</button>
         </div>
         <div class="crm-row" style="margin-top:10px">
-          <button class="crm-btn send sm" id="crmIntakeNext" type="button">Next →</button>
+          <button class="crm-btn send sm" id="crmIntakeNext" type="button">✓ Complete</button>
           <button class="crm-btn sm" id="crmIntakeSkip" type="button">Skip</button>
         </div>
         <div class="crm-intake-summary" id="crmIntakeSummary"></div>
-        <div class="mnote"><span>✦</span><span>Only <b>name</b> and <b>phone</b> are required. Say or type "skip" for anything you don't have.</span></div>
+        <div class="mnote"><span>✦</span><span>Four quick fields: first name, last name, phone, stock number. Say your answer then the word <b>“complete”</b> to save it and move on. First name and phone are required.</span></div>
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -532,7 +533,7 @@ function buildIntakeOverlay() {
   document.getElementById('crmIntakeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitIntake(e.target.value); } });
 }
 
-function intakeAsk(speakIntro) {
+function intakeAsk(speakIntro, ackPrefix = '') {
   const step = INTAKE_STEPS[intake.idx];
   if (!step) return finishIntake();
   document.getElementById('crmIntakeProg').textContent = `Question ${intake.idx + 1} of ${INTAKE_STEPS.length}${step.required ? ' · required' : ' · optional'}`;
@@ -541,7 +542,8 @@ function intakeAsk(speakIntro) {
   document.getElementById('crmIntakeSkip').style.visibility = step.required ? 'hidden' : 'visible';
   const inp = document.getElementById('crmIntakeInput'); inp.value = ''; try { inp.focus(); } catch (e) { /* noop */ }
   renderIntakeSummary();
-  if (speakIntro !== false) say(step.ask, () => { if (hasSR()) startIntakeRec(); });
+  const spoken = (ackPrefix ? ackPrefix + ' ' : '') + step.ask;
+  if (speakIntro !== false) say(spoken, () => { if (hasSR()) startIntakeRec(); });
   else if (hasSR()) startIntakeRec();
 }
 
@@ -560,8 +562,14 @@ function submitIntake(raw) {
   if (!isSkip(raw)) intake.draft = applyAnswer(intake.draft, step.key, raw);
   blip(820, 0.05, 'sine', 0.1);
   intake.idx += 1;
-  intakeAsk(true);
+  // A warm one-word acknowledgement, spoken together with the next question so
+  // it isn't cut off (each say() cancels the previous utterance).
+  const ack = !isSkip(raw) && INTAKE_STEPS[intake.idx] ? pickAck() : '';
+  intakeAsk(true, ack);
 }
+
+const ACKS = ['Got it.', 'Perfect.', 'Beautiful.', 'Good.', 'Nice.'];
+function pickAck() { return ACKS[intake.idx % ACKS.length]; }
 
 function skipIntake() {
   const step = INTAKE_STEPS[intake.idx];
@@ -573,8 +581,7 @@ function skipIntake() {
 function renderIntakeSummary() {
   const d = intake.draft;
   const rows = [
-    ['Name', [d.firstName, d.lastName].filter(Boolean).join(' ')],
-    ['Phone', d.phone], ['Vehicle', d.vehicle], ['Email', d.email], ['Address', d.address], ['Notes', d.notes],
+    ['First', d.firstName], ['Last', d.lastName], ['Phone', d.phone], ['Stock #', d.stockNumber],
   ].filter(([, val]) => val);
   document.getElementById('crmIntakeSummary').innerHTML = rows.length
     ? '<div class="crm-intake-have">So far: ' + rows.map(([k, val]) => `<span class="pill stage">${esc(k)}: ${esc(val)}</span>`).join(' ') + '</div>'
@@ -584,7 +591,8 @@ function renderIntakeSummary() {
 function finishIntake() {
   stopIntakeRec();
   document.getElementById('crmIntakeOverlay').classList.remove('show');
-  say('Got it. Look it over and add them.');
+  const who = (intake.draft.firstName || '').trim();
+  say(who ? `All set. Here's ${who} — give it a look and add them.` : 'All set. Give it a look and add them.');
   openAddPrefilled(intake.draft);
 }
 
@@ -594,26 +602,65 @@ function cancelIntake() {
   try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* noop */ }
 }
 
-// speech helpers (reuse CARVIS's global speak/TTS; degrade silently)
-function say(text, after) {
-  try { window.speak && window.speak(text); } catch (e) { /* noop */ }
-  if (after) setTimeout(after, Math.min(2600, 700 + text.length * 45));
+// Speech out — a warmer, more natural voice than the terse CARVIS default:
+// pick a real "Natural"/Google/Samantha-class voice when the browser has one,
+// slow it down a touch, and keep the pitch human.
+let crmVoice = null, crmVoicePicked = false;
+function pickCrmVoice() {
+  if (crmVoicePicked) return crmVoice;
+  try {
+    const all = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    if (all && all.length) {
+      const en = all.filter((v) => /^en(-|_|$)/i.test(v.lang || ''));
+      const pool = en.length ? en : all;
+      crmVoice = pool.find((v) => /natural|google us english|samantha|ava|allison|jenny|aria/i.test(v.name || ''))
+        || pool.find((v) => /en-?us/i.test(v.lang || ''))
+        || pool[0] || null;
+      crmVoicePicked = true; // voices are loaded; lock the choice in
+    }
+  } catch (e) { /* noop */ }
+  return crmVoice;
 }
+function say(text, after) {
+  let spoke = false;
+  try {
+    if (window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function') {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const v = pickCrmVoice(); if (v) u.voice = v;
+      u.rate = 0.96; u.pitch = 1.0; u.volume = 1.0; // unhurried, even-keeled
+      window.speechSynthesis.speak(u);
+      spoke = true;
+    }
+  } catch (e) { /* fall through to CARVIS speak */ }
+  if (!spoke) { try { window.speak && window.speak(text); } catch (e) { /* noop */ } }
+  if (after) setTimeout(after, Math.min(2800, 750 + text.length * 48));
+}
+// Re-pick once the browser finishes loading its voice list (often async).
+try { if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { crmVoicePicked = false; pickCrmVoice(); }; } catch (e) { /* noop */ }
+
 function hasSR() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
 function toggleIntakeMic() { if (intake.listening) stopIntakeRec(); else startIntakeRec(); }
 function startIntakeRec() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { toast("Voice input isn't supported here — type the answer"); return; }
   stopIntakeRec();
-  const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
-  intake.rec = rec; intake.listening = true;
+  const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
+  intake.rec = rec; intake.listening = true; intake.buf = '';
   const mic = document.getElementById('crmIntakeMic'); if (mic) mic.classList.add('on');
   rec.onresult = (e) => {
-    const t = (e.results[0][0].transcript || '').trim();
-    document.getElementById('crmIntakeHeard').textContent = t ? '“' + t + '”' : '';
-    const inp = document.getElementById('crmIntakeInput'); if (inp) inp.value = t;
-    intake.listening = false; if (mic) mic.classList.remove('on');
-    if (t) submitIntake(t);
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const chunk = e.results[i][0].transcript || '';
+      if (e.results[i].isFinal) intake.buf += chunk + ' '; else interim += chunk;
+    }
+    const full = (intake.buf + ' ' + interim).trim();
+    // Spoken "complete" commits the answer (everything before the keyword).
+    const m = /\bcomplete\b/i.exec(full);
+    const shown = m ? full.slice(0, m.index).trim() : full;
+    const heard = document.getElementById('crmIntakeHeard'); if (heard) heard.textContent = shown ? '“' + shown + '”' : '(listening… say “complete” when done)';
+    const inp = document.getElementById('crmIntakeInput'); if (inp) inp.value = shown;
+    if (m) { stopIntakeRec(); submitIntake(shown); }
   };
   rec.onerror = () => { intake.listening = false; if (mic) mic.classList.remove('on'); };
   rec.onend = () => { intake.listening = false; if (mic) mic.classList.remove('on'); };

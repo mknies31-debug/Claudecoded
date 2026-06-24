@@ -5,22 +5,19 @@
 // parsing for spoken answers and for fields pulled out of a photo.
 
 // The questions CARVIS asks, in order. `required` blocks "skip".
-// Only name + phone are absolutes (per the data model).
+// Voice intake captures four fields only: first name, last name, phone, stock #.
+// Each answer is locked in when Mick says the word "complete" (see crm.js).
 export const INTAKE_STEPS = [
-  { key: 'name', required: true, field: 'name',
-    ask: "Let's add a customer. What's their name?",
-    reAsk: "I need a name to start the profile. What's the customer's name?" },
+  { key: 'firstName', required: true, field: 'firstName',
+    ask: "Alright, let's get them in the book. What's their first name?",
+    reAsk: "I just need a first name to get started — what is it?" },
+  { key: 'lastName', required: false, field: 'lastName',
+    ask: "Good. And the last name?" },
   { key: 'phone', required: true, field: 'phone',
-    ask: "Got it. What's their phone number?",
-    reAsk: "I need a phone number — it's the one thing besides the name I can't skip. What is it?" },
-  { key: 'vehicle', required: false, field: 'vehicle',
-    ask: 'What car did they buy? Say skip if you don\'t have it yet.' },
-  { key: 'email', required: false, field: 'email',
-    ask: "What's their email address? Say skip if you don't have it." },
-  { key: 'address', required: false, field: 'address',
-    ask: "What's their address? Say skip if you don't have it." },
-  { key: 'notes', required: false, field: 'notes',
-    ask: 'Anything else worth noting — trade, family, how they found you? Say skip if not.' },
+    ask: "Perfect. What's the best phone number for them?",
+    reAsk: "I do need a phone number to reach them — go ahead." },
+  { key: 'stockNumber', required: false, field: 'stockNumber',
+    ask: "Last one — what's the stock number on their vehicle?" },
 ];
 
 // Words that mean "I don't have this / move on".
@@ -59,6 +56,23 @@ export function extractPhone(str) {
   return d;
 }
 
+/** Strip leading filler ("his name is…", "first name…") and punctuation. */
+export function cleanSpokenName(str) {
+  let c = String(str || '').replace(/[.,]/g, '').trim();
+  const FILLER = /^(his|her|their|the|a|customer'?s?|client'?s?|name|first|last|is|it'?s|this|that)\s+/i;
+  let prev;
+  do { prev = c; c = c.replace(FILLER, ''); } while (c !== prev);
+  return c.trim();
+}
+
+/** Tidy a spoken stock number ("stock number B four five six" → "B456"). */
+export function parseStockNumber(str) {
+  let s = String(str || '').toLowerCase().replace(/\b(stock|number|num|no|is|the|it'?s|it)\b/g, ' ');
+  const WORDS = { zero: '0', oh: '0', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9' };
+  s = s.replace(/\b(zero|oh|one|two|three|four|five|six|seven|eight|nine)\b/g, (w) => WORDS[w] || w);
+  return s.replace(/[^a-z0-9]/gi, '').toUpperCase();
+}
+
 /** Light cleanup for a spoken email ("dale at gmail dot com"). */
 export function parseSpokenEmail(str) {
   return String(str || '')
@@ -75,8 +89,11 @@ export function parseSpokenEmail(str) {
 export function applyAnswer(draft, stepKey, raw) {
   const out = { ...draft };
   switch (stepKey) {
+    case 'firstName': out.firstName = cleanSpokenName(raw).split(/\s+/)[0] || ''; break;
+    case 'lastName': out.lastName = cleanSpokenName(raw); break;
     case 'name': { const n = parseFullName(raw); out.firstName = n.firstName; out.lastName = n.lastName; break; }
     case 'phone': out.phone = extractPhone(raw); break;
+    case 'stockNumber': out.stockNumber = parseStockNumber(raw); break;
     case 'email': out.email = parseSpokenEmail(raw); break;
     case 'vehicle': out.vehicle = String(raw || '').trim(); break;
     case 'address': out.address = String(raw || '').trim(); break;

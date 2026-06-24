@@ -63,11 +63,12 @@ See `shared/schema.mjs` for field-by-field shapes.
 
 ## Capture (voice + photo + file/PDF)
 Four ways in, all funneling to one review form before save:
-- **Voice** — "enter customer" (mic or command bar) is caught by wrapping
-  CARVIS's global `openAI()`; `startVoiceIntake()` walks `INTAKE_STEPS`, speaking
-  each question via CARVIS's `speak()` and listening with the Web Speech API.
-  Spoken answers are parsed by `shared/intake.mjs` (name split, phone digits,
-  email "at/dot"). A typed fallback always works (no mic / unsupported browser).
+- **Voice** — "enter customer" (mic or command bar) walks four fields only —
+  first name, last name, phone, stock number (`INTAKE_STEPS`). Each answer is
+  spoken then locked in with the keyword **"complete"** (continuous recognition
+  watches for it), parsed by `shared/intake.mjs` (name clean, phone digits, stock
+  tidy). Questions are read in a warmer, slower picked voice with short spoken
+  acks. A typed fallback (type + Enter / "✓ Complete") always works.
 - **Photo** — a driver's license / card / paperwork image (camera capture) is sent
   as a base64 image block to the existing `carvis.js` Anthropic proxy with
   `EXTRACTION_PROMPT`; `parseExtraction()` turns the JSON reply into a draft.

@@ -15,7 +15,7 @@ import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
 import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
 import { runDailyCycle } from '../shared/engine.mjs';
-import { INTAKE_STEPS, isSkip, parseFullName, extractPhone, parseSpokenEmail, applyAnswer, parseExtraction } from '../shared/intake.mjs';
+import { INTAKE_STEPS, isSkip, parseFullName, extractPhone, parseSpokenEmail, parseStockNumber, applyAnswer, parseExtraction } from '../shared/intake.mjs';
 
 // ── helpers ───────────────────────────────────────────────────────────────
 function daysAgo(n) {
@@ -365,9 +365,9 @@ test('hydrate falls back gracefully when vehicle is missing', () => {
 function strip(report) { const { date, ...rest } = report; return rest; }
 
 // ── intake (voice + photo) ───────────────────────────────────────────────────
-test('intake steps: only name + phone are required', () => {
-  const req = INTAKE_STEPS.filter((s) => s.required).map((s) => s.key);
-  assert.deepEqual(req, ['name', 'phone']);
+test('voice intake captures first/last/phone/stock; first name + phone required', () => {
+  assert.deepEqual(INTAKE_STEPS.map((s) => s.key), ['firstName', 'lastName', 'phone', 'stockNumber']);
+  assert.deepEqual(INTAKE_STEPS.filter((s) => s.required).map((s) => s.key), ['firstName', 'phone']);
 });
 
 test('isSkip recognizes skip words and blanks', () => {
@@ -393,11 +393,18 @@ test('parseSpokenEmail rebuilds an address', () => {
 
 test('applyAnswer routes each field to the right parser', () => {
   let d = {};
-  d = applyAnswer(d, 'name', 'Dale Carlson');
+  d = applyAnswer(d, 'firstName', 'first name is Dale');
+  d = applyAnswer(d, 'lastName', 'Carlson');
   d = applyAnswer(d, 'phone', '507 555 0101');
-  d = applyAnswer(d, 'vehicle', '2019 F-150');
+  d = applyAnswer(d, 'stockNumber', 'stock number B four five six seven');
   assert.equal(d.firstName, 'Dale'); assert.equal(d.lastName, 'Carlson');
-  assert.equal(d.phone, '(507) 555-0101'); assert.equal(d.vehicle, '2019 F-150');
+  assert.equal(d.phone, '(507) 555-0101'); assert.equal(d.stockNumber, 'B4567');
+});
+
+test('parseStockNumber tidies a spoken stock number', () => {
+  assert.equal(parseStockNumber('stock number B four five six'), 'B456');
+  assert.equal(parseStockNumber('it is A123'), 'A123');
+  assert.equal(parseStockNumber('  c-99 '), 'C99');
 });
 
 test('parseExtraction reads JSON from a photo reply (even fenced/with prose)', () => {
