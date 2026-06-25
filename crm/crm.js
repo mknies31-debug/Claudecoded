@@ -390,6 +390,16 @@ function onOverlaySubmit(e) {
     return;
   }
 
+  // Duplicate guard: don't let the same phone get added twice by hand (import
+  // already dedupes). Matches on digits so formatting differences don't slip by.
+  const ph = digits(input.phone);
+  const dupe = ph && list.find((c) => digits(c.phone) === ph);
+  if (dupe) {
+    document.getElementById('crmAddErr').textContent = `${dupe.firstName} ${dupe.lastName || ''} is already on that number — edit them instead.`;
+    blip(360, 0.06, 'sawtooth', 0.1);
+    return;
+  }
+
   list.push(newCustomer(input));
   saveCustomers(list);
   blip(900, 0.06, 'sine', 0.12); toast('Customer added');
