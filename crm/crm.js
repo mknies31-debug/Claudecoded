@@ -507,6 +507,7 @@ const intake = { idx: 0, draft: {}, rec: null, listening: false };
 
 function startVoiceIntake() {
   buildIntakeOverlay();
+  populateVoicePicker(); // voices may have finished loading since the overlay was built
   intake.idx = 0; intake.draft = {};
   document.getElementById('crmIntakeOverlay').classList.add('show');
   blip(760, 0.06, 'sine', 0.12);
@@ -537,6 +538,11 @@ function buildIntakeOverlay() {
           <button class="crm-btn sm" id="crmIntakeSkip" type="button">Skip</button>
         </div>
         <div class="crm-intake-summary" id="crmIntakeSummary"></div>
+        <div class="crm-voice-pick">
+          <span>🔊 Voice</span>
+          <select class="crm-select" id="crmVoiceSel"></select>
+          <button class="crm-btn sm" id="crmVoiceTest" type="button">Test</button>
+        </div>
         <div class="mnote"><span>✦</span><span>Four quick fields: first name, last name, phone, stock number. Say your answer then the word <b>“complete”</b> to save it and move on. First name and phone are required.</span></div>
       </div>
     </div>`;
@@ -547,6 +553,9 @@ function buildIntakeOverlay() {
   document.getElementById('crmIntakeNext').addEventListener('click', () => submitIntake(document.getElementById('crmIntakeInput').value));
   document.getElementById('crmIntakeSkip').addEventListener('click', skipIntake);
   document.getElementById('crmIntakeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitIntake(e.target.value); } });
+  document.getElementById('crmVoiceSel').addEventListener('change', (e) => { stopIntakeRec(); setCrmVoice(e.target.value); say('Hey there — this is how I sound.'); });
+  document.getElementById('crmVoiceTest').addEventListener('click', () => { stopIntakeRec(); say('Hey there — this is how I sound.'); });
+  populateVoicePicker();
 }
 
 function intakeAsk(speakIntro, ackPrefix = '') {
@@ -619,23 +628,44 @@ function cancelIntake() {
 }
 
 // Speech out — a warmer, more natural voice than the terse CARVIS default:
-// pick a real "Natural"/Google/Samantha-class voice when the browser has one,
-// slow it down a touch, and keep the pitch human.
+// pick a real "Natural"/Enhanced/Google-class voice when the browser has one,
+// honor a saved preference, slow it down a touch, and keep the pitch human.
+const VOICE_KEY = 'carvis_referral_voice';
 let crmVoice = null, crmVoicePicked = false;
+
+/** English voices on this device, best-sounding first. */
+function englishVoices() {
+  let all = [];
+  try { all = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; } catch (e) { all = []; }
+  const en = all.filter((v) => /^en(-|_|$)/i.test(v.lang || ''));
+  const pool = en.length ? en : all;
+  return pool.slice().sort((a, b) => voiceScore(b) - voiceScore(a));
+}
+/** Higher = more natural. Enhanced/Premium/Natural/Neural and network voices win. */
+function voiceScore(v) {
+  const n = (v.name || '') + ' ' + (v.voiceURI || '');
+  let s = 0;
+  if (/enhanced|premium|natural|neural/i.test(n)) s += 100;
+  if (/google|microsoft|siri/i.test(n)) s += 40;
+  if (/samantha|ava|allison|jenny|aria|serena|zoe|nicky|evan|tom/i.test(n)) s += 25;
+  if (v.localService === false) s += 15; // network voices are usually richer
+  if (/en-us/i.test(v.lang || '')) s += 10;
+  if (/compact|eloquence|fred|albert|zarvox|robot/i.test(n)) s -= 60; // the robotic ones
+  return s;
+}
 function pickCrmVoice() {
-  if (crmVoicePicked) return crmVoice;
-  try {
-    const all = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-    if (all && all.length) {
-      const en = all.filter((v) => /^en(-|_|$)/i.test(v.lang || ''));
-      const pool = en.length ? en : all;
-      crmVoice = pool.find((v) => /natural|google us english|samantha|ava|allison|jenny|aria/i.test(v.name || ''))
-        || pool.find((v) => /en-?us/i.test(v.lang || ''))
-        || pool[0] || null;
-      crmVoicePicked = true; // voices are loaded; lock the choice in
-    }
-  } catch (e) { /* noop */ }
+  if (crmVoicePicked && crmVoice) return crmVoice;
+  const voices = englishVoices();
+  if (!voices.length) return null;
+  let saved = '';
+  try { saved = localStorage.getItem(VOICE_KEY) || ''; } catch (e) { /* noop */ }
+  crmVoice = (saved && voices.find((v) => v.name === saved)) || voices[0] || null;
+  crmVoicePicked = true;
   return crmVoice;
+}
+function setCrmVoice(name) {
+  try { localStorage.setItem(VOICE_KEY, name); } catch (e) { /* noop */ }
+  crmVoicePicked = false; pickCrmVoice();
 }
 function say(text, after) {
   let spoke = false;
@@ -643,8 +673,8 @@ function say(text, after) {
     if (window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function') {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      const v = pickCrmVoice(); if (v) u.voice = v;
-      u.rate = 0.96; u.pitch = 1.0; u.volume = 1.0; // unhurried, even-keeled
+      const v = pickCrmVoice(); if (v) { u.voice = v; u.lang = v.lang || 'en-US'; }
+      u.rate = 0.95; u.pitch = 1.02; u.volume = 1.0; // unhurried, a touch warm
       window.speechSynthesis.speak(u);
       spoke = true;
     }
@@ -652,8 +682,18 @@ function say(text, after) {
   if (!spoke) { try { window.speak && window.speak(text); } catch (e) { /* noop */ } }
   if (after) setTimeout(after, Math.min(2800, 750 + text.length * 48));
 }
-// Re-pick once the browser finishes loading its voice list (often async).
-try { if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { crmVoicePicked = false; pickCrmVoice(); }; } catch (e) { /* noop */ }
+// Voices load async — re-pick and refresh the chooser once they arrive.
+try { if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { crmVoicePicked = false; pickCrmVoice(); populateVoicePicker(); }; } catch (e) { /* noop */ }
+
+/** Fill the in-overlay voice dropdown with this device's voices. */
+function populateVoicePicker() {
+  const sel = document.getElementById('crmVoiceSel');
+  if (!sel) return;
+  const voices = englishVoices();
+  const cur = pickCrmVoice();
+  if (!voices.length) { sel.innerHTML = '<option>System default</option>'; return; }
+  sel.innerHTML = voices.map((v) => `<option value="${esc(v.name)}" ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name.replace(/\s*\(.*\)$/, ''))}</option>`).join('');
+}
 
 function hasSR() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
 function toggleIntakeMic() { if (intake.listening) stopIntakeRec(); else startIntakeRec(); }
