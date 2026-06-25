@@ -103,6 +103,9 @@ body.hivis .crm-intake-q { font-size:26px; }
 .crm-btn.on { border-color:var(--gold); color:var(--gold); box-shadow:0 0 12px rgba(255,201,102,.4); animation:pulse 1.4s infinite; }
 #crmIntakeMic { font-size:18px; flex:0 0 auto; }
 
+/* Auto-saved versions (restore) */
+.crm-hist-h { font-family:'Orbitron'; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); }
+
 /* Voice chooser inside the intake overlay */
 .crm-voice-pick { display:flex; align-items:center; gap:8px; margin-top:14px;
   font-family:var(--mono); font-size:13px; color:var(--dim); letter-spacing:.4px; }

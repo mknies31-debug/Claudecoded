@@ -23,6 +23,20 @@ What the suite already guarantees so you don't have to spot-check by hand:
   by purchase date instead of getting the welcome series.
 - **Instant feedback** — every save / send / complete / mark-done shows a toast.
 
+### Do I need manual backups? — mostly no.
+Three automatic safeguards now cover what the export button used to:
+1. **Cloud sync = off-device backup.** With ⇅ Sync on, every change pushes to the
+   cloud under your key; lose/replace a device and any device with the key pulls
+   it all back. Keep sync on — that's the one rule.
+2. **Auto version history.** A snapshot is saved before *every* change (last ~30,
+   on the device). Pipeline → **Restore a version** rolls back a bad edit, delete,
+   or overwrite in one tap — and the restore is itself undoable.
+3. **Schema auto-migration.** Old records upgrade to the current shape the instant
+   they're read, so a software update can't misread or corrupt your data.
+
+The manual ⇅ SYNC → EXPORT BACKUP is still there for a copy on your own disk, but
+day to day you don't need it.
+
 ## B. Live checks (do these once, right after deploy — they need real keys)
 These are the checklist items that can't run locally:
 

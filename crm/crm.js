@@ -5,7 +5,7 @@
 // existing CARVIS sync (snapshotStore picks the keys up automatically). The cron
 // writes the same blob, so what the engine does shows up here on next pull.
 
-import { KEYS, newCustomer, validateCustomer, digits } from '../shared/schema.mjs';
+import { KEYS, newCustomer, validateCustomer, digits, migrateCustomer } from '../shared/schema.mjs';
 import { currentSequence, isStagnant, daysSincePurchase, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { hydrate } from '../shared/hydrate.mjs';
 import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
@@ -23,16 +23,51 @@ const MOSAIC_SITE = 'https://mosaicautos.com';
 
 // ── store access ─────────────────────────────────────────────────────────────
 function loadArr(key) { try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
-const getCustomers = () => loadArr(KEYS.customers);
+// Every read upgrades old-shaped records to the current schema (migrateCustomer),
+// so a software update can never misread or corrupt data saved by an old version.
+const getCustomers = () => loadArr(KEYS.customers).map(migrateCustomer).filter(Boolean);
 const getLogs = () => loadArr(KEYS.touchLogs);
-function saveCustomers(list) { localStorage.setItem(KEYS.customers, JSON.stringify(list)); pushCloud(); }
+function saveCustomers(list) { snapshotHistory(); localStorage.setItem(KEYS.customers, JSON.stringify(list)); pushCloud(); }
 function saveLogs(list) { localStorage.setItem(KEYS.touchLogs, JSON.stringify(list)); pushCloud(); }
+
+// ── automatic local version history (one-tap undo, no manual export needed) ───
+// Before each customer write we stash the PRIOR state under a local-only key
+// (not synced, not cloud-bloating). Recover from a bad edit/delete/overwrite by
+// restoring a recent version. Off-device durability is handled by cloud sync.
+const HIST_KEY = 'nscrm_history';      // intentionally NOT a carvis_ key → stays local
+const HIST_MAX = 30;                    // keep the last 30 changes
+const HIST_BUDGET = 3000000;            // ~3MB cap so it can't blow the storage quota
+function loadHistory() { try { const v = JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+function snapshotHistory() {
+  const prev = localStorage.getItem(KEYS.customers);
+  if (prev == null) return; // nothing saved yet
+  let hist = loadHistory();
+  if (hist.length && hist[0].customers === prev) return; // unchanged → don't churn
+  let count = 0; try { count = (JSON.parse(prev) || []).length; } catch (e) { /* noop */ }
+  hist.unshift({ ts: new Date().toISOString(), count, customers: prev });
+  hist = hist.slice(0, HIST_MAX);
+  let total = hist.reduce((n, h) => n + h.customers.length, 0);
+  while (hist.length > 1 && total > HIST_BUDGET) { total -= hist.pop().customers.length; }
+  try { localStorage.setItem(HIST_KEY, JSON.stringify(hist)); }
+  catch (e) { try { localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 5))); } catch (_) { /* give up quietly */ } }
+}
+function restoreVersion(ts) {
+  const snap = loadHistory().find((h) => h.ts === ts);
+  if (!snap) { toast('That version is no longer available'); return; }
+  let list; try { list = JSON.parse(snap.customers); } catch (e) { toast('Could not read that version'); return; }
+  if (!window.confirm(`Restore the version from ${new Date(ts).toLocaleString()} (${snap.count} customer${snap.count === 1 ? '' : 's'})? Your current state is saved first, so this is undoable.`)) return;
+  saveCustomers(list); // snapshots the current state first, then writes the restore
+  showHistory = false;
+  toast('Restored — your previous state is in history if you need it back');
+  render();
+}
 
 // per-card chosen variant, keyed `${id}:${seqKey}`
 const variantChoice = new Map();
 let activeTab = 'dashboard';
 let editingId = null; // when set, the Add pane is editing an existing customer
 let importPlan = null; // when set, the Add pane shows the CSV import review
+let showHistory = false; // when true, the Pipeline shows the restore-a-version panel
 
 // ── overlay scaffold (built once, appended to body) ──────────────────────────
 function buildOverlay() {
@@ -303,7 +338,22 @@ function renderPipeline() {
       </div>`;
     }).join('');
   }
-  document.getElementById('crmPanePipeline').innerHTML = section('≣ All Customers', customers.length, body);
+  document.getElementById('crmPanePipeline').innerHTML = section('≣ All Customers', customers.length, body) + historyPanel();
+}
+
+function historyPanel() {
+  const hist = loadHistory();
+  if (!hist.length) return '';
+  const head = `<div class="crm-row between"><span class="crm-hist-h">↶ Auto-saved versions</span>
+    <button class="crm-btn sm" data-act="history-toggle" type="button">${showHistory ? 'Hide' : `Restore a version (${hist.length})`}</button></div>`;
+  if (!showHistory) return `<div class="crm-sec">${head}</div>`;
+  const rows = hist.map((h) => `<div class="crm-row between" style="margin-top:6px">
+      <span class="cmeta">${esc(new Date(h.ts).toLocaleString())} · ${h.count} customer${h.count === 1 ? '' : 's'}</span>
+      <button class="crm-btn sm" data-act="restore-version" data-ts="${esc(h.ts)}" type="button">↶ Restore</button>
+    </div>`).join('');
+  return `<div class="crm-sec">${head}
+    <div class="crm-empty" style="text-align:left;margin-top:8px">The app saves a version before every change (kept on this device). Restoring is itself undoable. For off-device safety, keep ⇅ Sync on.</div>
+    ${rows}</div>`;
 }
 
 function section(title, count, body) {
@@ -313,7 +363,7 @@ function section(title, count, body) {
 // ── events ───────────────────────────────────────────────────────────────────
 function onOverlayClick(e) {
   const tab = e.target.closest('.crm-tab');
-  if (tab) { editingId = null; importPlan = null; activeTab = tab.dataset.tab; render(); return; }
+  if (tab) { editingId = null; importPlan = null; showHistory = false; activeTab = tab.dataset.tab; render(); return; }
   if (e.target.closest('#crmVoiceBtn')) { startVoiceIntake(); return; }
   if (e.target.closest('#crmPhotoBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmFileBtn')) { const inp = document.getElementById('crmFileInput'); if (inp) inp.click(); return; }
@@ -336,6 +386,8 @@ function onOverlayClick(e) {
   if (a === 'edit') { openEditCustomer(act.dataset.id); return; }
   if (a === 'optout') { toggleOptOut(act.dataset.id); render(); return; }
   if (a === 'del') { removeCustomer(act.dataset.id); render(); return; }
+  if (a === 'history-toggle') { showHistory = !showHistory; render(); return; }
+  if (a === 'restore-version') { restoreVersion(act.dataset.ts); return; }
 }
 
 function onOverlayChange(e) {

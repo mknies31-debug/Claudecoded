@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { newCustomer, validateCustomer, KEYS } from '../shared/schema.mjs';
+import { newCustomer, validateCustomer, KEYS, migrateCustomer, SCHEMA_VERSION } from '../shared/schema.mjs';
 import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isThroughFixedSequence, followupForStage, stageForElapsedDays, localDateStr } from '../shared/sequences.mjs';
 import { parseCSV, planImport } from '../shared/import.mjs';
 import { hydrate, tokensIn } from '../shared/hydrate.mjs';
@@ -35,6 +35,17 @@ class MockProvider {
 }
 
 // ── schema ──────────────────────────────────────────────────────────────────
+test('migrateCustomer upgrades an old record and preserves referrerThanked', () => {
+  const old = { id: 'c1', firstName: 'Dale', phone: '5075550101', stage: 3, referredById: 'r1', referrerThanked: true, createdAt: '2024-01-01T00:00:00Z' };
+  const m = migrateCustomer(old);
+  assert.equal(m.id, 'c1'); assert.equal(m.stage, 3); assert.equal(m.referredById, 'r1');
+  assert.deepEqual(m.pendingTasks, []); // new field back-filled
+  assert.equal(m.photo, ''); assert.equal(m.stockNumber, ''); // new fields back-filled
+  assert.equal(m.referrerThanked, true); // ad-hoc flag carried over (newCustomer drops it)
+  assert.equal(m._v, SCHEMA_VERSION);
+  assert.equal(migrateCustomer(null), null);
+});
+
 test('newCustomer fills safe defaults', () => {
   const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', phone: '5075551212' });
   assert.equal(c.stage, 0);

@@ -60,7 +60,26 @@ export function newCustomer(input = {}) {
     pendingTasks: Array.isArray(input.pendingTasks) ? input.pendingTasks : [],
     createdAt: input.createdAt || now,
     updatedAt: input.updatedAt || now,
+    _v: SCHEMA_VERSION,
   };
+}
+
+// Bump when the customer shape changes in a way that needs handling on read.
+// migrateCustomer() coerces ANY stored record to the current shape so old data
+// (saved by an earlier version) always upgrades cleanly — no manual fix, no
+// corruption when new fields are added.
+export const SCHEMA_VERSION = 1;
+
+/**
+ * Upgrade a stored (possibly old-shaped) customer to the current schema.
+ * Preserves every known value, fills defaults for anything missing, and keeps
+ * the ad-hoc `referrerThanked` flag that newCustomer doesn't model.
+ */
+export function migrateCustomer(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const c = newCustomer(raw);
+  if (raw.referrerThanked) c.referrerThanked = true;
+  return c;
 }
 
 /** A logged touch (the audit trail). channel: 'email' | 'text'. */
