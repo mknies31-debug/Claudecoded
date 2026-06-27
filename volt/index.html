@@ -1222,8 +1222,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="cro-name-row">
         <input class="cro-name-input" id="croNameInput" type="text" placeholder="Name this course..." autocomplete="off">
       </div>
-      <button class="cro-finish-btn" id="croFinishBtn" onclick="finishCourseRecording()">✅ Save Course</button>
+      <button class="cro-finish-btn" id="croFinishBtn" onclick="finishCourseRecording()">✅ Finish &amp; Save Course</button>
       <div id="croAutoSave" style="text-align:center;font-size:.62rem;color:var(--volt-dim);font-family:'JetBrains Mono',monospace;margin-top:6px;letter-spacing:.06em"></div>
+      <button class="cro-cancel-btn" style="border-color:rgba(200,255,0,.3);color:var(--volt);margin-bottom:8px" onclick="pauseCourseRecording()">⏸ Save for Later</button>
       <button class="cro-cancel-btn" onclick="cancelCourseRecording()">Discard &amp; Cancel</button>
     </div>
   </div>
@@ -1258,6 +1259,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <div class="cride-stat"><div class="crds-v" id="crideTop">0.0</div><div class="crds-l">Top</div></div>
         <div class="cride-stat"><div class="crds-v" id="crideTime">0:00</div><div class="crds-l">Time</div></div>
       </div>
+      <button class="cride-stop" style="background:rgba(200,255,0,.08);border-color:rgba(200,255,0,.3);color:var(--volt);margin-bottom:8px" onclick="pauseCourseRide()">⏸ Save for Later</button>
       <button class="cride-stop" id="crideStopBtn" onclick="confirmStopCourse()">⏹ Finish Course</button>
     </div>
   </div>
@@ -1344,6 +1346,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div id="startMain">
       <div class="modal-title">Start a Ride</div>
       <div class="modal-sub">Track speed, distance, time, and battery range.</div>
+      <div id="startResume"></div>
       <div id="startNoScooter" style="display:none;background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:12px;padding:10px 13px;margin-bottom:14px;font-size:.72rem;color:var(--orange);line-height:1.5">⚠ Range tracking will be limited until you add a scooter. <span style="color:var(--volt);cursor:pointer;text-decoration:underline" onclick="closeStartModal();goTo('garage')">Add one</span></div>
       <button class="modal-save" style="margin-bottom:12px" onclick="startFreeRide()">⚡ Start Free Ride</button>
       <button class="start-opt" onclick="startPickTrail()"><span class="so-ic">🗺️</span><span><b>Pick a Trail</b><small>Follow a known path near you</small></span></button>
@@ -1678,8 +1681,10 @@ function goTo(screen) {
   if (screen === 'garage') renderGarage();
   // Stop background timers when navigating away from their screens
   if (screen !== 'cam' && camOn) { toggleCam(); }
-  if (screen !== 'courses' && courseRecording) { cancelCourseRecording(); }
-  if (screen !== 'courses' && courseRiding) { discardCourseRide(); }
+  // Leaving an in-progress course does NOT discard it — it's saved for later
+  // so the rider can resume exactly where they left off.
+  if (screen !== 'courses' && courseRecording) { pauseCourseRecording({ silent: true }); toast('⏸ Course saved for later', true); }
+  if (screen !== 'courses' && courseRiding) { pauseCourseRide({ silent: true }); toast('⏸ Race saved for later', true); }
 }
 
 function fabTap() {
@@ -1695,6 +1700,19 @@ function openStartModal() {
   document.getElementById('startMain').style.display = 'block';
   document.getElementById('startSub').style.display = 'none';
   document.getElementById('startNoScooter').style.display = activeScooter() ? 'none' : 'block';
+  // Surface any course saved for later as the top action — resume in one tap.
+  const resumeEl = document.getElementById('startResume');
+  if (resumeEl) {
+    let html = '';
+    if (state.courseDraft && !courseRecording) {
+      const nm = (state.courseDraft.name && state.courseDraft.name.trim()) ? esc(state.courseDraft.name.trim()) : 'Unnamed course';
+      html += `<button class="modal-save" style="margin-bottom:10px" onclick="closeStartModal();resumeCourseRecording()">▶ Resume Recording — ${nm}</button>`;
+    }
+    if (state.rideDraft && !courseRiding) {
+      html += `<button class="modal-save" style="margin-bottom:10px" onclick="closeStartModal();resumeCourseRide()">▶ Resume Race — ${esc(state.rideDraft.courseName || 'Course')}</button>`;
+    }
+    resumeEl.innerHTML = html;
+  }
   document.getElementById('startModal').classList.add('open');
 }
 function closeStartModal() { document.getElementById('startModal').classList.remove('open'); }
@@ -1960,8 +1978,10 @@ function refreshHome() {
   // Primary CTA reflects current state.
   const ctaSub = document.getElementById('rideCtaSub');
   const ctaTitle = document.querySelector('.ride-cta-title');
+  const hasDraft = (state.courseDraft && !courseRecording) || (state.rideDraft && !courseRiding);
   if (ctaSub) {
     if (rideActive) { ctaSub.textContent = 'Ride in progress — tap to return'; if (ctaTitle) ctaTitle.textContent = 'Riding now'; }
+    else if (hasDraft) { ctaSub.textContent = 'A course is saved for later — tap to resume or start fresh'; if (ctaTitle) ctaTitle.textContent = 'Resume your course'; }
     else if (!activeScooter()) { ctaSub.textContent = 'Add a scooter for full range tracking — or ride now'; if (ctaTitle) ctaTitle.textContent = 'Ready to ride?'; }
     else { ctaSub.textContent = 'Start tracking your speed, distance & time'; if (ctaTitle) ctaTitle.textContent = 'Ready to ride?'; }
   }
@@ -2792,15 +2812,57 @@ let courseRideSpdCount = 0;
 let activeCoursePb = null;
 let activeCourseIdx = -1;
 
+// A banner for an in-progress course saved for later (recording or race).
+// Shown at the top of the Courses list so a paused session is always one tap
+// from resuming. Skipped while that session is actually live on screen.
+function resumeBannerHtml() {
+  let html = '';
+  const rec = state.courseDraft;
+  if (rec && !courseRecording) {
+    const nm = (rec.name && rec.name.trim()) ? esc(rec.name.trim()) : 'Unnamed course';
+    html += `<div class="course-card" style="border-color:rgba(200,255,0,.4)" onclick="resumeCourseRecording()">
+      <div class="course-body">
+        <div class="course-top">
+          <div class="course-name">⏸ ${nm}</div>
+          <div class="course-date">Recording paused</div>
+        </div>
+        <div class="course-stats">
+          <div><div class="crs-sv">${(rec.dist||0).toFixed(2)} mi</div><div class="crs-sl">So far</div></div>
+          <div><div class="crs-sv">${fmtTime(rec.secs||0)}</div><div class="crs-sl">Elapsed</div></div>
+        </div>
+        <button onclick="event.stopPropagation();resumeCourseRecording()" style="width:100%;margin-top:10px;padding:11px;background:var(--volt);color:#000;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;cursor:pointer">▶ Resume Recording</button>
+      </div>
+    </div>`;
+  }
+  const rd = state.rideDraft;
+  if (rd && !courseRiding) {
+    html += `<div class="course-card" style="border-color:rgba(200,255,0,.4)" onclick="resumeCourseRide()">
+      <div class="course-body">
+        <div class="course-top">
+          <div class="course-name">⏸ ${esc(rd.courseName || 'Course')}</div>
+          <div class="course-date">Race paused</div>
+        </div>
+        <div class="course-stats">
+          <div><div class="crs-sv">${(rd.dist||0).toFixed(2)} mi</div><div class="crs-sl">So far</div></div>
+          <div><div class="crs-sv">${fmtTime(rd.secs||0)}</div><div class="crs-sl">Elapsed</div></div>
+        </div>
+        <button onclick="event.stopPropagation();resumeCourseRide()" style="width:100%;margin-top:10px;padding:11px;background:var(--volt);color:#000;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;cursor:pointer">▶ Resume Race</button>
+      </div>
+    </div>`;
+  }
+  return html;
+}
+
 function renderCourses() {
   const list = document.getElementById('coursesList');
   if (!list) return;
   const courses = state.courses || [];
+  const resume = resumeBannerHtml();
   if (!courses.length) {
-    list.innerHTML = '<div class="no-courses"><div class="nc-icon">🏁</div>No courses yet.<br>Tap "Record New Course" to trace a path,<br>then ride it and race your own best time!</div>';
+    list.innerHTML = resume + '<div class="no-courses"><div class="nc-icon">🏁</div>No courses yet.<br>Tap "Record New Course" to trace a path,<br>then ride it and race your own best time!</div>';
     return;
   }
-  list.innerHTML = courses.map((c, i) => {
+  list.innerHTML = resume + courses.map((c, i) => {
     const pb = c.attempts && c.attempts.length ? Math.min(...c.attempts.map(a => a.secs)) : null;
     const attempts = c.attempts ? c.attempts.length : 0;
     return `<div class="course-card">
@@ -2842,9 +2904,21 @@ function deleteCourse(i) {
 // ── Record a Course ──
 function startCourseRecording() {
   if (courseRecording) { goTo('courses'); return; }
+  // A course is already saved for later — never lose it silently.
+  if (state.courseDraft) {
+    if (!confirm('You have a course saved for later. Discard it and start a brand-new recording?')) {
+      toast('Tap “Resume Recording” to continue your saved course');
+      if (currentScreen === 'courses') renderCourses();
+      return;
+    }
+    state.courseDraft = null;
+    saveState(state);
+  }
   blurActive();
   courseRecording = true;
   courseRecSecs = 0; courseRecDist = 0; courseRecSpdIdx = 0;
+  window._croPathPoints = [[195, 380]];
+  window._croResumeCoords = null; // fresh recording: no prior GPS path to seed
   document.getElementById('courseRecOverlay').classList.add('open');
   document.getElementById('croNameInput').value = '';
   document.getElementById('croPathSvg').innerHTML = '';
@@ -2852,10 +2926,26 @@ function startCourseRecording() {
   document.getElementById('croTime').textContent = '0:00';
   document.getElementById('croDist').textContent = '0.00';
   document.getElementById('croSpd').textContent = '0.0';
+  _armCourseRecLoop();
+}
 
-  window._croPathPoints = [[195, 380]];
+// Draw the recording path SVG from the current synthetic point buffer.
+function _drawCroPath() {
   const svg = document.getElementById('croPathSvg');
+  if (!svg) return;
+  const pts = window._croPathPoints || [];
+  if (pts.length < 2) { svg.innerHTML = ''; return; }
+  let d = 'M ' + pts[0].join(' ');
+  for (let k = 1; k < pts.length; k++) d += ' L ' + pts[k].join(' ');
+  svg.innerHTML =
+    `<path d="${d}" stroke="rgba(200,255,0,.15)" stroke-width="8" stroke-linecap="round" fill="none"/>` +
+    `<path d="${d}" stroke="var(--volt)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="6 3" opacity=".9"/>`;
+}
 
+// Arm the recording clock + GPS watch. Shared by start and resume — it never
+// resets the courseRec* accumulators, so resuming continues from where the
+// rider paused. GPS re-anchors on the first new fix (no phantom "gap" miles).
+function _armCourseRecLoop() {
   let croLastLat = null, croLastLng = null;
   let croHasMoved = false, croLastMoveTs = Date.now(); // 30s auto-end on no movement
   window._courseGpsId = navigator.geolocation ? navigator.geolocation.watchPosition(
@@ -2901,17 +2991,63 @@ function startCourseRecording() {
     const nx = Math.max(20, Math.min(370, last[0] + Math.cos(rad) * 18));
     const ny = Math.max(30, Math.min(390, last[1] + Math.sin(rad) * 10 - 3));
     window._croPathPoints.push([nx, ny]);
-
-    if (window._croPathPoints.length > 1) {
-      let d = 'M ' + window._croPathPoints[0].join(' ');
-      for (let k = 1; k < window._croPathPoints.length; k++) {
-        d += ' L ' + window._croPathPoints[k].join(' ');
-      }
-      svg.innerHTML = `
-        <path d="${d}" stroke="rgba(200,255,0,.15)" stroke-width="8" stroke-linecap="round" fill="none"/>
-        <path d="${d}" stroke="var(--volt)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="6 3" opacity=".9"/>`;
-    }
+    _drawCroPath();
   }, 1000);
+}
+
+// ── Save a course recording for later (pause) ──
+// Snapshots the in-progress recording to a persisted draft and tears down the
+// live timers/GPS. The rider can resume it later — even after closing the app.
+function pauseCourseRecording(opts) {
+  if (!courseRecording) return;
+  opts = opts || {};
+  disarmAutoSave();
+  clearInterval(courseRecTimer);
+  if (window._courseGpsId) { navigator.geolocation.clearWatch(window._courseGpsId); window._courseGpsId = null; }
+  if (typeof stopCroMapTracking === 'function') stopCroMapTracking();
+  courseRecording = false;
+
+  const nameEl = document.getElementById('croNameInput');
+  state.courseDraft = {
+    name: nameEl ? (nameEl.value || '') : '',
+    secs: courseRecSecs,
+    dist: courseRecDist,
+    spdIdx: courseRecSpdIdx,
+    pathPoints: (window._croPathPoints || [[195, 380]]).slice(),
+    gpsCoords: [], // filled by the maps wrapper (croPathCoords lives in that scope)
+    updatedAt: Date.now()
+  };
+  saveState(state);
+  document.getElementById('courseRecOverlay').classList.remove('open');
+  if (currentScreen === 'courses') renderCourses();
+  if (!opts.silent) toast('⏸ Course saved — resume anytime', true);
+}
+
+// ── Resume a saved (paused) course recording ──
+function resumeCourseRecording() {
+  const d = state.courseDraft;
+  if (!d) { toast('No saved course to resume'); return; }
+  if (courseRiding) { pauseCourseRide({ silent: true }); }
+  if (courseRecording) { document.getElementById('courseRecOverlay').classList.add('open'); return; }
+  blurActive();
+  if (currentScreen !== 'courses') goTo('courses');
+
+  courseRecSecs = d.secs || 0;
+  courseRecDist = d.dist || 0;
+  courseRecSpdIdx = d.spdIdx || 0;
+  window._croPathPoints = (d.pathPoints && d.pathPoints.length) ? d.pathPoints.slice() : [[195, 380]];
+  window._croResumeCoords = (d.gpsCoords && d.gpsCoords.length) ? d.gpsCoords.slice() : null;
+  courseRecording = true;
+
+  document.getElementById('courseRecOverlay').classList.add('open');
+  document.getElementById('croNameInput').value = d.name || '';
+  document.getElementById('croDistChip').textContent = courseRecDist.toFixed(2) + ' mi';
+  document.getElementById('croTime').textContent = fmtTime(courseRecSecs);
+  document.getElementById('croDist').textContent = courseRecDist.toFixed(2);
+  document.getElementById('croSpd').textContent = '0.0';
+  _drawCroPath();
+  _armCourseRecLoop();
+  toast('▶ Resumed — keep recording your course', true);
 }
 
 // Auto-save a recorded course when the prompt goes unanswered — fills a
@@ -2953,6 +3089,7 @@ function finishCourseRecording() {
     svgPath,
     attempts: []
   });
+  state.courseDraft = null; // recording finished — clear the resume draft
   saveState(state);
   document.getElementById('courseRecOverlay').classList.remove('open');
   renderCourses();
@@ -2964,13 +3101,26 @@ function cancelCourseRecording() {
   clearInterval(courseRecTimer);
   if (window._courseGpsId) { navigator.geolocation.clearWatch(window._courseGpsId); window._courseGpsId = null; }
   courseRecording = false;
+  state.courseDraft = null; // explicit discard clears any resume draft
+  saveState(state);
   document.getElementById('courseRecOverlay').classList.remove('open');
+  if (currentScreen === 'courses') renderCourses();
 }
 
 // ── Ride a Course ──
 function startCourseRide(idx) {
   const course = state.courses[idx];
   if (!course) return;
+  // A race is already saved for later — don't discard it without consent.
+  if (state.rideDraft) {
+    if (!confirm('You have a race saved for later. Discard it and start fresh?')) {
+      toast('Tap “Resume Race” to continue your saved race');
+      if (currentScreen === 'courses') renderCourses();
+      return;
+    }
+    state.rideDraft = null;
+    saveState(state);
+  }
   blurActive();
   if (courseRiding) { stopCourseRide(); }
   if (!navigator.geolocation) { toast('GPS not available on this device'); return; }
@@ -3001,7 +3151,14 @@ function startCourseRide(idx) {
 
   document.getElementById('courseRideOverlay').classList.add('open');
   toast('🏁 Course started! Acquiring GPS...', true);
+  _armCourseRideLoop(course);
+}
 
+// Arm the course-ride GPS watch + clock. Shared by start and resume; it does
+// NOT reset the courseRide* accumulators, so resuming continues mid-attempt.
+// GPS re-anchors on the first new fix, so the paused gap is never counted.
+function _armCourseRideLoop(course) {
+  const dot = document.getElementById('crideDot');
   // ── GPS WATCH — real speed, distance, and progress along the course ──
   let crLastLat = null, crLastLng = null, crLastTime = null, crLastSpd = 0;
   let crHasMoved = false, crLastMoveTs = Date.now(); // 30s auto-end on no movement
@@ -3082,6 +3239,7 @@ function stopCourseRide() {
   clearInterval(courseRideTimer);
   clearCrideEngineGps();
   courseRiding = false;
+  state.rideDraft = null; // attempt finished — clear the resume draft
   document.getElementById('courseRideOverlay').classList.remove('open');
 
   const course = state.courses[activeCourseIdx];
@@ -3102,6 +3260,8 @@ function stopCourseRide() {
     const pb = Math.min(...course.attempts.map(a => a.secs));
     const isNewPb = pb === courseRideSecs && course.attempts.length > 1;
     toast(isNewPb ? '🏆 New personal best: ' + fmtTime(courseRideSecs) + '!' : '🏁 Ride complete! ' + fmtTime(courseRideSecs), true);
+  } else {
+    saveState(state); // course gone — still persist the cleared draft
   }
 }
 
@@ -3112,7 +3272,85 @@ function discardCourseRide() {
   clearCrideEngineGps();
   if (typeof stopCrideMapTracking === 'function') stopCrideMapTracking();
   courseRiding = false;
+  state.rideDraft = null; // explicit abandon clears any resume draft
+  saveState(state);
   document.getElementById('courseRideOverlay').classList.remove('open');
+}
+
+// ── Save a course ride for later (pause) ──
+// Snapshots an in-progress attempt to a persisted draft and tears down the
+// live timers/GPS. Resume later — even after closing the app — and the clock,
+// distance, and pace pick up where they left off.
+function pauseCourseRide(opts) {
+  if (!courseRiding) return;
+  opts = opts || {};
+  clearInterval(courseRideTimer);
+  clearCrideEngineGps();
+  if (typeof stopCrideMapTracking === 'function') stopCrideMapTracking();
+  courseRiding = false;
+
+  const course = state.courses[activeCourseIdx];
+  state.rideDraft = {
+    courseTs: course ? course.ts : null,
+    courseName: course ? course.name : 'Course',
+    secs: courseRideSecs,
+    dist: courseRideDist,
+    topSpd: courseRideTopSpd,
+    spdSum: courseRideSpdSum,
+    spdCount: courseRideSpdCount,
+    updatedAt: Date.now()
+  };
+  saveState(state);
+  document.getElementById('courseRideOverlay').classList.remove('open');
+  if (currentScreen === 'courses') renderCourses();
+  if (!opts.silent) toast('⏸ Race saved — resume anytime', true);
+}
+
+// ── Resume a saved (paused) course ride ──
+function resumeCourseRide() {
+  const d = state.rideDraft;
+  if (!d) { toast('No saved race to resume'); return; }
+  // Resolve the course by its stable timestamp id (indices shift on delete).
+  let idx = (state.courses || []).findIndex(c => c.ts === d.courseTs);
+  if (idx < 0) { state.rideDraft = null; saveState(state); toast('That course was deleted'); if (currentScreen === 'courses') renderCourses(); return; }
+  if (!navigator.geolocation) { toast('GPS not available on this device'); return; }
+  if (courseRecording) { pauseCourseRecording({ silent: true }); }
+  if (courseRiding) { document.getElementById('courseRideOverlay').classList.add('open'); return; }
+  blurActive();
+  if (currentScreen !== 'courses') goTo('courses');
+
+  const course = state.courses[idx];
+  activeCourseIdx = idx;
+  activeCoursePb = course.attempts && course.attempts.length ? Math.min(...course.attempts.map(a => a.secs)) : null;
+  courseRideSecs = d.secs || 0;
+  courseRideDist = d.dist || 0;
+  courseRideTopSpd = d.topSpd || 0;
+  courseRideSpdSum = d.spdSum || 0;
+  courseRideSpdCount = d.spdCount || 0;
+  courseRiding = true;
+
+  document.getElementById('crideTitleLbl').textContent = course.name;
+  document.getElementById('crideCourseName').textContent = course.name;
+  document.getElementById('crideYouTime').textContent = fmtTime(courseRideSecs);
+  document.getElementById('cridePbTime').textContent = activeCoursePb ? 'PB: ' + fmtTime(activeCoursePb) : 'No PB yet';
+  document.getElementById('crideDist').textContent = courseRideDist.toFixed(2);
+  document.getElementById('crideSpd').textContent = '0.0';
+  document.getElementById('crideTop').textContent = courseRideTopSpd.toFixed(1);
+  document.getElementById('crideTime').textContent = fmtTime(courseRideSecs);
+  document.getElementById('crideStatusChip').textContent = '🟢 RIDING';
+
+  const svg = document.getElementById('cridePathSvg');
+  svg.innerHTML =
+    `<path d="${course.svgPath}" stroke="rgba(200,255,0,.1)" stroke-width="10" stroke-linecap="round" fill="none"/>` +
+    `<path d="${course.svgPath}" stroke="rgba(200,255,0,.4)" stroke-width="2.5" stroke-linecap="round" fill="none" stroke-dasharray="6 4"/>`;
+  const dot = document.getElementById('crideDot');
+  const progress = Math.min(0.95, courseRideDist / Math.max(0.01, course.dist));
+  dot.style.left = (5 + progress * 85) + '%';
+  dot.style.top = (85 - progress * 70) + '%';
+
+  document.getElementById('courseRideOverlay').classList.add('open');
+  _armCourseRideLoop(course);
+  toast('▶ Resumed your race', true);
 }
 
 function confirmStopCourse() {
@@ -3769,6 +4007,13 @@ function resetApp() {
 (function boot() {
   if (!state.settings) state.settings = { spd: true, loc: false, cam: false };
   if (!state.courses) state.courses = [];
+  if (typeof state.courseDraft === 'undefined') state.courseDraft = null; // paused recording
+  if (typeof state.rideDraft === 'undefined') state.rideDraft = null;     // paused race
+  // Drop a paused race whose course was deleted while paused.
+  if (state.rideDraft && !(state.courses || []).some(c => c.ts === state.rideDraft.courseTs)) {
+    state.rideDraft = null;
+    saveState(state);
+  }
   if (!state.garage) state.garage = []; // garage starts (and can stay) empty
 
   // Guard against a stale scooterIdx pointing past the garage.
@@ -3990,9 +4235,13 @@ function initCroMap() {
     croMap = makeMap(el, lat, lng, 16);
     if (!croMap) return;
     croUserMarker = makeMarker(croMap, lat, lng, 'You');
-    croPolyline = makePolyline(croMap, [], '#C8FF00', 3, true);
-    croPathCoords = [{ lat, lng }];
-    makeStartPin(croMap, lat, lng, 'Course Start');
+    // Resuming a paused recording: seed the path with the GPS captured before
+    // the pause so the finished course keeps the whole route, not just the tail.
+    const seed = window._croResumeCoords;
+    window._croResumeCoords = null;
+    croPathCoords = (seed && seed.length) ? seed.slice() : [{ lat, lng }];
+    croPolyline = makePolyline(croMap, croPathCoords.map(c => [c.lat, c.lng]), '#C8FF00', 3, true);
+    makeStartPin(croMap, croPathCoords[0].lat, croPathCoords[0].lng, 'Course Start');
 
     if (navigator.geolocation) {
       window._croWatchId = navigator.geolocation.watchPosition(pos => {
@@ -4094,6 +4343,7 @@ window.saveRide = saveRide = function() {
 const _origStartCourseRecording = startCourseRecording;
 window.startCourseRecording = startCourseRecording = function() {
   _origStartCourseRecording();
+  if (!courseRecording) return; // guard declined / nothing started
   whenMapsReady(() => {
     setTimeout(() => initCroMap(), 300);
   });
@@ -4131,9 +4381,27 @@ window.cancelCourseRecording = cancelCourseRecording = function() {
   _origCancelCourseRecording();
 };
 
+const _origPauseCourseRecording = pauseCourseRecording;
+window.pauseCourseRecording = pauseCourseRecording = function(opts) {
+  const wasRec = courseRecording;
+  const coords = croPathCoords ? [...croPathCoords] : [];
+  stopCroMapTracking();
+  _origPauseCourseRecording(opts);
+  // Persist the real GPS path so a resumed recording keeps the whole route.
+  if (wasRec && state.courseDraft) { state.courseDraft.gpsCoords = coords; saveState(state); }
+};
+
+const _origResumeCourseRecording = resumeCourseRecording;
+window.resumeCourseRecording = resumeCourseRecording = function() {
+  _origResumeCourseRecording();
+  if (!courseRecording) return; // base bailed (no draft / deleted)
+  whenMapsReady(() => { setTimeout(() => initCroMap(), 300); });
+};
+
 const _origStartCourseRide = startCourseRide;
 window.startCourseRide = startCourseRide = function(idx) {
   _origStartCourseRide(idx);
+  if (!courseRiding) return; // guard declined / nothing started
   whenMapsReady(() => {
     setTimeout(() => initCrideMap(state.courses[idx] || {}), 300);
   });
@@ -4143,6 +4411,19 @@ const _origStopCourseRide = stopCourseRide;
 window.stopCourseRide = stopCourseRide = function() {
   stopCrideMapTracking();
   _origStopCourseRide();
+};
+
+const _origPauseCourseRide = pauseCourseRide;
+window.pauseCourseRide = pauseCourseRide = function(opts) {
+  stopCrideMapTracking();
+  _origPauseCourseRide(opts);
+};
+
+const _origResumeCourseRide = resumeCourseRide;
+window.resumeCourseRide = resumeCourseRide = function() {
+  _origResumeCourseRide();
+  if (!courseRiding) return; // base bailed (no draft / deleted)
+  whenMapsReady(() => { setTimeout(() => initCrideMap(state.courses[activeCourseIdx] || {}), 300); });
 };
 
 // ══ BOOT: init trails map if already on trails screen ══
