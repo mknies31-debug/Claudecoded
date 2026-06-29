@@ -3041,10 +3041,22 @@ function gsHandlePhoto(input) {
 }
 
 function gsSaveScooter() {
+ try {
   let name, meta, range, modelIdx, maxSpd;
   if (gsSelectedModel === 3) {
-    name = (document.getElementById('gs-custom-name').value || '').trim();
-    if (!name) { toast('Enter a scooter name'); return; }
+    const nameEl = document.getElementById('gs-custom-name');
+    name = (nameEl.value || '').trim();
+    // Custom needs a name. Make the refusal obvious instead of a silent no-op
+    // (focus + flash the field) so the Save button never feels "stuck".
+    if (!name) {
+      toast('⚠ Name your scooter to save it', false);
+      if (nameEl) {
+        nameEl.focus();
+        nameEl.style.borderColor = 'var(--red)';
+        setTimeout(() => { nameEl.style.borderColor = ''; }, 1500);
+      }
+      return;
+    }
     range = parseInt(document.getElementById('gs-custom-range').value) || 30;
     maxSpd = parseInt(document.getElementById('gs-custom-maxspd').value) || 0;
     meta = customMeta(range, maxSpd);
@@ -3073,6 +3085,13 @@ function gsSaveScooter() {
   closeGarageSheet();
   renderGarage();
   refreshHomeWidgets();
+ } catch (e) {
+  // Never leave the sheet stuck-open on an unexpected error — surface it and
+  // close so the UI can't appear frozen.
+  console.error('gsSaveScooter failed:', e);
+  try { toast('⚠ Could not save: ' + (e && e.message ? e.message : e), false); } catch(_) {}
+  try { closeGarageSheet(); } catch(_) {}
+ }
 }
 
 // ══════════════════════════════════════════════
