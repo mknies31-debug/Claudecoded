@@ -616,6 +616,56 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
 /* Map setup hint — shown on map areas when no key / key rejected */
 .map-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;max-width:84%;text-align:center;white-space:pre-line;background:rgba(8,8,8,.82);border:1px solid rgba(200,255,0,.28);border-radius:12px;padding:11px 15px;font-family:'JetBrains Mono',monospace;font-size:.6rem;line-height:1.7;letter-spacing:.03em;color:var(--volt);backdrop-filter:blur(6px);pointer-events:none}
+
+/* ── HISTORY: period totals (week/month/year) + interactive bar chart ── */
+.hist-periods{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 20px 14px}
+.hp-c{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.hp-c:active{transform:scale(.97)}
+.hp-c.active{border-color:var(--volt);background:rgba(200,255,0,.06)}
+.hp-c.active::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:30px;height:2px;background:var(--volt);border-radius:2px}
+.hp-v{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--volt);line-height:1}
+.hp-v small{font-size:.62rem;color:var(--muted2);font-family:'DM Sans',sans-serif}
+.hp-l{font-size:.55rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-top:4px}
+.wk-wrap{margin:0 20px 18px;background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:14px 14px 12px}
+.wk-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.wk-title{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.05em}
+.wk-readout{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--volt);letter-spacing:.03em;text-align:right}
+.wk-readout .wk-ro-sub{color:var(--muted2)}
+.wk-chart{display:flex;align-items:stretch;justify-content:space-between;gap:5px;height:132px}
+.wk-bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;min-width:0}
+.wk-bar-track{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;position:relative}
+.wk-bar-fill{width:78%;max-width:30px;background:linear-gradient(180deg,var(--volt),#6f9300);border-radius:5px 5px 2px 2px;height:2px;transition:height .55s cubic-bezier(.25,1,.3,1),background .2s,box-shadow .2s}
+.wk-bar.empty .wk-bar-fill{background:var(--surface3)}
+.wk-bar.sel .wk-bar-fill{background:linear-gradient(180deg,#eaff66,var(--volt));box-shadow:0 0 14px rgba(200,255,0,.55)}
+.wk-bar-lbl{font-size:.55rem;color:var(--muted2);font-family:'JetBrains Mono',monospace;letter-spacing:.02em;white-space:nowrap}
+.wk-bar.today .wk-bar-lbl{color:var(--volt);font-weight:700}
+.wk-bar.sel .wk-bar-lbl{color:var(--text)}
+.wk-empty-note{text-align:center;color:var(--muted2);font-size:.74rem;font-family:'JetBrains Mono',monospace;padding:42px 10px;line-height:1.6}
+
+/* ── IN-RIDE DASHBOARD (supplemental info beyond the speedometer) ── */
+.ride-dash-btn{margin:0 20px 10px;width:calc(100% - 40px);display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface);border:1px solid rgba(200,255,0,.25);border-radius:13px;color:var(--volt);font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;flex-shrink:0}
+.ride-dash-btn:active{background:rgba(200,255,0,.07);transform:scale(.99)}
+.ride-info-panel{position:absolute;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.ride-info-panel.open{transform:translateY(0)}
+.rip-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 10px;flex-shrink:0}
+.rip-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.05em}
+.rip-spd-mini{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--volt);font-weight:700}
+.rip-back{background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.3);border-radius:20px;padding:7px 14px;font-family:'JetBrains Mono',monospace;font-size:.64rem;color:var(--volt);cursor:pointer;letter-spacing:.06em}
+.rip-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.rip-scroll::-webkit-scrollbar{display:none}
+.rip-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:6px 16px 18px}
+.rip-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 14px;position:relative;overflow:hidden}
+.rip-tile.wide{grid-column:1 / -1}
+.rip-tile::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--volt);opacity:.5}
+.rip-ic{font-size:1rem;margin-bottom:6px;display:block}
+.rip-v{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--text);line-height:1}
+.rip-v small{font-size:.66rem;color:var(--muted2);font-family:'JetBrains Mono',monospace}
+.rip-v.volt{color:var(--volt)}
+.rip-l{font-size:.58rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-top:4px}
+.rip-compass{display:flex;align-items:center;gap:12px}
+.rip-compass-dial{width:46px;height:46px;border-radius:50%;border:2px solid var(--border);position:relative;flex-shrink:0}
+.rip-compass-needle{position:absolute;top:3px;left:50%;width:2px;height:20px;background:var(--volt);transform-origin:bottom center;transform:translateX(-50%) rotate(0deg);transition:transform .4s ease;border-radius:2px}
+.rip-compass-dial::after{content:'N';position:absolute;top:1px;left:50%;transform:translateX(-50%);font-size:.42rem;color:var(--muted2);font-family:'JetBrains Mono',monospace}
 </style>
 </head>
 <body>
@@ -851,7 +901,40 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="rb-track"><div class="rb-fill" id="rbFill" style="width:72%"></div></div>
     <div class="rb-range" id="rbRange">-- mi</div>
   </div>
+  <button class="ride-dash-btn" onclick="toggleRideInfo()">📊 Ride Dashboard · more stats</button>
   <button class="stop-btn" onclick="stopRide()">⏹ Stop Ride</button>
+
+  <!-- In-ride dashboard: supplemental info beyond the speedometer -->
+  <div class="ride-info-panel" id="rideInfoPanel">
+    <div class="rip-hdr">
+      <div class="rip-title">Ride Dashboard</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="rip-spd-mini"><span id="ripSpdMini">0.0</span> mph</span>
+        <div class="rip-back" onclick="toggleRideInfo()">← Speedometer</div>
+      </div>
+    </div>
+    <div class="rip-scroll">
+      <div class="rip-grid">
+        <div class="rip-tile wide">
+          <div class="rip-compass">
+            <div class="rip-compass-dial"><div class="rip-compass-needle" id="ripNeedle"></div></div>
+            <div><div class="rip-v volt" id="ripHeading">—</div><div class="rip-l">Heading · compass</div></div>
+          </div>
+        </div>
+        <div class="rip-tile"><span class="rip-ic">⛰️</span><div class="rip-v" id="ripAlt">—</div><div class="rip-l">Altitude</div></div>
+        <div class="rip-tile"><span class="rip-ic">📈</span><div class="rip-v" id="ripElev">+0<small> ft</small></div><div class="rip-l">Elevation gain</div></div>
+        <div class="rip-tile"><span class="rip-ic">🏃</span><div class="rip-v" id="ripMovAvg">0.0<small> mph</small></div><div class="rip-l">Moving avg</div></div>
+        <div class="rip-tile"><span class="rip-ic">⏱️</span><div class="rip-v" id="ripMovTime">0:00</div><div class="rip-l">Moving time</div></div>
+        <div class="rip-tile"><span class="rip-ic">🔥</span><div class="rip-v" id="ripCal">0<small> kcal</small></div><div class="rip-l">Calories</div></div>
+        <div class="rip-tile"><span class="rip-ic">🌱</span><div class="rip-v volt" id="ripCo2">0.0<small> lb</small></div><div class="rip-l">CO₂ saved vs car</div></div>
+        <div class="rip-tile"><span class="rip-ic">💸</span><div class="rip-v volt" id="ripSaved">$0.00</div><div class="rip-l">Saved vs rideshare</div></div>
+        <div class="rip-tile"><span class="rip-ic">🔋</span><div class="rip-v" id="ripRange">—</div><div class="rip-l">Range left</div></div>
+        <div class="rip-tile"><span class="rip-ic">🪫</span><div class="rip-v" id="ripEmpty">—</div><div class="rip-l">Est. time to empty</div></div>
+        <div class="rip-tile"><span class="rip-ic">📡</span><div class="rip-v" id="ripGps">—</div><div class="rip-l">GPS signal</div></div>
+        <div class="rip-tile"><span class="rip-ic">⛽</span><div class="rip-v" id="ripOdo">0.0<small> mi</small></div><div class="rip-l">Lifetime odometer</div></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══ TRAILS ══ -->
@@ -913,14 +996,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="hs-c"><div class="hs-v" id="hsTopSpd">0</div><div class="hs-l">Top mph</div></div>
     </div>
   </div>
-  <div class="heatmap-wrap">
-    <div class="hm-lbl">Your Ride Heatmap</div>
-    <div class="hm-area">
-      <div class="hm-grid"></div>
-      <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 390 120" fill="none" id="heatmapSvg">
-        <text x="50%" y="55%" text-anchor="middle" fill="rgba(200,255,0,.15)" font-family="'Bebas Neue',sans-serif" font-size="14" letter-spacing="4">COMPLETE A RIDE TO SEE YOUR MAP</text>
-      </svg>
+  <!-- Period totals double as a segmented control for the chart below -->
+  <div class="hist-periods" id="histPeriods">
+    <div class="hp-c active" data-period="week" onclick="setHistMode('week')"><div class="hp-v" id="hpWeek">0<small> mi</small></div><div class="hp-l">This week</div></div>
+    <div class="hp-c" data-period="month" onclick="setHistMode('month')"><div class="hp-v" id="hpMonth">0<small> mi</small></div><div class="hp-l">This month</div></div>
+    <div class="hp-c" data-period="year" onclick="setHistMode('year')"><div class="hp-v" id="hpYear">0<small> mi</small></div><div class="hp-l">This year</div></div>
+  </div>
+  <div class="wk-wrap">
+    <div class="wk-hdr">
+      <div class="wk-title" id="wkTitle">Last 7 Days</div>
+      <div class="wk-readout" id="wkReadout">Tap a bar for detail</div>
     </div>
+    <div class="wk-chart" id="wkChart"></div>
   </div>
   <div class="ride-list-wrap" id="rideListWrap"></div>
 </div>
@@ -1222,8 +1309,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="cro-name-row">
         <input class="cro-name-input" id="croNameInput" type="text" placeholder="Name this course..." autocomplete="off">
       </div>
-      <button class="cro-finish-btn" id="croFinishBtn" onclick="finishCourseRecording()">✅ Save Course</button>
+      <button class="cro-finish-btn" id="croFinishBtn" onclick="finishCourseRecording()">✅ Finish &amp; Save Course</button>
       <div id="croAutoSave" style="text-align:center;font-size:.62rem;color:var(--volt-dim);font-family:'JetBrains Mono',monospace;margin-top:6px;letter-spacing:.06em"></div>
+      <button class="cro-cancel-btn" style="border-color:rgba(200,255,0,.3);color:var(--volt);margin-bottom:8px" onclick="pauseCourseRecording()">⏸ Save for Later</button>
       <button class="cro-cancel-btn" onclick="cancelCourseRecording()">Discard &amp; Cancel</button>
     </div>
   </div>
@@ -1258,6 +1346,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
         <div class="cride-stat"><div class="crds-v" id="crideTop">0.0</div><div class="crds-l">Top</div></div>
         <div class="cride-stat"><div class="crds-v" id="crideTime">0:00</div><div class="crds-l">Time</div></div>
       </div>
+      <button class="cride-stop" style="background:rgba(200,255,0,.08);border-color:rgba(200,255,0,.3);color:var(--volt);margin-bottom:8px" onclick="pauseCourseRide()">⏸ Save for Later</button>
       <button class="cride-stop" id="crideStopBtn" onclick="confirmStopCourse()">⏹ Finish Course</button>
     </div>
   </div>
@@ -1344,6 +1433,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div id="startMain">
       <div class="modal-title">Start a Ride</div>
       <div class="modal-sub">Track speed, distance, time, and battery range.</div>
+      <div id="startResume"></div>
       <div id="startNoScooter" style="display:none;background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:12px;padding:10px 13px;margin-bottom:14px;font-size:.72rem;color:var(--orange);line-height:1.5">⚠ Range tracking will be limited until you add a scooter. <span style="color:var(--volt);cursor:pointer;text-decoration:underline" onclick="closeStartModal();goTo('garage')">Add one</span></div>
       <button class="modal-save" style="margin-bottom:12px" onclick="startFreeRide()">⚡ Start Free Ride</button>
       <button class="start-opt" onclick="startPickTrail()"><span class="so-ic">🗺️</span><span><b>Pick a Trail</b><small>Follow a known path near you</small></span></button>
@@ -1678,8 +1768,10 @@ function goTo(screen) {
   if (screen === 'garage') renderGarage();
   // Stop background timers when navigating away from their screens
   if (screen !== 'cam' && camOn) { toggleCam(); }
-  if (screen !== 'courses' && courseRecording) { cancelCourseRecording(); }
-  if (screen !== 'courses' && courseRiding) { discardCourseRide(); }
+  // Leaving an in-progress course does NOT discard it — it's saved for later
+  // so the rider can resume exactly where they left off.
+  if (screen !== 'courses' && courseRecording) { pauseCourseRecording({ silent: true }); toast('⏸ Course saved for later', true); }
+  if (screen !== 'courses' && courseRiding) { pauseCourseRide({ silent: true }); toast('⏸ Race saved for later', true); }
 }
 
 function fabTap() {
@@ -1695,6 +1787,19 @@ function openStartModal() {
   document.getElementById('startMain').style.display = 'block';
   document.getElementById('startSub').style.display = 'none';
   document.getElementById('startNoScooter').style.display = activeScooter() ? 'none' : 'block';
+  // Surface any course saved for later as the top action — resume in one tap.
+  const resumeEl = document.getElementById('startResume');
+  if (resumeEl) {
+    let html = '';
+    if (state.courseDraft && !courseRecording) {
+      const nm = (state.courseDraft.name && state.courseDraft.name.trim()) ? esc(state.courseDraft.name.trim()) : 'Unnamed course';
+      html += `<button class="modal-save" style="margin-bottom:10px" onclick="closeStartModal();resumeCourseRecording()">▶ Resume Recording — ${nm}</button>`;
+    }
+    if (state.rideDraft && !courseRiding) {
+      html += `<button class="modal-save" style="margin-bottom:10px" onclick="closeStartModal();resumeCourseRide()">▶ Resume Race — ${esc(state.rideDraft.courseName || 'Course')}</button>`;
+    }
+    resumeEl.innerHTML = html;
+  }
   document.getElementById('startModal').classList.add('open');
 }
 function closeStartModal() { document.getElementById('startModal').classList.remove('open'); }
@@ -1960,8 +2065,10 @@ function refreshHome() {
   // Primary CTA reflects current state.
   const ctaSub = document.getElementById('rideCtaSub');
   const ctaTitle = document.querySelector('.ride-cta-title');
+  const hasDraft = (state.courseDraft && !courseRecording) || (state.rideDraft && !courseRiding);
   if (ctaSub) {
     if (rideActive) { ctaSub.textContent = 'Ride in progress — tap to return'; if (ctaTitle) ctaTitle.textContent = 'Riding now'; }
+    else if (hasDraft) { ctaSub.textContent = 'A course is saved for later — tap to resume or start fresh'; if (ctaTitle) ctaTitle.textContent = 'Resume your course'; }
     else if (!activeScooter()) { ctaSub.textContent = 'Add a scooter for full range tracking — or ride now'; if (ctaTitle) ctaTitle.textContent = 'Ready to ride?'; }
     else { ctaSub.textContent = 'Start tracking your speed, distance & time'; if (ctaTitle) ctaTitle.textContent = 'Ready to ride?'; }
   }
@@ -2012,6 +2119,16 @@ let rideTopSpd = 0;
 let rideSpdSum = 0;
 let rideSpdCount = 0;
 let rideStartMiles = 0, rideStartFull = 0;
+// In-ride dashboard accumulators (supplemental info beyond the speedometer)
+let rideCurSpd = 0;        // mph, latest cleaned speed
+let rideHeading = null;    // deg, last heading while moving
+let rideAltitude = null;   // m, last altitude
+let rideLastAlt = null;    // m, for elevation-gain deltas
+let rideElevGain = 0;      // ft, cumulative climb
+let rideMovingSecs = 0;    // s, time spent actually moving
+let rideMovSpdSum = 0, rideMovSpdCount = 0; // moving-average speed
+let rideGpsAcc = null;     // m, last fix accuracy
+let rideInfoOpen = false;  // dashboard panel visible?
 
 const GPS_COORDS =['44.2930° N','44.2935° N','44.2940° N','44.2945° N','44.2950° N','44.2953° N','44.2958° N'];
 
@@ -2039,6 +2156,10 @@ function startRide() {
 
   rideActive = true;
   rideSecs = 0; rideDist = 0; rideTopSpd = 0; rideSpdSum = 0; rideSpdCount = 0;
+  rideCurSpd = 0; rideHeading = null; rideAltitude = null; rideLastAlt = null;
+  rideElevGain = 0; rideMovingSecs = 0; rideMovSpdSum = 0; rideMovSpdCount = 0; rideGpsAcc = null;
+  rideInfoOpen = false;
+  const _rip = document.getElementById('rideInfoPanel'); if (_rip) _rip.classList.remove('open');
   rideStartMiles = activeMiles();
   rideStartFull = scoFull(activeScooter());
   let rideLowWarned = false;
@@ -2117,6 +2238,17 @@ function startRide() {
       rideSpdSum += spd; rideSpdCount++;
       const avgSpd = rideSpdCount > 0 ? rideSpdSum / rideSpdCount : 0;
 
+      // ── Supplemental telemetry for the in-ride dashboard ──
+      rideCurSpd = spd;
+      rideGpsAcc = acc;
+      if (pos.coords.heading != null && !isNaN(pos.coords.heading) && spd > 1) rideHeading = pos.coords.heading;
+      if (pos.coords.altitude != null && !isNaN(pos.coords.altitude)) {
+        if (rideLastAlt !== null) { const dAlt = pos.coords.altitude - rideLastAlt; if (dAlt > 0.3) rideElevGain += dAlt * 3.28084; }
+        rideLastAlt = pos.coords.altitude; rideAltitude = pos.coords.altitude;
+      }
+      if (spd > 1) { rideMovSpdSum += spd; rideMovSpdCount++; }
+      if (rideInfoOpen) updateRideInfo();
+
       document.getElementById('rideSpd').textContent = spd.toFixed(1);
       document.getElementById('rideSpd').className = 'spd-num' + (spd > 20 ? ' warn' : '');
       document.getElementById('rideTop').textContent = rideTopSpd.toFixed(1);
@@ -2158,9 +2290,73 @@ function startRide() {
       return;
     }
     rideSecs++;
+    if (rideCurSpd > 1) rideMovingSecs++;
     document.getElementById('rideTime').textContent = fmtTime(rideSecs);
     document.getElementById('rideCal').textContent = Math.round(rideDist * 35 + rideSecs * 0.01);
+    if (rideInfoOpen) updateRideInfo();
   }, 1000);
+}
+
+// ── In-ride dashboard ──────────────────────────────────────────────
+// A second page over the speedometer with the extra stats a scooter rider
+// actually wants on the move: compass heading, altitude & climb, moving-only
+// pace/time, calories, CO₂ & money saved, live range and time-to-empty, GPS
+// signal, and the lifetime odometer. Fed live by the same GPS watch + clock.
+function toggleRideInfo() {
+  const panel = document.getElementById('rideInfoPanel');
+  if (!panel) return;
+  rideInfoOpen = !rideInfoOpen;
+  panel.classList.toggle('open', rideInfoOpen);
+  if (rideInfoOpen) updateRideInfo();
+}
+
+function headingStr(deg) {
+  if (deg == null || isNaN(deg)) return '—';
+  const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+  const card = dirs[Math.round(((deg % 360) / 45)) % 8];
+  return card + ' ' + String(Math.round(deg % 360)).padStart(3, '0') + '°';
+}
+
+function updateRideInfo() {
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.innerHTML = v; };
+  const movAvg = rideMovSpdCount ? rideMovSpdSum / rideMovSpdCount : 0;
+  set('ripSpdMini', rideCurSpd.toFixed(1));
+
+  // Compass
+  set('ripHeading', headingStr(rideHeading));
+  const needle = document.getElementById('ripNeedle');
+  if (needle) needle.style.transform = 'translateX(-50%) rotate(' + (rideHeading == null || isNaN(rideHeading) ? 0 : Math.round(rideHeading)) + 'deg)';
+
+  // Altitude & climb
+  set('ripAlt', rideAltitude != null ? Math.round(rideAltitude * 3.28084) + '<small> ft</small>' : '—');
+  set('ripElev', '+' + Math.round(rideElevGain) + '<small> ft</small>');
+
+  // Pace & effort
+  set('ripMovAvg', movAvg.toFixed(1) + '<small> mph</small>');
+  set('ripMovTime', fmtTime(rideMovingSecs));
+  set('ripCal', Math.round(rideDist * 35 + rideSecs * 0.01) + '<small> kcal</small>');
+
+  // Impact: ~0.404 kg CO₂/mi avoided vs an average car; ~$1.50/mi vs rideshare.
+  set('ripCo2', (rideDist * 0.404 * 2.20462).toFixed(1) + '<small> lb</small>');
+  set('ripSaved', '$' + (rideDist * 1.5).toFixed(2));
+
+  // Range & time-to-empty at the current moving pace
+  const milesNow = rideStartFull ? Math.max(0, rideStartMiles - rideDist) : null;
+  set('ripRange', milesNow != null ? milesNow.toFixed(1) + '<small> mi</small>' : '—');
+  if (milesNow != null && movAvg > 0.5) {
+    const mins = Math.round(milesNow / movAvg * 60);
+    set('ripEmpty', mins >= 60 ? fmtTime(mins * 60) + '<small> hrs</small>' : mins + '<small> min</small>');
+  } else { set('ripEmpty', '—'); }
+
+  // GPS signal from last-fix accuracy
+  if (rideGpsAcc == null) set('ripGps', '—');
+  else {
+    const q = rideGpsAcc <= 10 ? 'Strong' : rideGpsAcc <= 25 ? 'Good' : rideGpsAcc <= 50 ? 'Fair' : 'Weak';
+    set('ripGps', q + '<small> · ±' + Math.round(rideGpsAcc) + 'm</small>');
+  }
+
+  // Lifetime odometer including the in-progress ride
+  set('ripOdo', (((state.odometer || 0) + rideDist)).toFixed(1) + '<small> mi</small>');
 }
 
 function stopRide() {
@@ -2171,6 +2367,8 @@ function stopRide() {
     window._rideGpsId = undefined;
   }
   rideActive = false;
+  rideInfoOpen = false;
+  const _rip = document.getElementById('rideInfoPanel'); if (_rip) _rip.classList.remove('open');
   const fab = document.getElementById('fab');
   fab.textContent = '🛴'; fab.classList.remove('riding');
   document.getElementById('rideSpd').textContent = '0.0';
@@ -2273,21 +2471,10 @@ function refreshHistory() {
   document.getElementById('hsTotalRides').textContent = filtered.length;
   document.getElementById('hsTopSpd').textContent = topSpd.toFixed(1);
 
-  // Heatmap (all rides)
-  const svg = document.getElementById('heatmapSvg');
-  if (rides.length) {
-    const paths = rides.map((_,i) => {
-      const seed = (i * 137) % 360;
-      const x1 = 10 + (seed % 60), y1 = 100 - (seed % 40);
-      const x2 = 150 + (seed % 80), y2 = 80 - (seed % 30);
-      const x3 = 280 + (seed % 60), y3 = 60 - (seed % 25);
-      const x4 = 370, y4 = 30 + (seed % 20);
-      return `<path d="M${x1} ${y1} Q${x2} ${y2} ${x3} ${y3} Q${x4 - 20} ${y4 + 5} ${x4} ${y4}" stroke="rgba(200,255,0,.${Math.min(9,5+i)})" stroke-width="${2+i*.3}" stroke-linecap="round" fill="none"/>`;
-    }).join('');
-    svg.innerHTML = paths;
-  } else {
-    svg.innerHTML = '<text x="50%" y="55%" text-anchor="middle" fill="rgba(200,255,0,.15)" font-family="\'Bebas Neue\',sans-serif" font-size="14" letter-spacing="4">COMPLETE A RIDE TO SEE YOUR MAP</text>';
-  }
+  // Period totals + interactive distance chart (respect the scooter filter)
+  _histFiltered = filtered;
+  renderHistPeriods(filtered);
+  renderHistChart();
 
   // Ride list
   const wrap = document.getElementById('rideListWrap');
@@ -2313,6 +2500,120 @@ function refreshHistory() {
         ${filterVal === 'all' && (state.garage || [])[r.scooterIdx] ? '<div class="ri-tag">🛴 ' + esc(state.garage[r.scooterIdx].name || '') + '</div>' : ''}</div>`;
   });
   wrap.innerHTML = html;
+}
+
+// ── Interactive distance chart (week / month / year) ──
+let histMode = 'week';
+let _histFiltered = [];
+let _histBuckets = [];
+let _histSelBar = -1;
+
+function sumDist(rides, start, end) {
+  return rides.reduce((a, r) => (r.ts >= start && r.ts < end ? a + r.dist : a), 0);
+}
+function countRides(rides, start, end) {
+  return rides.reduce((a, r) => (r.ts >= start && r.ts < end ? a + 1 : a), 0);
+}
+
+// Top three cards: rolling totals for the current week / month / year.
+function renderHistPeriods(rides) {
+  const now = new Date();
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6).getTime();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
+  const end = now.getTime() + 1;
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.innerHTML = v.toFixed(1) + '<small> mi</small>'; };
+  set('hpWeek', sumDist(rides, weekStart, end));
+  set('hpMonth', sumDist(rides, monthStart, end));
+  set('hpYear', sumDist(rides, yearStart, end));
+}
+
+// Switch the chart between daily / weekly / monthly buckets via the cards.
+function setHistMode(mode) {
+  histMode = mode;
+  _histSelBar = -1;
+  document.querySelectorAll('#histPeriods .hp-c').forEach(c => {
+    c.classList.toggle('active', c.dataset.period === mode);
+  });
+  renderHistChart();
+}
+
+// Build the bucket list for the active mode from the (filtered) ride set.
+function buildHistBuckets() {
+  const rides = _histFiltered || [];
+  const now = new Date();
+  const Y = now.getFullYear(), M = now.getMonth(), D = now.getDate();
+  const buckets = [];
+  const DAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const MON = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+  const MONF = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (histMode === 'week') {
+    for (let i = 6; i >= 0; i--) {
+      const dt = new Date(Y, M, D - i);
+      const start = dt.getTime(), end = start + 86400000;
+      buckets.push({ start, end, label: DAY[dt.getDay()],
+        full: dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        cur: i === 0 });
+    }
+  } else if (histMode === 'month') {
+    const daysInMonth = new Date(Y, M + 1, 0).getDate();
+    for (let s = 1; s <= daysInMonth; s += 7) {
+      const e = Math.min(s + 6, daysInMonth);
+      const start = new Date(Y, M, s).getTime(), end = new Date(Y, M, e + 1).getTime();
+      buckets.push({ start, end, label: s + '–' + e,
+        full: MONF[M] + ' ' + s + '–' + e, cur: D >= s && D <= e });
+    }
+  } else { // year
+    for (let mo = 0; mo < 12; mo++) {
+      const start = new Date(Y, mo, 1).getTime(), end = new Date(Y, mo + 1, 1).getTime();
+      buckets.push({ start, end, label: MON[mo], full: MONF[mo] + ' ' + Y, cur: mo === M });
+    }
+  }
+  buckets.forEach(b => { b.dist = sumDist(rides, b.start, b.end); b.rides = countRides(rides, b.start, b.end); });
+  return buckets;
+}
+
+function renderHistChart() {
+  const chart = document.getElementById('wkChart');
+  const title = document.getElementById('wkTitle');
+  const readout = document.getElementById('wkReadout');
+  if (!chart) return;
+  const now = new Date();
+  if (title) title.textContent = histMode === 'week' ? 'Last 7 Days'
+    : histMode === 'month' ? now.toLocaleDateString('en-US', { month: 'long' }) + ' by Week'
+    : now.getFullYear() + ' by Month';
+
+  _histBuckets = buildHistBuckets();
+  const total = _histBuckets.reduce((a, b) => a + b.dist, 0);
+  if (total <= 0) {
+    chart.innerHTML = '<div class="wk-empty-note">No distance logged in this period yet.<br>Your chart fills in as you ride. 🛴</div>';
+    if (readout) readout.innerHTML = '0.0 mi total';
+    return;
+  }
+  const max = Math.max(..._histBuckets.map(b => b.dist));
+  chart.innerHTML = _histBuckets.map((b, i) => {
+    const pct = b.dist > 0 ? Math.max(6, Math.round(b.dist / max * 100)) : 0;
+    const cls = 'wk-bar' + (b.cur ? ' today' : '') + (b.dist <= 0 ? ' empty' : '');
+    return `<div class="${cls}" data-i="${i}" onclick="selectHistBar(${i})">
+      <div class="wk-bar-track"><div class="wk-bar-fill" style="height:${pct}%"></div></div>
+      <div class="wk-bar-lbl">${b.label}</div>
+    </div>`;
+  }).join('');
+  if (readout) readout.innerHTML = total.toFixed(1) + ' mi total <span class="wk-ro-sub">· tap a bar</span>';
+}
+
+// Tap a bar to read its exact distance & ride count.
+function selectHistBar(i) {
+  const b = _histBuckets[i];
+  if (!b) return;
+  _histSelBar = i;
+  document.querySelectorAll('#wkChart .wk-bar').forEach(el => {
+    el.classList.toggle('sel', Number(el.dataset.i) === i);
+  });
+  const readout = document.getElementById('wkReadout');
+  if (readout) {
+    readout.innerHTML = b.dist.toFixed(2) + ' mi <span class="wk-ro-sub">· ' + b.full + ' · ' + b.rides + (b.rides === 1 ? ' ride' : ' rides') + '</span>';
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -2792,15 +3093,57 @@ let courseRideSpdCount = 0;
 let activeCoursePb = null;
 let activeCourseIdx = -1;
 
+// A banner for an in-progress course saved for later (recording or race).
+// Shown at the top of the Courses list so a paused session is always one tap
+// from resuming. Skipped while that session is actually live on screen.
+function resumeBannerHtml() {
+  let html = '';
+  const rec = state.courseDraft;
+  if (rec && !courseRecording) {
+    const nm = (rec.name && rec.name.trim()) ? esc(rec.name.trim()) : 'Unnamed course';
+    html += `<div class="course-card" style="border-color:rgba(200,255,0,.4)" onclick="resumeCourseRecording()">
+      <div class="course-body">
+        <div class="course-top">
+          <div class="course-name">⏸ ${nm}</div>
+          <div class="course-date">Recording paused</div>
+        </div>
+        <div class="course-stats">
+          <div><div class="crs-sv">${(rec.dist||0).toFixed(2)} mi</div><div class="crs-sl">So far</div></div>
+          <div><div class="crs-sv">${fmtTime(rec.secs||0)}</div><div class="crs-sl">Elapsed</div></div>
+        </div>
+        <button onclick="event.stopPropagation();resumeCourseRecording()" style="width:100%;margin-top:10px;padding:11px;background:var(--volt);color:#000;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;cursor:pointer">▶ Resume Recording</button>
+      </div>
+    </div>`;
+  }
+  const rd = state.rideDraft;
+  if (rd && !courseRiding) {
+    html += `<div class="course-card" style="border-color:rgba(200,255,0,.4)" onclick="resumeCourseRide()">
+      <div class="course-body">
+        <div class="course-top">
+          <div class="course-name">⏸ ${esc(rd.courseName || 'Course')}</div>
+          <div class="course-date">Race paused</div>
+        </div>
+        <div class="course-stats">
+          <div><div class="crs-sv">${(rd.dist||0).toFixed(2)} mi</div><div class="crs-sl">So far</div></div>
+          <div><div class="crs-sv">${fmtTime(rd.secs||0)}</div><div class="crs-sl">Elapsed</div></div>
+        </div>
+        <button onclick="event.stopPropagation();resumeCourseRide()" style="width:100%;margin-top:10px;padding:11px;background:var(--volt);color:#000;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;cursor:pointer">▶ Resume Race</button>
+      </div>
+    </div>`;
+  }
+  return html;
+}
+
 function renderCourses() {
   const list = document.getElementById('coursesList');
   if (!list) return;
   const courses = state.courses || [];
+  const resume = resumeBannerHtml();
   if (!courses.length) {
-    list.innerHTML = '<div class="no-courses"><div class="nc-icon">🏁</div>No courses yet.<br>Tap "Record New Course" to trace a path,<br>then ride it and race your own best time!</div>';
+    list.innerHTML = resume + '<div class="no-courses"><div class="nc-icon">🏁</div>No courses yet.<br>Tap "Record New Course" to trace a path,<br>then ride it and race your own best time!</div>';
     return;
   }
-  list.innerHTML = courses.map((c, i) => {
+  list.innerHTML = resume + courses.map((c, i) => {
     const pb = c.attempts && c.attempts.length ? Math.min(...c.attempts.map(a => a.secs)) : null;
     const attempts = c.attempts ? c.attempts.length : 0;
     return `<div class="course-card">
@@ -2842,9 +3185,21 @@ function deleteCourse(i) {
 // ── Record a Course ──
 function startCourseRecording() {
   if (courseRecording) { goTo('courses'); return; }
+  // A course is already saved for later — never lose it silently.
+  if (state.courseDraft) {
+    if (!confirm('You have a course saved for later. Discard it and start a brand-new recording?')) {
+      toast('Tap “Resume Recording” to continue your saved course');
+      if (currentScreen === 'courses') renderCourses();
+      return;
+    }
+    state.courseDraft = null;
+    saveState(state);
+  }
   blurActive();
   courseRecording = true;
   courseRecSecs = 0; courseRecDist = 0; courseRecSpdIdx = 0;
+  window._croPathPoints = [[195, 380]];
+  window._croResumeCoords = null; // fresh recording: no prior GPS path to seed
   document.getElementById('courseRecOverlay').classList.add('open');
   document.getElementById('croNameInput').value = '';
   document.getElementById('croPathSvg').innerHTML = '';
@@ -2852,10 +3207,26 @@ function startCourseRecording() {
   document.getElementById('croTime').textContent = '0:00';
   document.getElementById('croDist').textContent = '0.00';
   document.getElementById('croSpd').textContent = '0.0';
+  _armCourseRecLoop();
+}
 
-  window._croPathPoints = [[195, 380]];
+// Draw the recording path SVG from the current synthetic point buffer.
+function _drawCroPath() {
   const svg = document.getElementById('croPathSvg');
+  if (!svg) return;
+  const pts = window._croPathPoints || [];
+  if (pts.length < 2) { svg.innerHTML = ''; return; }
+  let d = 'M ' + pts[0].join(' ');
+  for (let k = 1; k < pts.length; k++) d += ' L ' + pts[k].join(' ');
+  svg.innerHTML =
+    `<path d="${d}" stroke="rgba(200,255,0,.15)" stroke-width="8" stroke-linecap="round" fill="none"/>` +
+    `<path d="${d}" stroke="var(--volt)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="6 3" opacity=".9"/>`;
+}
 
+// Arm the recording clock + GPS watch. Shared by start and resume — it never
+// resets the courseRec* accumulators, so resuming continues from where the
+// rider paused. GPS re-anchors on the first new fix (no phantom "gap" miles).
+function _armCourseRecLoop() {
   let croLastLat = null, croLastLng = null;
   let croHasMoved = false, croLastMoveTs = Date.now(); // 30s auto-end on no movement
   window._courseGpsId = navigator.geolocation ? navigator.geolocation.watchPosition(
@@ -2901,17 +3272,63 @@ function startCourseRecording() {
     const nx = Math.max(20, Math.min(370, last[0] + Math.cos(rad) * 18));
     const ny = Math.max(30, Math.min(390, last[1] + Math.sin(rad) * 10 - 3));
     window._croPathPoints.push([nx, ny]);
-
-    if (window._croPathPoints.length > 1) {
-      let d = 'M ' + window._croPathPoints[0].join(' ');
-      for (let k = 1; k < window._croPathPoints.length; k++) {
-        d += ' L ' + window._croPathPoints[k].join(' ');
-      }
-      svg.innerHTML = `
-        <path d="${d}" stroke="rgba(200,255,0,.15)" stroke-width="8" stroke-linecap="round" fill="none"/>
-        <path d="${d}" stroke="var(--volt)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="6 3" opacity=".9"/>`;
-    }
+    _drawCroPath();
   }, 1000);
+}
+
+// ── Save a course recording for later (pause) ──
+// Snapshots the in-progress recording to a persisted draft and tears down the
+// live timers/GPS. The rider can resume it later — even after closing the app.
+function pauseCourseRecording(opts) {
+  if (!courseRecording) return;
+  opts = opts || {};
+  disarmAutoSave();
+  clearInterval(courseRecTimer);
+  if (window._courseGpsId) { navigator.geolocation.clearWatch(window._courseGpsId); window._courseGpsId = null; }
+  if (typeof stopCroMapTracking === 'function') stopCroMapTracking();
+  courseRecording = false;
+
+  const nameEl = document.getElementById('croNameInput');
+  state.courseDraft = {
+    name: nameEl ? (nameEl.value || '') : '',
+    secs: courseRecSecs,
+    dist: courseRecDist,
+    spdIdx: courseRecSpdIdx,
+    pathPoints: (window._croPathPoints || [[195, 380]]).slice(),
+    gpsCoords: [], // filled by the maps wrapper (croPathCoords lives in that scope)
+    updatedAt: Date.now()
+  };
+  saveState(state);
+  document.getElementById('courseRecOverlay').classList.remove('open');
+  if (currentScreen === 'courses') renderCourses();
+  if (!opts.silent) toast('⏸ Course saved — resume anytime', true);
+}
+
+// ── Resume a saved (paused) course recording ──
+function resumeCourseRecording() {
+  const d = state.courseDraft;
+  if (!d) { toast('No saved course to resume'); return; }
+  if (courseRiding) { pauseCourseRide({ silent: true }); }
+  if (courseRecording) { document.getElementById('courseRecOverlay').classList.add('open'); return; }
+  blurActive();
+  if (currentScreen !== 'courses') goTo('courses');
+
+  courseRecSecs = d.secs || 0;
+  courseRecDist = d.dist || 0;
+  courseRecSpdIdx = d.spdIdx || 0;
+  window._croPathPoints = (d.pathPoints && d.pathPoints.length) ? d.pathPoints.slice() : [[195, 380]];
+  window._croResumeCoords = (d.gpsCoords && d.gpsCoords.length) ? d.gpsCoords.slice() : null;
+  courseRecording = true;
+
+  document.getElementById('courseRecOverlay').classList.add('open');
+  document.getElementById('croNameInput').value = d.name || '';
+  document.getElementById('croDistChip').textContent = courseRecDist.toFixed(2) + ' mi';
+  document.getElementById('croTime').textContent = fmtTime(courseRecSecs);
+  document.getElementById('croDist').textContent = courseRecDist.toFixed(2);
+  document.getElementById('croSpd').textContent = '0.0';
+  _drawCroPath();
+  _armCourseRecLoop();
+  toast('▶ Resumed — keep recording your course', true);
 }
 
 // Auto-save a recorded course when the prompt goes unanswered — fills a
@@ -2953,6 +3370,7 @@ function finishCourseRecording() {
     svgPath,
     attempts: []
   });
+  state.courseDraft = null; // recording finished — clear the resume draft
   saveState(state);
   document.getElementById('courseRecOverlay').classList.remove('open');
   renderCourses();
@@ -2964,13 +3382,26 @@ function cancelCourseRecording() {
   clearInterval(courseRecTimer);
   if (window._courseGpsId) { navigator.geolocation.clearWatch(window._courseGpsId); window._courseGpsId = null; }
   courseRecording = false;
+  state.courseDraft = null; // explicit discard clears any resume draft
+  saveState(state);
   document.getElementById('courseRecOverlay').classList.remove('open');
+  if (currentScreen === 'courses') renderCourses();
 }
 
 // ── Ride a Course ──
 function startCourseRide(idx) {
   const course = state.courses[idx];
   if (!course) return;
+  // A race is already saved for later — don't discard it without consent.
+  if (state.rideDraft) {
+    if (!confirm('You have a race saved for later. Discard it and start fresh?')) {
+      toast('Tap “Resume Race” to continue your saved race');
+      if (currentScreen === 'courses') renderCourses();
+      return;
+    }
+    state.rideDraft = null;
+    saveState(state);
+  }
   blurActive();
   if (courseRiding) { stopCourseRide(); }
   if (!navigator.geolocation) { toast('GPS not available on this device'); return; }
@@ -3001,7 +3432,14 @@ function startCourseRide(idx) {
 
   document.getElementById('courseRideOverlay').classList.add('open');
   toast('🏁 Course started! Acquiring GPS...', true);
+  _armCourseRideLoop(course);
+}
 
+// Arm the course-ride GPS watch + clock. Shared by start and resume; it does
+// NOT reset the courseRide* accumulators, so resuming continues mid-attempt.
+// GPS re-anchors on the first new fix, so the paused gap is never counted.
+function _armCourseRideLoop(course) {
+  const dot = document.getElementById('crideDot');
   // ── GPS WATCH — real speed, distance, and progress along the course ──
   let crLastLat = null, crLastLng = null, crLastTime = null, crLastSpd = 0;
   let crHasMoved = false, crLastMoveTs = Date.now(); // 30s auto-end on no movement
@@ -3082,6 +3520,7 @@ function stopCourseRide() {
   clearInterval(courseRideTimer);
   clearCrideEngineGps();
   courseRiding = false;
+  state.rideDraft = null; // attempt finished — clear the resume draft
   document.getElementById('courseRideOverlay').classList.remove('open');
 
   const course = state.courses[activeCourseIdx];
@@ -3102,6 +3541,8 @@ function stopCourseRide() {
     const pb = Math.min(...course.attempts.map(a => a.secs));
     const isNewPb = pb === courseRideSecs && course.attempts.length > 1;
     toast(isNewPb ? '🏆 New personal best: ' + fmtTime(courseRideSecs) + '!' : '🏁 Ride complete! ' + fmtTime(courseRideSecs), true);
+  } else {
+    saveState(state); // course gone — still persist the cleared draft
   }
 }
 
@@ -3112,7 +3553,85 @@ function discardCourseRide() {
   clearCrideEngineGps();
   if (typeof stopCrideMapTracking === 'function') stopCrideMapTracking();
   courseRiding = false;
+  state.rideDraft = null; // explicit abandon clears any resume draft
+  saveState(state);
   document.getElementById('courseRideOverlay').classList.remove('open');
+}
+
+// ── Save a course ride for later (pause) ──
+// Snapshots an in-progress attempt to a persisted draft and tears down the
+// live timers/GPS. Resume later — even after closing the app — and the clock,
+// distance, and pace pick up where they left off.
+function pauseCourseRide(opts) {
+  if (!courseRiding) return;
+  opts = opts || {};
+  clearInterval(courseRideTimer);
+  clearCrideEngineGps();
+  if (typeof stopCrideMapTracking === 'function') stopCrideMapTracking();
+  courseRiding = false;
+
+  const course = state.courses[activeCourseIdx];
+  state.rideDraft = {
+    courseTs: course ? course.ts : null,
+    courseName: course ? course.name : 'Course',
+    secs: courseRideSecs,
+    dist: courseRideDist,
+    topSpd: courseRideTopSpd,
+    spdSum: courseRideSpdSum,
+    spdCount: courseRideSpdCount,
+    updatedAt: Date.now()
+  };
+  saveState(state);
+  document.getElementById('courseRideOverlay').classList.remove('open');
+  if (currentScreen === 'courses') renderCourses();
+  if (!opts.silent) toast('⏸ Race saved — resume anytime', true);
+}
+
+// ── Resume a saved (paused) course ride ──
+function resumeCourseRide() {
+  const d = state.rideDraft;
+  if (!d) { toast('No saved race to resume'); return; }
+  // Resolve the course by its stable timestamp id (indices shift on delete).
+  let idx = (state.courses || []).findIndex(c => c.ts === d.courseTs);
+  if (idx < 0) { state.rideDraft = null; saveState(state); toast('That course was deleted'); if (currentScreen === 'courses') renderCourses(); return; }
+  if (!navigator.geolocation) { toast('GPS not available on this device'); return; }
+  if (courseRecording) { pauseCourseRecording({ silent: true }); }
+  if (courseRiding) { document.getElementById('courseRideOverlay').classList.add('open'); return; }
+  blurActive();
+  if (currentScreen !== 'courses') goTo('courses');
+
+  const course = state.courses[idx];
+  activeCourseIdx = idx;
+  activeCoursePb = course.attempts && course.attempts.length ? Math.min(...course.attempts.map(a => a.secs)) : null;
+  courseRideSecs = d.secs || 0;
+  courseRideDist = d.dist || 0;
+  courseRideTopSpd = d.topSpd || 0;
+  courseRideSpdSum = d.spdSum || 0;
+  courseRideSpdCount = d.spdCount || 0;
+  courseRiding = true;
+
+  document.getElementById('crideTitleLbl').textContent = course.name;
+  document.getElementById('crideCourseName').textContent = course.name;
+  document.getElementById('crideYouTime').textContent = fmtTime(courseRideSecs);
+  document.getElementById('cridePbTime').textContent = activeCoursePb ? 'PB: ' + fmtTime(activeCoursePb) : 'No PB yet';
+  document.getElementById('crideDist').textContent = courseRideDist.toFixed(2);
+  document.getElementById('crideSpd').textContent = '0.0';
+  document.getElementById('crideTop').textContent = courseRideTopSpd.toFixed(1);
+  document.getElementById('crideTime').textContent = fmtTime(courseRideSecs);
+  document.getElementById('crideStatusChip').textContent = '🟢 RIDING';
+
+  const svg = document.getElementById('cridePathSvg');
+  svg.innerHTML =
+    `<path d="${course.svgPath}" stroke="rgba(200,255,0,.1)" stroke-width="10" stroke-linecap="round" fill="none"/>` +
+    `<path d="${course.svgPath}" stroke="rgba(200,255,0,.4)" stroke-width="2.5" stroke-linecap="round" fill="none" stroke-dasharray="6 4"/>`;
+  const dot = document.getElementById('crideDot');
+  const progress = Math.min(0.95, courseRideDist / Math.max(0.01, course.dist));
+  dot.style.left = (5 + progress * 85) + '%';
+  dot.style.top = (85 - progress * 70) + '%';
+
+  document.getElementById('courseRideOverlay').classList.add('open');
+  _armCourseRideLoop(course);
+  toast('▶ Resumed your race', true);
 }
 
 function confirmStopCourse() {
@@ -3769,6 +4288,13 @@ function resetApp() {
 (function boot() {
   if (!state.settings) state.settings = { spd: true, loc: false, cam: false };
   if (!state.courses) state.courses = [];
+  if (typeof state.courseDraft === 'undefined') state.courseDraft = null; // paused recording
+  if (typeof state.rideDraft === 'undefined') state.rideDraft = null;     // paused race
+  // Drop a paused race whose course was deleted while paused.
+  if (state.rideDraft && !(state.courses || []).some(c => c.ts === state.rideDraft.courseTs)) {
+    state.rideDraft = null;
+    saveState(state);
+  }
   if (!state.garage) state.garage = []; // garage starts (and can stay) empty
 
   // Guard against a stale scooterIdx pointing past the garage.
@@ -3990,9 +4516,13 @@ function initCroMap() {
     croMap = makeMap(el, lat, lng, 16);
     if (!croMap) return;
     croUserMarker = makeMarker(croMap, lat, lng, 'You');
-    croPolyline = makePolyline(croMap, [], '#C8FF00', 3, true);
-    croPathCoords = [{ lat, lng }];
-    makeStartPin(croMap, lat, lng, 'Course Start');
+    // Resuming a paused recording: seed the path with the GPS captured before
+    // the pause so the finished course keeps the whole route, not just the tail.
+    const seed = window._croResumeCoords;
+    window._croResumeCoords = null;
+    croPathCoords = (seed && seed.length) ? seed.slice() : [{ lat, lng }];
+    croPolyline = makePolyline(croMap, croPathCoords.map(c => [c.lat, c.lng]), '#C8FF00', 3, true);
+    makeStartPin(croMap, croPathCoords[0].lat, croPathCoords[0].lng, 'Course Start');
 
     if (navigator.geolocation) {
       window._croWatchId = navigator.geolocation.watchPosition(pos => {
@@ -4094,6 +4624,7 @@ window.saveRide = saveRide = function() {
 const _origStartCourseRecording = startCourseRecording;
 window.startCourseRecording = startCourseRecording = function() {
   _origStartCourseRecording();
+  if (!courseRecording) return; // guard declined / nothing started
   whenMapsReady(() => {
     setTimeout(() => initCroMap(), 300);
   });
@@ -4131,9 +4662,27 @@ window.cancelCourseRecording = cancelCourseRecording = function() {
   _origCancelCourseRecording();
 };
 
+const _origPauseCourseRecording = pauseCourseRecording;
+window.pauseCourseRecording = pauseCourseRecording = function(opts) {
+  const wasRec = courseRecording;
+  const coords = croPathCoords ? [...croPathCoords] : [];
+  stopCroMapTracking();
+  _origPauseCourseRecording(opts);
+  // Persist the real GPS path so a resumed recording keeps the whole route.
+  if (wasRec && state.courseDraft) { state.courseDraft.gpsCoords = coords; saveState(state); }
+};
+
+const _origResumeCourseRecording = resumeCourseRecording;
+window.resumeCourseRecording = resumeCourseRecording = function() {
+  _origResumeCourseRecording();
+  if (!courseRecording) return; // base bailed (no draft / deleted)
+  whenMapsReady(() => { setTimeout(() => initCroMap(), 300); });
+};
+
 const _origStartCourseRide = startCourseRide;
 window.startCourseRide = startCourseRide = function(idx) {
   _origStartCourseRide(idx);
+  if (!courseRiding) return; // guard declined / nothing started
   whenMapsReady(() => {
     setTimeout(() => initCrideMap(state.courses[idx] || {}), 300);
   });
@@ -4143,6 +4692,19 @@ const _origStopCourseRide = stopCourseRide;
 window.stopCourseRide = stopCourseRide = function() {
   stopCrideMapTracking();
   _origStopCourseRide();
+};
+
+const _origPauseCourseRide = pauseCourseRide;
+window.pauseCourseRide = pauseCourseRide = function(opts) {
+  stopCrideMapTracking();
+  _origPauseCourseRide(opts);
+};
+
+const _origResumeCourseRide = resumeCourseRide;
+window.resumeCourseRide = resumeCourseRide = function() {
+  _origResumeCourseRide();
+  if (!courseRiding) return; // base bailed (no draft / deleted)
+  whenMapsReady(() => { setTimeout(() => initCrideMap(state.courses[activeCourseIdx] || {}), 300); });
 };
 
 // ══ BOOT: init trails map if already on trails screen ══
