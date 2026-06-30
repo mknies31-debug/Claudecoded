@@ -153,6 +153,10 @@
   .md td.amt-pos{color:var(--pos);font-weight:600;font-variant-numeric:tabular-nums}
   .md td.amt-neg{color:var(--neg);font-weight:600;font-variant-numeric:tabular-nums}
   .md td.nullcell{color:#a59f8e;font-style:italic}
+  .md td.onetime-cell{color:var(--dim)}
+  .md tbody tr.is-recurring td{background:#fbf2dc}
+  .rec-badge{display:inline-block;background:var(--gold);color:var(--ink);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .rec-badge::before{content:"\21BB  ";font-weight:700}
 
   details.raw{margin-top:16px;border:1px solid var(--line);border-radius:11px;background:#fbfaf6}
   details.raw summary{cursor:pointer;padding:10px 14px;font-size:13px;font-weight:600;color:var(--green-2)}
@@ -165,6 +169,7 @@
     display:inline-block;background:var(--gold-soft);color:var(--green);
     font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:8px;
   }
+  .count-pill.rec-pill{background:var(--gold);color:var(--ink)}
 
   textarea.ledger-in{
     width:100%;min-height:200px;border:1px solid var(--line-strong);border-radius:11px;
@@ -234,8 +239,8 @@
     </div>
 
     <div id="ledgerCard" class="card" style="display:none">
-      <h2>Your ledger<span id="rowCount" class="count-pill">0 rows</span></h2>
-      <p class="sub">Each extraction appends to this running table. Outflows are negative, inflows positive.</p>
+      <h2>Your ledger<span id="rowCount" class="count-pill">0 rows</span><span id="recCount" class="count-pill rec-pill" style="display:none"></span></h2>
+      <p class="sub">Each extraction appends to this running table. Outflows are negative, inflows positive. Recurring charges (subscriptions, rent, utilities, salary) are badged and highlighted.</p>
       <div class="row" style="margin-top:0">
         <button class="btn gold" onclick="copyMarkdown()">Copy Markdown</button>
         <button class="btn ghost" onclick="copyTSV()">Copy for Sheets/Excel</button>
@@ -311,28 +316,60 @@ fileInput.addEventListener('change', e => addFiles(e.target.files));
 drop.addEventListener('drop', e => { if(e.dataTransfer?.files) addFiles(e.dataTransfer.files); });
 
 const OK_TYPES = ['image/png','image/jpeg','image/webp','image/gif'];
-function addFiles(fileList){
+const MAX_EDGE = 1568;     // matches Anthropic's internal resize — no accuracy loss, small payload
+const JPEG_QUALITY = 0.85;
+const MAX_IMAGES = 20;     // keep total request comfortably under the function body limit
+
+async function addFiles(fileList){
   const files = Array.from(fileList||[]);
-  let skipped = 0;
-  let pending = files.length;
-  if(!pending) return;
-  files.forEach(f => {
-    if(!OK_TYPES.includes(f.type)){ skipped++; if(--pending===0) finishAdd(skipped); return; }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      const base64 = String(dataUrl).split(',')[1] || '';
-      images.push({ name:f.name, mediaType:f.type, dataUrl, base64 });
-      if(--pending===0) finishAdd(skipped);
-    };
-    reader.onerror = () => { skipped++; if(--pending===0) finishAdd(skipped); };
-    reader.readAsDataURL(f);
-  });
+  if(!files.length) return;
+  let skipped = 0, full = 0;
+  document.getElementById('exStatus').innerHTML = '<span class="spinner"></span>Preparing image(s)…';
+  for(const f of files){
+    if(images.length >= MAX_IMAGES){ full++; continue; }
+    if(!f.type.startsWith('image/')){ skipped++; continue; }
+    try{
+      images.push(await downscale(f));
+    }catch{ skipped++; }
+  }
   fileInput.value = '';
+  document.getElementById('exStatus').textContent = '';
+  finishAdd(skipped, full);
 }
-function finishAdd(skipped){
+
+// Load → draw onto a white-filled canvas scaled to <= MAX_EDGE → export JPEG.
+// Standardizes every input (PNG/WebP/GIF/HEIC-as-JPEG) to a small base64 JPEG so
+// large phone photos can't blow past the serverless request-body limit.
+function downscale(file){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, MAX_EDGE / Math.max(im.width, im.height));
+      const w = Math.max(1, Math.round(im.width * scale));
+      const h = Math.max(1, Math.round(im.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';           // flatten any transparency to white
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(im, 0, 0, w, h);
+      let dataUrl;
+      try{ dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY); }
+      catch(e){ reject(e); return; }
+      resolve({ name:file.name, mediaType:'image/jpeg', dataUrl, base64:(dataUrl.split(',')[1]||'') });
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+    im.src = url;
+  });
+}
+function finishAdd(skipped, full){
   renderThumbs();
-  if(skipped) showAlert('exAlert','err', skipped+' file(s) skipped — only PNG, JPG, WebP, or GIF images are supported.');
+  const msgs = [];
+  if(skipped) msgs.push(skipped+' file(s) skipped — not a readable image (PNG, JPG, WebP, or GIF).');
+  if(full) msgs.push(full+' file(s) skipped — '+MAX_IMAGES+'-image limit reached. Extract this batch, then add more.');
+  if(msgs.length) showAlert('exAlert','err', msgs.join(' '));
   else hideAlert('exAlert');
 }
 function renderThumbs(){
@@ -410,9 +447,9 @@ async function runExtract(){
     }
   }catch(err){
     showAlert('exAlert','err', err.message);
+    document.getElementById('exStatus').textContent = '';
   }finally{
     document.getElementById('extractBtn').disabled = images.length===0;
-    if(document.getElementById('exStatus').querySelector('.spinner')) document.getElementById('exStatus').textContent='';
   }
 }
 
@@ -444,6 +481,11 @@ function splitRow(line){
 function renderLedger(){
   document.getElementById('ledgerCard').style.display = ledgerRows.length ? 'block' : 'none';
   document.getElementById('rowCount').textContent = ledgerRows.length + (ledgerRows.length===1?' row':' rows');
+  const recIdx = HEADERS.indexOf('Recurring Status');
+  const recN = ledgerRows.filter(r => (r[recIdx]||'').trim().toLowerCase()==='recurring').length;
+  const recPill = document.getElementById('recCount');
+  if(recN){ recPill.style.display='inline-block'; recPill.textContent = '↻ '+recN+' recurring'; }
+  else recPill.style.display='none';
   document.getElementById('ledgerRender').innerHTML = renderTableHTML(HEADERS, ledgerRows);
   document.getElementById('ledgerRaw').value = toMarkdown();
 }
@@ -520,13 +562,21 @@ function isTableSep(line){ return /^\s*\|?[\s:|-]+\|?\s*$/.test(line) && line.in
 
 function renderTableHTML(headers, rows){
   const amtIdx = headers.indexOf('Amount');
+  const recIdx = headers.indexOf('Recurring Status');
   let html = '<div class="table-scroll"><table><thead><tr>';
   html += headers.map(h=>'<th>'+esc(h)+'</th>').join('');
   html += '</tr></thead><tbody>';
   for(const r of rows){
-    html += '<tr>';
+    const recurring = recIdx>=0 && (r[recIdx]||'').trim().toLowerCase()==='recurring';
+    html += '<tr'+(recurring?' class="is-recurring"':'')+'>';
     for(let i=0;i<headers.length;i++){
       const v = (r[i] ?? '').trim();
+      // Recurring Status cell → badge for recurring, muted text for one-time.
+      if(i===recIdx){
+        if(v.toLowerCase()==='recurring'){ html += '<td><span class="rec-badge">Recurring</span></td>'; continue; }
+        if(v.toLowerCase()==='null'){ html += '<td class="nullcell">null</td>'; continue; }
+        html += '<td class="onetime-cell">'+inline(v)+'</td>'; continue;
+      }
       let cls = '';
       if(v.toLowerCase()==='null') cls='nullcell';
       else if(i===amtIdx){

@@ -35,7 +35,7 @@ Operational Guidelines for Data Mapping:
 - Currency: ISO-4217 three-letter code (USD, CAD, EUR, GBP, ...).
 - Payment Method: the bank, credit card, e-wallet, or P2P tool shown (e.g., Checking, Chase Visa, Apple Pay, Cash App).
 - Category: one of — Groceries, Apparel, Electronics, Housing & Utilities, Software & Subscriptions, Transportation, Meals & Dining, Professional Services, Medical, or Income.
-- Recurring Status: "Recurring" (subscription, rent, utility, salary) or "One-Time".
+- Recurring Status: "Recurring" or "One-Time". Be proactive about catching recurring charges. Mark "Recurring" when the line is rent/mortgage, a utility (electric, gas, water, internet, phone), insurance, a salary/payroll deposit, a gym/membership, OR a recognizable subscription service — e.g. Netflix, Hulu, Disney+, Max, Spotify, Apple (iCloud/Music/TV+), YouTube Premium, Amazon Prime, Adobe, Microsoft 365, Google One, Dropbox, Notion, ChatGPT/OpenAI, Patreon, Substack, news/media memberships, SaaS tools, and similar. Also treat any charge whose description contains cues like "subscription", "monthly", "annual", "membership", "renewal", "autopay", or "recurring" as "Recurring". When the merchant is clearly a one-off purchase, use "One-Time".
 - BNPL Provider: if the transaction involves Klarna, Sezzle, Afterpay, or Affirm, name the provider. Otherwise leave blank.
 
 Output Constraints:
