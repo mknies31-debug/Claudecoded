@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f3d2e">
+<title>Ledger Lens — Snap. Extract. Optimize.</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='34' fill='%230f3d2e'/><text x='90' y='126' font-size='110' font-family='Georgia,serif' font-weight='bold' text-anchor='middle' fill='%23e9c46a'>L</text></svg>">
+<style>
+  :root{
+    --ink:#10241c;
+    --green:#0f3d2e;
+    --green-2:#13533c;
+    --gold:#c9962f;
+    --gold-soft:#e9c46a;
+    --bg:#f4f1ea;
+    --card:#ffffff;
+    --line:#e2ddd1;
+    --line-strong:#cfc8b6;
+    --text:#1d2a24;
+    --dim:#5d6b63;
+    --pos:#1b7a4b;
+    --neg:#b3402f;
+    --shadow:0 1px 2px rgba(16,36,28,.06), 0 8px 24px rgba(16,36,28,.07);
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,'Times New Roman',serif;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--green-2)}
+
+  header.top{
+    background:linear-gradient(155deg,var(--green) 0%,var(--green-2) 100%);
+    color:#f4f1ea;
+    padding:26px 20px 22px;
+  }
+  .wrap{max-width:1020px;margin:0 auto;padding:0 18px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:42px;height:42px;border-radius:11px;flex:0 0 auto;
+    background:var(--gold-soft);color:var(--green);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:bold;font-size:28px;
+  }
+  .brand h1{font-size:21px;margin:0;font-weight:700;letter-spacing:.2px}
+  .brand p{margin:1px 0 0;font-size:12.5px;opacity:.82}
+  .tag{margin-top:14px;font-size:13px;opacity:.9;max-width:640px}
+
+  /* Stepper */
+  nav.steps{display:flex;gap:8px;margin-top:18px}
+  nav.steps button{
+    flex:1;cursor:pointer;border:1px solid transparent;border-radius:11px;
+    background:rgba(255,255,255,.10);color:#f4f1ea;
+    padding:11px 12px;text-align:left;font-family:var(--sans);font-size:13px;
+    transition:background .15s,border-color .15s;
+  }
+  nav.steps button .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;border-radius:50%;background:var(--gold-soft);
+    color:var(--green);font-weight:700;font-size:12px;margin-right:8px;
+  }
+  nav.steps button.active{background:var(--gold-soft);color:var(--green);border-color:var(--gold)}
+  nav.steps button.active .n{background:var(--green);color:var(--gold-soft)}
+  nav.steps button strong{font-weight:700}
+  nav.steps button small{display:block;margin-left:28px;font-size:11px;opacity:.78}
+
+  main{padding:22px 0 60px}
+  section.panel{display:none}
+  section.panel.show{display:block}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);padding:20px;margin-bottom:18px;
+  }
+  .card h2{margin:0 0 4px;font-size:16px;font-weight:700}
+  .card .sub{margin:0 0 16px;font-size:13px;color:var(--dim)}
+
+  /* Dropzone */
+  .drop{
+    border:2px dashed var(--line-strong);border-radius:14px;
+    background:#fbfaf6;padding:26px 18px;text-align:center;cursor:pointer;
+    transition:border-color .15s,background .15s;
+  }
+  .drop.drag{border-color:var(--gold);background:#fdf8ec}
+  .drop .big{font-size:14px;font-weight:600}
+  .drop .small{font-size:12.5px;color:var(--dim);margin-top:4px}
+  .drop svg{width:34px;height:34px;color:var(--green-2);opacity:.8;margin-bottom:8px}
+
+  .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .thumb{
+    position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;
+    border:1px solid var(--line-strong);background:#eee;
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb button{
+    position:absolute;top:3px;right:3px;width:20px;height:20px;border:none;
+    border-radius:50%;background:rgba(16,36,28,.78);color:#fff;cursor:pointer;
+    font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;
+  }
+
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  button.btn{
+    appearance:none;border:1px solid var(--green);background:var(--green);color:#f4f1ea;
+    border-radius:11px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;
+    font-family:var(--sans);transition:transform .05s,opacity .15s,background .15s;
+  }
+  button.btn:hover{background:var(--green-2)}
+  button.btn:active{transform:translateY(1px)}
+  button.btn[disabled]{opacity:.45;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--green-2);border-color:var(--line-strong)}
+  button.ghost:hover{background:#f0ede3}
+  button.gold{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+  button.gold:hover{background:var(--gold-soft)}
+
+  .status{font-size:13px;color:var(--dim);margin-left:2px}
+  .spinner{
+    display:inline-block;width:15px;height:15px;border:2px solid var(--line-strong);
+    border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;
+    vertical-align:-3px;margin-right:7px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .alert{
+    border-radius:11px;padding:12px 14px;font-size:13px;margin-top:14px;display:none;
+  }
+  .alert.show{display:block}
+  .alert.err{background:#fbeae7;border:1px solid #e9bcb4;color:#86291b}
+  .alert.ok{background:#e7f4ec;border:1px solid #b4dcc3;color:#1b6b43}
+
+  /* Rendered markdown output */
+  .md{font-size:14px}
+  .md h2{font-size:16.5px;margin:22px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--gold-soft);color:var(--green)}
+  .md h3{font-size:14.5px;margin:16px 0 6px;color:var(--green-2)}
+  .md h2:first-child,.md h3:first-child{margin-top:2px}
+  .md p{margin:8px 0}
+  .md ul,.md ol{margin:8px 0;padding-left:22px}
+  .md li{margin:3px 0}
+  .md code{font-family:var(--mono);font-size:12.5px;background:#f0ede3;padding:1px 5px;border-radius:5px}
+  .md strong{font-weight:700}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .md table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0}
+  .md th,.md td{border:1px solid var(--line);padding:7px 10px;text-align:left;white-space:nowrap}
+  .md thead th{background:var(--green);color:#f4f1ea;font-weight:600;position:sticky;top:0}
+  .md tbody tr:nth-child(even){background:#faf8f2}
+  .md td.amt-pos{color:var(--pos);font-weight:600;font-variant-numeric:tabular-nums}
+  .md td.amt-neg{color:var(--neg);font-weight:600;font-variant-numeric:tabular-nums}
+  .md td.nullcell{color:#a59f8e;font-style:italic}
+
+  details.raw{margin-top:16px;border:1px solid var(--line);border-radius:11px;background:#fbfaf6}
+  details.raw summary{cursor:pointer;padding:10px 14px;font-size:13px;font-weight:600;color:var(--green-2)}
+  details.raw textarea{
+    width:100%;border:none;border-top:1px solid var(--line);background:#fbfaf6;
+    font-family:var(--mono);font-size:12px;padding:12px 14px;min-height:160px;resize:vertical;
+    color:var(--text);border-radius:0 0 11px 11px;
+  }
+  .count-pill{
+    display:inline-block;background:var(--gold-soft);color:var(--green);
+    font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:8px;
+  }
+
+  textarea.ledger-in{
+    width:100%;min-height:200px;border:1px solid var(--line-strong);border-radius:11px;
+    padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.5;
+    color:var(--text);background:#fbfaf6;resize:vertical;
+  }
+  textarea.ledger-in:focus{outline:none;border-color:var(--gold)}
+
+  footer.foot{text-align:center;font-size:12px;color:var(--dim);padding:0 18px 40px}
+  .privacy{font-size:12px;color:var(--dim);margin-top:12px;line-height:1.5}
+  @media(max-width:560px){
+    nav.steps{flex-direction:column}
+    nav.steps button small{margin-left:28px}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo">L</div>
+      <div>
+        <h1>Ledger Lens</h1>
+        <p>Snap → Extract → Optimize</p>
+      </div>
+    </div>
+    <p class="tag">Drop in screenshots of your bank app, Venmo / PayPal / Cash App, email receipts, or photos of paper receipts. Ledger Lens reads them, builds a clean transaction table you can paste straight into Sheets or Excel, then turns it into a personalized savings plan.</p>
+    <nav class="steps">
+      <button id="tab-extract" class="active" onclick="showTab('extract')">
+        <strong><span class="n">1</span>Extract</strong>
+        <small>Images → clean transaction table</small>
+      </button>
+      <button id="tab-analyze" onclick="showTab('analyze')">
+        <strong><span class="n">2</span>Optimize</strong>
+        <small>Table → savings &amp; budget plan</small>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <!-- ============ STEP 1 — EXTRACT ============ -->
+  <section id="panel-extract" class="panel show">
+    <div class="card">
+      <h2>Upload transaction images</h2>
+      <p class="sub">Bank screenshots, P2P payment history, digital receipts, or photos of physical receipts. Add several at once — they're all read together.</p>
+
+      <div id="drop" class="drop" tabindex="0" role="button" aria-label="Add images">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="big">Tap to add images, or drag &amp; drop</div>
+        <div class="small">PNG, JPG, WebP, or GIF — multiple files OK</div>
+      </div>
+      <input id="file" type="file" accept="image/*" multiple hidden>
+
+      <div id="thumbs" class="thumbs"></div>
+
+      <div class="row">
+        <button id="extractBtn" class="btn" disabled onclick="runExtract()">Extract transactions</button>
+        <button class="btn ghost" onclick="clearImages()">Clear images</button>
+        <span id="exStatus" class="status"></span>
+      </div>
+
+      <div id="exAlert" class="alert err"></div>
+      <p class="privacy">Your API key lives only on the server (Netlify env var) — never in this page. Images are sent to Anthropic to read the transactions and are not stored by this app.</p>
+    </div>
+
+    <div id="ledgerCard" class="card" style="display:none">
+      <h2>Your ledger<span id="rowCount" class="count-pill">0 rows</span></h2>
+      <p class="sub">Each extraction appends to this running table. Outflows are negative, inflows positive.</p>
+      <div class="row" style="margin-top:0">
+        <button class="btn gold" onclick="copyMarkdown()">Copy Markdown</button>
+        <button class="btn ghost" onclick="copyTSV()">Copy for Sheets/Excel</button>
+        <button class="btn ghost" onclick="sendToAnalyze()">Send to Optimize →</button>
+        <button class="btn ghost" onclick="clearLedger()">Clear ledger</button>
+        <span id="copyStatus" class="status"></span>
+      </div>
+      <div id="ledgerRender" class="md"></div>
+      <details class="raw">
+        <summary>Raw Markdown</summary>
+        <textarea id="ledgerRaw" readonly spellcheck="false"></textarea>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2 — ANALYZE ============ -->
+  <section id="panel-analyze" class="panel">
+    <div class="card">
+      <h2>Transaction ledger</h2>
+      <p class="sub">Paste a Markdown table here (or use the one carried over from Step 1), then generate your optimization plan.</p>
+      <textarea id="analyzeIn" class="ledger-in" spellcheck="false" placeholder="| Date | Merchant/Payee | Amount | Currency | Payment Method | Category | Recurring Status | BNPL Provider |&#10;| --- | --- | --- | --- | --- | --- | --- | --- |&#10;| 2026-06-12 | Klarna — Nike | -32.50 | USD | Chase Visa | Apparel | One-Time | Klarna |"></textarea>
+      <div class="row">
+        <button id="analyzeBtn" class="btn" onclick="runAnalyze()">Generate optimization plan</button>
+        <span id="anStatus" class="status"></span>
+      </div>
+      <div id="anAlert" class="alert err"></div>
+    </div>
+
+    <div id="planCard" class="card" style="display:none">
+      <h2>Financial optimization plan</h2>
+      <div class="row" style="margin-top:0;margin-bottom:6px">
+        <button class="btn ghost" onclick="copyPlan()">Copy plan</button>
+        <span id="planCopyStatus" class="status"></span>
+      </div>
+      <div id="planRender" class="md"></div>
+      <details class="raw">
+        <summary>Raw Markdown</summary>
+        <textarea id="planRaw" readonly spellcheck="false"></textarea>
+      </details>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="foot">
+  Ledger Lens · runs on your own Anthropic key · a standalone tool, separate from CARVIS &amp; VOLT
+</footer>
+
+<script>
+const ENDPOINT = '/.netlify/functions/ledger';
+const HEADERS = ['Date','Merchant/Payee','Amount','Currency','Payment Method','Category','Recurring Status','BNPL Provider'];
+
+/* ---------- tab switching ---------- */
+function showTab(name){
+  document.getElementById('panel-extract').classList.toggle('show', name==='extract');
+  document.getElementById('panel-analyze').classList.toggle('show', name==='analyze');
+  document.getElementById('tab-extract').classList.toggle('active', name==='extract');
+  document.getElementById('tab-analyze').classList.toggle('active', name==='analyze');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------- image intake ---------- */
+let images = []; // { name, mediaType, dataUrl, base64 }
+
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('file');
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); }});
+fileInput.addEventListener('change', e => addFiles(e.target.files));
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+drop.addEventListener('drop', e => { if(e.dataTransfer?.files) addFiles(e.dataTransfer.files); });
+
+const OK_TYPES = ['image/png','image/jpeg','image/webp','image/gif'];
+function addFiles(fileList){
+  const files = Array.from(fileList||[]);
+  let skipped = 0;
+  let pending = files.length;
+  if(!pending) return;
+  files.forEach(f => {
+    if(!OK_TYPES.includes(f.type)){ skipped++; if(--pending===0) finishAdd(skipped); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const base64 = String(dataUrl).split(',')[1] || '';
+      images.push({ name:f.name, mediaType:f.type, dataUrl, base64 });
+      if(--pending===0) finishAdd(skipped);
+    };
+    reader.onerror = () => { skipped++; if(--pending===0) finishAdd(skipped); };
+    reader.readAsDataURL(f);
+  });
+  fileInput.value = '';
+}
+function finishAdd(skipped){
+  renderThumbs();
+  if(skipped) showAlert('exAlert','err', skipped+' file(s) skipped — only PNG, JPG, WebP, or GIF images are supported.');
+  else hideAlert('exAlert');
+}
+function renderThumbs(){
+  const box = document.getElementById('thumbs');
+  box.innerHTML = '';
+  images.forEach((img, i) => {
+    const d = document.createElement('div');
+    d.className = 'thumb';
+    d.innerHTML = `<img src="${img.dataUrl}" alt=""><button title="Remove" onclick="removeImage(${i})">×</button>`;
+    box.appendChild(d);
+  });
+  document.getElementById('extractBtn').disabled = images.length === 0;
+}
+function removeImage(i){ images.splice(i,1); renderThumbs(); }
+function clearImages(){ images = []; renderThumbs(); hideAlert('exAlert'); }
+
+/* ---------- alerts ---------- */
+function showAlert(id, kind, msg){
+  const el = document.getElementById(id);
+  el.className = 'alert ' + kind + ' show';
+  el.textContent = msg;
+}
+function hideAlert(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ---------- API call ---------- */
+async function callLedger(mode, messages){
+  let res;
+  try{
+    res = await fetch(ENDPOINT, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({ mode, messages }),
+    });
+  }catch(err){
+    throw new Error('Could not reach the server function. If you opened this file directly, deploy it to Netlify (or run `netlify dev`) so /.netlify/functions/ledger is live. ('+err.message+')');
+  }
+  const text = await res.text();
+  let data;
+  try{ data = JSON.parse(text); }catch{ throw new Error('Unexpected non-JSON response ('+res.status+'). '+text.slice(0,200)); }
+  if(!res.ok){
+    const m = data?.error?.message || data?.error || ('Request failed ('+res.status+')');
+    throw new Error(typeof m === 'string' ? m : JSON.stringify(m));
+  }
+  const parts = Array.isArray(data.content) ? data.content.filter(b=>b.type==='text').map(b=>b.text) : [];
+  return parts.join('\n').trim();
+}
+
+/* ---------- EXTRACT ---------- */
+let ledgerRows = []; // array of 8-cell arrays
+
+async function runExtract(){
+  if(images.length===0) return;
+  const btn = document.getElementById('extractBtn');
+  btn.disabled = true;
+  hideAlert('exAlert');
+  document.getElementById('exStatus').innerHTML = '<span class="spinner"></span>Reading '+images.length+' image(s)…';
+
+  const content = images.map(img => ({
+    type:'image',
+    source:{ type:'base64', media_type:img.mediaType, data:img.base64 },
+  }));
+  content.push({ type:'text', text:'Extract every transaction visible in the image(s) above into the Markdown table exactly as specified. Output only the table.' });
+
+  try{
+    const out = await callLedger('extract', [{ role:'user', content }]);
+    const rows = parseTableRows(out);
+    if(rows.length===0){
+      showAlert('exAlert','err','No transaction rows were found in that image. Try a clearer screenshot, or check that transactions are visible.');
+    }else{
+      ledgerRows = ledgerRows.concat(rows);
+      renderLedger();
+      document.getElementById('exStatus').textContent = 'Added '+rows.length+' transaction(s).';
+      // clear consumed images so the next batch is fresh
+      clearImages();
+    }
+  }catch(err){
+    showAlert('exAlert','err', err.message);
+  }finally{
+    document.getElementById('extractBtn').disabled = images.length===0;
+    if(document.getElementById('exStatus').querySelector('.spinner')) document.getElementById('exStatus').textContent='';
+  }
+}
+
+// Parse a GitHub-flavored markdown table (strip code fences, header, separator).
+function parseTableRows(md){
+  let s = md.replace(/```[a-zA-Z]*\n?/g,'').replace(/```/g,'').trim();
+  const lines = s.split('\n').map(l=>l.trim()).filter(l=>l.startsWith('|'));
+  const rows = [];
+  for(const line of lines){
+    const cells = splitRow(line);
+    if(cells.length===0) continue;
+    const joined = cells.join('').replace(/[\s-]/g,'');
+    if(joined==='') continue;                       // separator row (---)
+    const lc = cells.map(c=>c.toLowerCase());
+    if(lc[0]==='date' && lc.includes('amount')) continue; // header row
+    // normalize to 8 cells
+    const norm = HEADERS.map((_,i)=> (cells[i] ?? '').trim());
+    rows.push(norm);
+  }
+  return rows;
+}
+function splitRow(line){
+  let l = line.trim();
+  if(l.startsWith('|')) l = l.slice(1);
+  if(l.endsWith('|')) l = l.slice(0,-1);
+  return l.split('|').map(c=>c.trim());
+}
+
+function renderLedger(){
+  document.getElementById('ledgerCard').style.display = ledgerRows.length ? 'block' : 'none';
+  document.getElementById('rowCount').textContent = ledgerRows.length + (ledgerRows.length===1?' row':' rows');
+  document.getElementById('ledgerRender').innerHTML = renderTableHTML(HEADERS, ledgerRows);
+  document.getElementById('ledgerRaw').value = toMarkdown();
+}
+
+function toMarkdown(){
+  const head = '| ' + HEADERS.join(' | ') + ' |';
+  const sep  = '| ' + HEADERS.map(()=>'---').join(' | ') + ' |';
+  const body = ledgerRows.map(r => '| ' + HEADERS.map((_,i)=>(r[i]||'')).join(' | ') + ' |').join('\n');
+  return [head, sep, body].join('\n');
+}
+function toTSV(){
+  const head = HEADERS.join('\t');
+  const body = ledgerRows.map(r => HEADERS.map((_,i)=>(r[i]||'')).join('\t')).join('\n');
+  return head + '\n' + body;
+}
+
+function clearLedger(){ ledgerRows = []; renderLedger(); }
+
+/* ---------- copy helpers ---------- */
+async function copyText(text, statusId, label){
+  try{
+    await navigator.clipboard.writeText(text);
+    flash(statusId, (label||'Copied')+' ✓');
+  }catch{
+    // fallback
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+    ta.select(); try{ document.execCommand('copy'); flash(statusId,(label||'Copied')+' ✓'); }catch{ flash(statusId,'Copy failed — select manually'); }
+    document.body.removeChild(ta);
+  }
+}
+function flash(id, msg){ const el=document.getElementById(id); el.textContent=msg; setTimeout(()=>{ if(el.textContent===msg) el.textContent=''; }, 2200); }
+function copyMarkdown(){ copyText(toMarkdown(),'copyStatus','Markdown copied'); }
+function copyTSV(){ copyText(toTSV(),'copyStatus','Copied for Sheets'); }
+function copyPlan(){ copyText(document.getElementById('planRaw').value,'planCopyStatus','Plan copied'); }
+
+function sendToAnalyze(){
+  document.getElementById('analyzeIn').value = toMarkdown();
+  showTab('analyze');
+}
+
+/* ---------- ANALYZE ---------- */
+async function runAnalyze(){
+  const table = document.getElementById('analyzeIn').value.trim();
+  hideAlert('anAlert');
+  if(!table){ showAlert('anAlert','err','Paste a transaction table first (or run Step 1).'); return; }
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  document.getElementById('anStatus').innerHTML = '<span class="spinner"></span>Auditing your ledger…';
+  try{
+    const out = await callLedger('analyze', [{ role:'user', content:'Here is the parsed transaction data to analyze:\n\n'+table }]);
+    document.getElementById('planRaw').value = out;
+    document.getElementById('planRender').innerHTML = renderMarkdown(out);
+    document.getElementById('planCard').style.display = 'block';
+    document.getElementById('anStatus').textContent = 'Plan ready.';
+    document.getElementById('planCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(err){
+    showAlert('anAlert','err', err.message);
+    document.getElementById('anStatus').textContent = '';
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* ---------- minimal Markdown renderer (headings, lists, tables, inline) ---------- */
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function inline(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function isTableSep(line){ return /^\s*\|?[\s:|-]+\|?\s*$/.test(line) && line.includes('-'); }
+
+function renderTableHTML(headers, rows){
+  const amtIdx = headers.indexOf('Amount');
+  let html = '<div class="table-scroll"><table><thead><tr>';
+  html += headers.map(h=>'<th>'+esc(h)+'</th>').join('');
+  html += '</tr></thead><tbody>';
+  for(const r of rows){
+    html += '<tr>';
+    for(let i=0;i<headers.length;i++){
+      const v = (r[i] ?? '').trim();
+      let cls = '';
+      if(v.toLowerCase()==='null') cls='nullcell';
+      else if(i===amtIdx){
+        const num = parseFloat(v.replace(/[^0-9.\-]/g,''));
+        if(!isNaN(num)) cls = num<0 ? 'amt-neg' : 'amt-pos';
+      }
+      html += '<td'+(cls?' class="'+cls+'"':'')+'>'+inline(v)+'</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderMarkdown(md){
+  const lines = md.replace(/```[a-zA-Z]*\n?/g,'').replace(/```/g,'').split('\n');
+  let html = '', i = 0;
+  let listType = null; // 'ul' | 'ol'
+  const closeList = () => { if(listType){ html += '</'+listType+'>'; listType=null; } };
+
+  while(i < lines.length){
+    const line = lines[i];
+
+    // table block
+    if(line.trim().startsWith('|') && i+1 < lines.length && isTableSep(lines[i+1])){
+      closeList();
+      const headers = splitRow(line);
+      i += 2;
+      const rows = [];
+      while(i < lines.length && lines[i].trim().startsWith('|')){
+        rows.push(splitRow(lines[i])); i++;
+      }
+      html += renderTableHTML(headers, rows);
+      continue;
+    }
+
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if(h){ closeList(); const lvl=Math.min(h[1].length,3); html += '<h'+lvl+'>'+inline(h[2].trim())+'</h'+lvl+'>'; i++; continue; }
+
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+    if(ul){ if(listType!=='ul'){ closeList(); html+='<ul>'; listType='ul'; } html += '<li>'+inline(ul[1])+'</li>'; i++; continue; }
+
+    const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    if(ol){ if(listType!=='ol'){ closeList(); html+='<ol>'; listType='ol'; } html += '<li>'+inline(ol[1])+'</li>'; i++; continue; }
+
+    if(line.trim()===''){ closeList(); i++; continue; }
+
+    closeList();
+    html += '<p>'+inline(line.trim())+'</p>';
+    i++;
+  }
+  closeList();
+  return html;
+}
+</script>
+</body>
+</html>

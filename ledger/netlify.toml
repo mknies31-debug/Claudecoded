@@ -1,0 +1,15 @@
+# Ledger Lens — standalone deploy config (separate from CARVIS and VOLT).
+#
+# To deploy Ledger Lens as its own site: in Netlify, create a new site from this
+# repo and set "Base directory" = ledger. Netlify then serves ledger/index.html
+# at the site root and bundles the Anthropic proxy from ledger/netlify/functions.
+# No build step.
+#
+# Before it works: Site settings → Environment variables → add ANTHROPIC_API_KEY.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
