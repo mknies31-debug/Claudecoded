@@ -300,8 +300,7 @@
   .omanage:hover{text-decoration:underline}
   .omg{margin-top:10px;padding:12px;border:1px dashed var(--line-strong);border-radius:11px}
 
-  /* ===== ask CARVIS (live · Fable 5) ===== */
-  .ailog{display:flex;flex-direction:column;gap:10px;min-height:90px;max-height:46vh;overflow-y:auto;margin-bottom:12px}
+  /* ===== ask CARVIS (live · Fable 5) ===== */  .ailog{display:flex;flex-direction:column;gap:10px;min-height:90px;max-height:46vh;overflow-y:auto;margin-bottom:12px}
   .aim{max-width:90%;padding:11px 14px;border-radius:12px;font-size:17px;line-height:1.55;white-space:pre-wrap}
   .aim.you{align-self:flex-end;background:rgba(92,240,255,.12);border:1px solid var(--line)}
   .aim.bot{align-self:flex-start;background:rgba(6,14,24,.95);border:1px solid var(--line);border-left:3px solid var(--cyan)}
@@ -309,6 +308,20 @@
   .airow{display:flex;gap:10px;align-items:flex-end}
   .airow .rta{margin-top:0}
   body.hivis .aim{font-size:21px}
+
+  /* ===== CEO daily briefing ===== */
+  .pace{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;padding:11px 13px;border:1px solid var(--line);
+    border-left:3px solid var(--gold);border-radius:11px;background:rgba(255,201,102,.06);margin-bottom:12px;font-family:var(--mono);font-size:14px}
+  .pace b{color:var(--gold);font-family:'Atkinson Hyperlegible'}
+  .pace .on{color:var(--green)} .pace .behind{color:var(--red)} .pace .dim{color:var(--dim)}
+  .brief{min-height:100px;max-height:52vh;overflow-y:auto;font-size:16.5px;line-height:1.55}
+  .brief h4{font-family:'Orbitron';font-size:13px;letter-spacing:1.5px;color:var(--cyan);margin:16px 0 6px;text-transform:uppercase}
+  .brief h4:first-child{margin-top:0}
+  .brief p{margin:0 0 6px;color:var(--text)}
+  .brief .ln{display:block;margin:0 0 5px}
+  body.hivis .brief{font-size:20px} body.hivis .pace{font-size:17px}
+  .briefbar{display:flex;gap:10px;margin-top:12px}
+  .briefbar .rgen{margin-top:0}
 
   /* ===== monthly numbers ===== */
   .numgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
@@ -623,7 +636,9 @@
     <button class="mic" id="outreachBtn" title="Send a referral / sold-customer email" style="font-size:17px">📧</button>
     <button class="mic" id="carBtn" title="Find a car / ask about inventory" style="font-size:18px">🚗</button>
     <button class="mic" id="statsBtn" title="Enter monthly sales numbers (backfill any month)" style="font-size:17px">📊</button>
+    <button class="mic" id="briefBtn" title="CEO daily briefing — your morning board meeting" style="font-size:17px">◆</button>
     <div class="chips">
+      <div class="chip" data-cmd="brief">◆ Daily Brief</div>
       <div class="chip" data-cmd="ask">◉ Ask CARVIS</div>
       <div class="chip" data-cmd="numbers">📊 Numbers</div>
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
@@ -763,6 +778,27 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       </div>
       <div class="ostat" id="cloudStat" style="margin-top:10px"></div>
       <div class="mnote"><span>✦</span><span>Anyone with your key can read your data — keep it private and make it long. <span class="soon">Needs the sync function deployed on Netlify (it self-enables on first use).</span></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CEO DAILY BRIEFING ============ -->
+<div class="overlay" id="briefOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">◆</div>
+      <div><div class="mt">DAILY BRIEFING</div><div class="ms" id="briefSub">Your morning board meeting</div></div>
+      <button class="x" id="briefClose">✕</button>
+    </div>
+    <div class="mb">
+      <div class="pace" id="briefPace"></div>
+      <div class="brief" id="briefBody"></div>
+      <div class="ostat" id="briefStat"></div>
+      <div class="briefbar">
+        <button class="rgen" id="briefRegen" style="flex:1">◉ REGENERATE</button>
+        <button class="rgen" id="briefSpeak" style="flex:0 0 auto;background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205" title="Read the briefing aloud">🔊 READ</button>
+      </div>
+      <div class="mnote"><span>✦</span><span>Built from your real CarVis data — this month's pace, prospects, and habits. Estimates are flagged; verify dollar figures before quoting. Needs <b>ANTHROPIC_API_KEY</b> on Netlify.</span></div>
     </div>
   </div>
 </div>
@@ -1307,6 +1343,7 @@ function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classLis
 function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
+  if(low==='brief'||low==='briefing'||low==='board'||low==='daily'){ openBrief(); $('#cmd').value=''; return; }
   if(low==='ask'||low==='carvis'||low==='ai'){ openAI(); $('#cmd').value=''; return; }
   if(low==='numbers'||low==='stats'||low==='month'||low==='totals'){ openNumbers(); return; }
   if(low==='reply'||low==='buyer reply'){ openReply(); return; }
@@ -1718,6 +1755,107 @@ function speak(text){
     speechSynthesis.speak(u);
   }catch(e){}
 }
+/* ---------- CEO daily briefing ----------
+   The keystone of the CarVis "executive layer": the live brain reads the real
+   dashboard data (this month's pace, prospects, habits, inventory) and returns
+   a board-meeting briefing. A deterministic pace strip renders instantly even
+   offline; the AI narrative fills in when the proxy is reachable. Cached per day. */
+const BRIEF_KEY='carvis_brief';
+function briefContext(){
+  refreshStats();
+  const now=new Date();
+  const dom=now.getDate(), dim=new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const s=STATS;
+  const pace = s.soldGoal>0 ? +(s.sold - s.soldGoal*(dom/dim)).toFixed(1) : null; // + ahead / - behind
+  const recent=[]; for(let i=3;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); recent.push(shortMonth(d)+' '+d.getFullYear()+'='+monthData(monthKey(d)).sold); }
+  const heat={hot:0,warm:0,cool:0}; HOT.forEach(p=>{ heat[p.heat]=(heat[p.heat]||0)+1; });
+  const habitsDone=DATA.tasks.filter(t=>taskState[t.id]).length;
+  const undone=DATA.tasks.filter(t=>!taskState[t.id]).map(t=>t.hp);
+  return { now, dom, dim, s, pace, recent, heat, habitsDone, habitsTotal:DATA.tasks.length, undone,
+           inv:(INVENTORY?INVENTORY.length:0) };
+}
+function renderPace(c){
+  const s=c.s;
+  const paceTxt = s.soldGoal>0
+    ? (c.pace>=0 ? `<span class="on">on/ahead by ${c.pace}</span>` : `<span class="behind">behind by ${Math.abs(c.pace)}</span>`)
+    : `<span class="dim">set a monthly goal</span>`;
+  $('#briefPace').innerHTML =
+    `<span><b>Day ${c.dom}/${c.dim}</b></span>`+
+    `<span>Sold <b>${s.sold}${s.soldGoal?'/'+s.soldGoal:''}</b> ${paceTxt}</span>`+
+    `<span class="dim">Bought ${s.bought}${s.buyGoal?'/'+s.buyGoal:''}</span>`+
+    `<span class="dim">Deals ${s.deals}${s.dealGoal?'/'+s.dealGoal:''}</span>`+
+    `<span class="dim">Close ${s.closeRate}%</span>`+
+    `<span class="dim">Hot ${c.heat.hot}·Warm ${c.heat.warm}·Cool ${c.heat.cool}</span>`+
+    `<span class="dim">Habits ${c.habitsDone}/${c.habitsTotal}</span>`;
+}
+function briefPrompt(c){
+  const s=c.s;
+  const hp=HOT.slice(0,12).map(p=>`- ${p.name} — ${p.heat}${p.note?' — '+p.note:''}`).join('\n')||'- (none pinned)';
+  const paceLine = s.soldGoal>0 ? `${(c.pace>=0?'ahead/on pace by ':'behind by ')}${Math.abs(c.pace)} cars for day ${c.dom} of ${c.dim}` : 'no monthly goal set';
+  return `Run today's CARVIS executive board briefing for Mick. Use ONLY this real data:
+
+DATE: ${c.now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}
+THIS MONTH (month-to-date):
+- Cars sold: ${s.sold}${s.soldGoal?' of goal '+s.soldGoal+' ('+Math.round(s.sold/s.soldGoal*100)+'%), '+paceLine:''}
+- Cars bought: ${s.bought}${s.buyGoal?' of goal '+s.buyGoal:''}
+- Deals closed: ${s.deals}${s.dealGoal?' of goal '+s.dealGoal:''}
+- Close rate: ${s.closeRate}%
+RECENT MONTHS (cars sold): ${c.recent.join(', ')}
+HOT PROSPECTS (${c.heat.hot} hot, ${c.heat.warm} warm, ${c.heat.cool} cool):
+${hp}
+HABITS TODAY: ${c.habitsDone}/${c.habitsTotal} done${c.undone.length?' — not yet: '+c.undone.join(', '):''}
+INVENTORY ON LOT: ${c.inv} units
+
+Produce a tight, specific briefing in PLAIN TEXT. Use these exact section titles on their own line in ALL CAPS, each followed by 1-4 short dash lines. No markdown symbols, no preamble:
+TOP 3 PRIORITIES TODAY
+QUICK WINS
+SALES FOCUS
+INVENTORY / ACQUISITION FOCUS
+LEAD & FOLLOW-UP FOCUS
+REFERRAL FOCUS
+BLIND SPOTS & RISKS
+Be his sharp COO — concrete actions tied to the data above, not generic advice. Flag any dollar figures as estimates.`;
+}
+function renderBriefText(text){
+  const body=$('#briefBody'); const lines=(text||'').split('\n');
+  const isHead=l=>{ const t=l.trim(); return t.length>2 && t.length<48 && /^[A-Z0-9 &/()#,'.-]+$/.test(t) && /[A-Z]/.test(t) && !/[a-z]/.test(t); };
+  body.innerHTML = lines.map(l=>{ const t=l.trim(); if(!t) return '';
+    return isHead(t) ? `<h4>${esc(t.replace(/[#*]/g,''))}</h4>` : `<span class="ln">${esc(t.replace(/^[-•*]\s*/,'— '))}</span>`;
+  }).join('');
+}
+let briefBusy=false, briefText='';
+async function generateBrief(force){
+  if(briefBusy) return; const c=briefContext(); renderPace(c);
+  const today=new Date().toISOString().slice(0,10);
+  if(!force){
+    try{ const cached=JSON.parse(localStorage.getItem(BRIEF_KEY)||'null'); if(cached&&cached.date===today&&cached.text){ briefText=cached.text; renderBriefText(cached.text); $('#briefSub').textContent='Board meeting · '+new Date(cached.ts||Date.now()).toLocaleTimeString(); return; } }catch(e){}
+  }
+  briefBusy=true; $('#briefStat').className='ostat send'; $('#briefStat').textContent='◉ Convening the board…';
+  $('#briefBody').innerHTML='<span class="ln" style="color:var(--dim)">Reading your numbers, prospects, and habits…</span>';
+  const r0=$('#reactor'); if(r0) r0.classList.add('listening');
+  try{
+    const r=await fetch('/.netlify/functions/carvis',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[{role:'user',content:briefPrompt(c)}]})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ const msg=(d&&d.error&&(d.error.message||d.error))||('HTTP '+r.status);
+      $('#briefBody').innerHTML=`<span class="ln">✕ ${esc(msg)}</span>`;
+      $('#briefStat').className='ostat err'; $('#briefStat').textContent='Live brain error — check ANTHROPIC_API_KEY on Netlify. Your pace snapshot above is live regardless.';
+    }else{
+      briefText=(d.content||[]).map(b=>b.text||'').join('\n').trim()||'(no briefing)';
+      renderBriefText(briefText);
+      try{ localStorage.setItem(BRIEF_KEY, JSON.stringify({date:today, ts:Date.now(), text:briefText})); }catch(e){}
+      $('#briefStat').className='ostat ok'; $('#briefStat').textContent='✓ Briefing ready · '+new Date().toLocaleTimeString();
+      $('#briefSub').textContent='Board meeting · '+new Date().toLocaleTimeString(); blip(940,0.06,'sine',0.12);
+    }
+  }catch(e){
+    $('#briefBody').innerHTML='<span class="ln">✕ CARVIS\'s live brain isn\'t reachable here — deploy on Netlify with ANTHROPIC_API_KEY. Your pace snapshot above is still accurate.</span>';
+    $('#briefStat').className='ostat err'; $('#briefStat').textContent='Offline / not deployed.';
+  }
+  briefBusy=false; if(r0) r0.classList.remove('listening');
+}
+function openBrief(){ $('#briefOverlay').classList.add('show'); generateBrief(false); }
+function closeBrief(){ $('#briefOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
+
 function openAI(seed){
   $('#aiOverlay').classList.add('show');
   if(!$('#aiLog').children.length) aiAdd('bot','Ready when you are, Mick. Objections, customer texts, pricing strategy — fire away.');
@@ -1830,11 +1968,12 @@ function init(){
     if(e.target.closest('#syncClose')||e.target===$('#syncOverlay')) closeSync();
     if(e.target.closest('#numClose')||e.target===$('#numOverlay')) closeNumbers();
     if(e.target.closest('#aiClose')||e.target===$('#aiOverlay')) closeAI();
+    if(e.target.closest('#briefClose')||e.target===$('#briefOverlay')) closeBrief();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
     const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
@@ -1867,6 +2006,11 @@ function init(){
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  // CEO daily briefing
+  $('#briefBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); openBrief(); });
+  $('#briefClose').addEventListener('click', closeBrief);
+  $('#briefRegen').addEventListener('click', ()=>generateBrief(true));
+  $('#briefSpeak').addEventListener('click', ()=>{ if(briefText){ const wasOn=audioOn; audioOn=true; speak(briefText); audioOn=wasOn; } });
   // ask CARVIS (live)
   $('#aiSend').addEventListener('click', askCarvis);
   $('#aiIn').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); askCarvis(); } });
