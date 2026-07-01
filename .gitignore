@@ -7,6 +7,9 @@ node_modules/
 # Deploy bundle (generated on demand, not source)
 carvis-netlify.zip
 
+# Generated deliverables (regenerated on demand, not source)
+*.pdf
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
