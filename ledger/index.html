@@ -178,11 +178,57 @@
   }
   textarea.ledger-in:focus{outline:none;border-color:var(--gold)}
 
+  /* Big camera-first capture buttons */
+  .capture{
+    display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+    padding:16px;margin-bottom:10px;border-radius:14px;cursor:pointer;
+    border:1px solid var(--green);background:var(--green);color:#f4f1ea;
+    font-family:var(--sans);font-size:16px;font-weight:700;
+    transition:background .15s,transform .05s;
+  }
+  .capture:hover{background:var(--green-2)}
+  .capture:active{transform:translateY(1px)}
+  .capture.ghost{background:#fbfaf6;color:var(--green);border-color:var(--line-strong)}
+  .capture.ghost:hover{background:#f0ede3}
+  .capture svg{width:22px;height:22px;flex:0 0 auto}
+  .dt-only{margin-top:4px}
+  /* On touch devices the OS pickers ARE the affordance — hide the desktop hint */
+  @media(hover:none),(pointer:coarse){ .dt-only{display:none} }
+
+  /* Tally / running totals */
+  .tally{margin:2px 0 14px}
+  .tally-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tcard{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fbfaf6}
+  .tcard.out{background:#fdf1ee;border-color:#eccfc7}
+  .tcard.in{background:#eef7f1;border-color:#c9e3d2}
+  .tcard.net{background:#fbf6e9;border-color:#e7d9b3}
+  .tcard .tlabel{font-size:11.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+  .tcard .tnum{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+  .tcard .tnum.neg{color:var(--neg)} .tcard .tnum.pos{color:var(--pos)}
+  .tacct-title{font-size:13px;font-weight:700;color:var(--green);margin:16px 0 6px}
+  .cur-warn{font-weight:400;color:var(--neg);font-size:11.5px}
+  table.tacct{border-collapse:collapse;width:100%;font-size:13px}
+  table.tacct th,table.tacct td{border:1px solid var(--line);padding:7px 10px;text-align:left;white-space:nowrap}
+  table.tacct thead th{background:#f0ede3;color:var(--green);font-weight:700}
+  table.tacct td.amt-pos{color:var(--pos);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+  table.tacct td.amt-neg{color:var(--neg);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+  table.tacct td:nth-child(2){text-align:right;color:var(--dim)}
+
   footer.foot{text-align:center;font-size:12px;color:var(--dim);padding:0 18px 40px}
   .privacy{font-size:12px;color:var(--dim);margin-top:12px;line-height:1.5}
   @media(max-width:560px){
     nav.steps{flex-direction:column}
     nav.steps button small{margin-left:28px}
+    .brand h1{font-size:20px}
+    .card{padding:16px}
+    .tally-cards{gap:7px}
+    .tcard{padding:10px}
+    .tcard .tnum{font-size:17px}
+    .tcard .tlabel{font-size:10px}
+    /* full-width, thumb-friendly action buttons stacked on phones */
+    .row{gap:8px}
+    .row button.btn{flex:1 1 100%}
+    #extractBtn{font-size:16px;padding:15px}
   }
 </style>
 </head>
@@ -196,7 +242,7 @@
         <p>Snap → Extract → Optimize</p>
       </div>
     </div>
-    <p class="tag">Drop in screenshots of your bank app, Venmo / PayPal / Cash App, email receipts, or photos of paper receipts. Ledger Lens reads them, builds a clean transaction table you can paste straight into Sheets or Excel, then turns it into a personalized savings plan.</p>
+    <p class="tag">Snap a receipt with your camera, or add a screenshot from your bank / Venmo / PayPal / Cash App. Ledger Lens reads it, keeps a running tally grouped by account (checking, savings, credit card, loan, investment…), and can turn the whole ledger into a personalized savings plan.</p>
     <nav class="steps">
       <button id="tab-extract" class="active" onclick="showTab('extract')">
         <strong><span class="n">1</span>Extract</strong>
@@ -216,14 +262,23 @@
   <!-- ============ STEP 1 — EXTRACT ============ -->
   <section id="panel-extract" class="panel show">
     <div class="card">
-      <h2>Upload transaction images</h2>
-      <p class="sub">Bank screenshots, P2P payment history, digital receipts, or photos of physical receipts. Add several at once — they're all read together.</p>
+      <h2>Snap a receipt or statement</h2>
+      <p class="sub">Point your camera at a receipt, or add a screenshot from your bank / Venmo / PayPal / Cash App. Snap as many as you like — they're read together.</p>
 
-      <div id="drop" class="drop" tabindex="0" role="button" aria-label="Add images">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div class="big">Tap to add images, or drag &amp; drop</div>
-        <div class="small">PNG, JPG, WebP, or GIF — multiple files OK</div>
+      <button class="capture" onclick="document.getElementById('camera').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Take a photo</span>
+      </button>
+      <button class="capture ghost" onclick="document.getElementById('file').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Choose from library</span>
+      </button>
+
+      <div id="drop" class="drop dt-only" tabindex="0" role="button" aria-label="Add images">
+        <div class="small">…or drag &amp; drop image files here</div>
       </div>
+
+      <input id="camera" type="file" accept="image/*" capture="environment" hidden>
       <input id="file" type="file" accept="image/*" multiple hidden>
 
       <div id="thumbs" class="thumbs"></div>
@@ -248,6 +303,7 @@
         <button class="btn ghost" onclick="clearLedger()">Clear ledger</button>
         <span id="copyStatus" class="status"></span>
       </div>
+      <div id="tally"></div>
       <div id="ledgerRender" class="md"></div>
       <details class="raw">
         <summary>Raw Markdown</summary>
@@ -261,7 +317,7 @@
     <div class="card">
       <h2>Transaction ledger</h2>
       <p class="sub">Paste a Markdown table here (or use the one carried over from Step 1), then generate your optimization plan.</p>
-      <textarea id="analyzeIn" class="ledger-in" spellcheck="false" placeholder="| Date | Merchant/Payee | Amount | Currency | Payment Method | Category | Recurring Status | BNPL Provider |&#10;| --- | --- | --- | --- | --- | --- | --- | --- |&#10;| 2026-06-12 | Klarna — Nike | -32.50 | USD | Chase Visa | Apparel | One-Time | Klarna |"></textarea>
+      <textarea id="analyzeIn" class="ledger-in" spellcheck="false" placeholder="| Date | Merchant/Payee | Amount | Currency | Account Type | Payment Method | Category | Recurring Status | BNPL Provider |&#10;| --- | --- | --- | --- | --- | --- | --- | --- | --- |&#10;| 2026-06-12 | Klarna — Nike | -32.50 | USD | Credit Card | Chase Visa | Apparel | One-Time | Klarna |"></textarea>
       <div class="row">
         <button id="analyzeBtn" class="btn" onclick="runAnalyze()">Generate optimization plan</button>
         <span id="anStatus" class="status"></span>
@@ -292,7 +348,8 @@
 
 <script>
 const ENDPOINT = '/.netlify/functions/ledger';
-const HEADERS = ['Date','Merchant/Payee','Amount','Currency','Payment Method','Category','Recurring Status','BNPL Provider'];
+const HEADERS = ['Date','Merchant/Payee','Amount','Currency','Account Type','Payment Method','Category','Recurring Status','BNPL Provider'];
+const ACCOUNT_TYPES = ['Checking','Savings','Investment','Credit Card','Loan','Cash','Digital Wallet','Other'];
 
 /* ---------- tab switching ---------- */
 function showTab(name){
@@ -308,9 +365,11 @@ let images = []; // { name, mediaType, dataUrl, base64 }
 
 const drop = document.getElementById('drop');
 const fileInput = document.getElementById('file');
+const cameraInput = document.getElementById('camera');
 drop.addEventListener('click', () => fileInput.click());
 drop.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); }});
 fileInput.addEventListener('change', e => addFiles(e.target.files));
+cameraInput.addEventListener('change', e => { addFiles(e.target.files); cameraInput.value=''; });
 ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
 ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
 drop.addEventListener('drop', e => { if(e.dataTransfer?.files) addFiles(e.dataTransfer.files); });
@@ -465,7 +524,7 @@ function parseTableRows(md){
     if(joined==='') continue;                       // separator row (---)
     const lc = cells.map(c=>c.toLowerCase());
     if(lc[0]==='date' && lc.includes('amount')) continue; // header row
-    // normalize to 8 cells
+    // normalize to the fixed column count
     const norm = HEADERS.map((_,i)=> (cells[i] ?? '').trim());
     rows.push(norm);
   }
@@ -486,8 +545,66 @@ function renderLedger(){
   const recPill = document.getElementById('recCount');
   if(recN){ recPill.style.display='inline-block'; recPill.textContent = '↻ '+recN+' recurring'; }
   else recPill.style.display='none';
+  document.getElementById('tally').innerHTML = renderTally();
   document.getElementById('ledgerRender').innerHTML = renderTableHTML(HEADERS, ledgerRows);
   document.getElementById('ledgerRaw').value = toMarkdown();
+}
+
+// Parse the Amount cell to a number (ignore currency symbols / thousands commas).
+function amountOf(row){
+  const idx = HEADERS.indexOf('Amount');
+  const raw = (row[idx]||'').replace(/[^0-9.\-]/g,'');
+  const n = parseFloat(raw);
+  return isNaN(n) ? 0 : n;
+}
+function fmtMoney(n){
+  const s = Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+  return (n<0?'-':'')+'$'+s;
+}
+
+// Running tally: money in / out / net, plus a per-account-type breakdown so the
+// user can see spending grouped by Checking / Savings / Credit Card / Loan / etc.
+function renderTally(){
+  if(!ledgerRows.length) return '';
+  const acctIdx = HEADERS.indexOf('Account Type');
+  let inSum=0, outSum=0;
+  const byAcct = {};
+  const currencies = new Set();
+  for(const r of ledgerRows){
+    const amt = amountOf(r);
+    if(amt<0) outSum += amt; else inSum += amt;
+    const cur = (r[HEADERS.indexOf('Currency')]||'').trim().toUpperCase();
+    if(cur && cur!=='NULL') currencies.add(cur);
+    let acct = (r[acctIdx]||'').trim();
+    if(!acct || acct.toLowerCase()==='null') acct = 'Other';
+    if(!byAcct[acct]) byAcct[acct] = {n:0, in:0, out:0};
+    byAcct[acct].n++;
+    if(amt<0) byAcct[acct].out += amt; else byAcct[acct].in += amt;
+  }
+  const net = inSum + outSum;
+  const curNote = currencies.size>1 ? ' <span class="cur-warn">(mixed currencies — totals combine them)</span>' : '';
+
+  let html = '<div class="tally">';
+  html += '<div class="tally-cards">';
+  html += '<div class="tcard out"><div class="tlabel">Money out</div><div class="tnum">'+fmtMoney(outSum)+'</div></div>';
+  html += '<div class="tcard in"><div class="tlabel">Money in</div><div class="tnum">'+fmtMoney(inSum)+'</div></div>';
+  html += '<div class="tcard net"><div class="tlabel">Net</div><div class="tnum '+(net<0?'neg':'pos')+'">'+fmtMoney(net)+'</div></div>';
+  html += '</div>';
+
+  // order account types by the fixed list, then any extras
+  const order = ACCOUNT_TYPES.filter(a=>byAcct[a]).concat(Object.keys(byAcct).filter(a=>!ACCOUNT_TYPES.includes(a)));
+  html += '<div class="tacct-title">By account type'+curNote+'</div>';
+  html += '<div class="table-scroll"><table class="tacct"><thead><tr><th>Account type</th><th>#</th><th>Out</th><th>In</th><th>Net</th></tr></thead><tbody>';
+  for(const a of order){
+    const d = byAcct[a];
+    const n = d.in + d.out;
+    html += '<tr><td>'+esc(a)+'</td><td>'+d.n+'</td>'
+         + '<td class="amt-neg">'+(d.out?fmtMoney(d.out):'—')+'</td>'
+         + '<td class="amt-pos">'+(d.in?fmtMoney(d.in):'—')+'</td>'
+         + '<td class="'+(n<0?'amt-neg':'amt-pos')+'">'+fmtMoney(n)+'</td></tr>';
+  }
+  html += '</tbody></table></div></div>';
+  return html;
 }
 
 function toMarkdown(){

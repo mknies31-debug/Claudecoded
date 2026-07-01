@@ -10,20 +10,29 @@ This is its own project — fully separate from CARVIS and VOLT. It lives in
 ## What it does
 
 **Step 1 — Extract (multimodal ingestion).**
-Drop in one or more images: bank-app screenshots, P2P payment history
-(Venmo / PayPal / Apple Pay / Cash App), digital receipts, or photos of paper
-receipts. Ledger Lens reads them and builds a GitHub-flavored Markdown table:
+Built camera-first for phones: tap **Take a photo** to snap a receipt, or
+**Choose from library** to add a bank / P2P screenshot (Venmo / PayPal /
+Apple Pay / Cash App), a digital receipt, or a paper-receipt photo. Ledger
+Lens reads them and builds a GitHub-flavored Markdown table:
 
-| Date | Merchant/Payee | Amount | Currency | Payment Method | Category | Recurring Status | BNPL Provider |
+| Date | Merchant/Payee | Amount | Currency | Account Type | Payment Method | Category | Recurring Status | BNPL Provider |
 
 - Dates normalized to ISO-8601 (`YYYY-MM-DD`).
 - Outflows negative, inflows positive; no currency symbols in the Amount column.
-- Categories constrained to a fixed domain list; recurring vs. one-time flagged.
+- **Account Type** classifies the funding source: Checking, Savings, Investment,
+  Credit Card, Loan, Cash, Digital Wallet, or Other.
+- Categories constrained to a fixed domain list; recurring vs. one-time flagged
+  (subscriptions, rent, utilities, salary).
 - Buy-Now-Pay-Later transactions (Klarna, Sezzle, Afterpay, Affirm) tagged.
 - Unreadable fields become `null` — no guessing.
 
-Each extraction **appends** to a running ledger. Copy it as **Markdown** or as
-**TSV for Sheets/Excel** (paste straight into a spreadsheet).
+Each extraction **appends** to a running ledger with a live **tally** on top —
+money in, money out, net, and a per-account-type breakdown so you always see
+the running total for each account. Copy it as **Markdown** or as **TSV for
+Sheets/Excel** (paste straight into a spreadsheet).
+
+Images are downscaled in the browser before upload (≤1568px, JPEG) so large
+phone photos stay well under the serverless request limit.
 
 **Step 2 — Optimize (analysis & savings plan).**
 Hand the ledger to a financial-forensics pass that:
