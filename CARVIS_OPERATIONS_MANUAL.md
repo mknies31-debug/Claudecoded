@@ -42,6 +42,7 @@ multi-agent enterprise platform the vision describes. That gap is the roadmap.
 | 8 | **Ask CARVIS (live AI)** | ✅ Built | Live answers in Mick's voice, voice in/out | Question | Spoken + written answer (Fable-5 proxy, model-fallback chain) | Speed, coaching, drafting |
 | 9 | **Cloud Sync + Backup** | ✅ Built | Home↔work continuity | All `carvis_*` keys | Netlify Blobs store + JSON file | Reliability |
 | 10 | **Accessibility** | ✅ Built | Low-vision default + A⁺ mode + time-of-day theme | — | Legible, high-contrast UI | Usability |
+| 11 | **Measurement (funnel + source)** | ✅ Built | One-tap capture of leads/appts/sales by source | Taps (source-tagged) | Monthly funnel, conversion %, source-ROI table | Lead→appt→sale rates, source ROI |
 
 **What does NOT exist yet (the vision's core, honestly):** a content engine, any analytics
 pipeline, market/auction/BI monitoring, a referral *system* (vs. one-off emails), an
@@ -66,7 +67,7 @@ Agents collaborate; they do not operate in isolation. Status is honest: most are
 | **Referral Agent** | Turn happy customers into pipelines | Outreach, referral loop | Referrals/mo | ⬜ Planned |
 | **Reputation Agent** | Reviews & trust signals | Review requests | Reviews, rating | ⬜ Planned |
 | **BI / Market Agent** | Actionable market/auction/season intel | Market Pulse | Pricing edge | ⬜ Planned |
-| **Analytics Agent** | Measure everything, surface truth | Dashboards, reports | Data coverage | ⬜ Planned |
+| **Analytics Agent** | Measure everything, surface truth | Funnel, source ROI, dashboards | Data coverage, conversion | ▶ Partial (funnel + source capture) |
 
 ---
 
@@ -99,9 +100,10 @@ model-fallback, cloud sync, accessibility, PWA.
   cool 7d) into a **Follow-Ups Due** list — quiet-timer badges, urgency sort, one-tap
   **Logged** (resets the clock), **Call** (`tel:`), and one-tap **AI revival draft**
   (Fable-5, click-to-copy). Feeds the Daily Briefing's follow-up focus.
-- **Measurement capture** _(next)_ — frictionless entry for the 5 decision-driving metrics
-  (leads, appointments, sales, source), so everything after is data-informed.
-- **SOP / Prompt Library** — reusable, versioned playbooks and AI prompts inside CarVis.
+- **Measurement capture** ✅ _Built._ One-tap Measure panel (📈): source-tagged leads /
+  appointments / sales → monthly funnel with conversion %, and a **source-ROI table**
+  (which channels actually convert to sales). Undo-last, sticky source, feeds the Briefing.
+- **SOP / Prompt Library** _(next)_ — reusable, versioned playbooks and AI prompts inside CarVis.
 
 **Phase 2 — Growth Engines**
 - **Content OS** — daily 3-video plan (Reach/Trust/Action) cross-referencing inventory,
@@ -149,5 +151,6 @@ Efficiency: ROI, return on time invested (ROTI).
 | v1.0 | 2026-06 | Foundation complete; Operations Manual established. Metrics start at 0; live Fable-5 brain wired with model-fallback. |
 | v1.1 | 2026-06 | Phase 1 begins: **CEO Daily Briefing** shipped (pace strip + AI board meeting, cached, read-aloud). |
 | v1.2 | 2026-06 | **Follow-Up Engine (B1)** shipped: prospect aging + SLA → daily due list, one-tap Logged / Call / AI revival draft; briefing now cites real quiet-timers. |
+| v1.3 | 2026-06 | **Measurement capture (B2)** shipped: one-tap funnel (leads→appts→sales) + source-ROI table; briefing cites the funnel + best source. |
 
-_Next in Phase 1: **B2 Measurement capture** — frictionless entry for leads → appointments → sales + source._
+_Next in Phase 1: **B3 SOP / Prompt Library** — reusable scripts + prompts, versioned, one-tap into the workflow. Then Phase 1 is complete._

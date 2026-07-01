@@ -324,6 +324,29 @@
   .briefbar{display:flex;gap:10px;margin-top:12px}
   .briefbar .rgen{margin-top:0}
 
+  /* ===== measurement (funnel + source) ===== */
+  .qsrc{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:2px}
+  .qsrc .qs{font-family:'Orbitron';font-size:12px;letter-spacing:.5px;padding:9px 12px;border-radius:8px;border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:.15s}
+  .qsrc .qs.on{background:var(--cyan);color:#02141a;border-color:var(--cyan)}
+  .qlog{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+  .qbtn{font-family:'Orbitron';font-size:14px;letter-spacing:.5px;padding:18px 6px;border-radius:12px;border:none;cursor:pointer;transition:.15s;color:#02141a;font-weight:700}
+  .qbtn.lead{background:linear-gradient(135deg,var(--cyan),var(--cyan-dim))}
+  .qbtn.appt{background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205}
+  .qbtn.sale{background:linear-gradient(135deg,var(--green),#1f9d5e)}
+  .qbtn:hover{filter:brightness(1.1)} .qbtn:active{transform:scale(.97)}
+  .measrow{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-top:11px}
+  .measrow .ostat{margin-top:0}
+  .funnel{display:flex;align-items:center;gap:8px;margin-top:2px}
+  .funnel .fstat{flex:0 0 auto;text-align:center;padding:10px 14px;border:1px solid var(--line);border-radius:11px;background:rgba(47,230,255,.04)}
+  .funnel .fv{font-family:'Orbitron';font-weight:800;font-size:24px}
+  .funnel .fl{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--dim);margin-top:2px}
+  .funnel .farrow{flex:1;text-align:center;font-family:var(--mono);font-size:13px;color:var(--gold)}
+  .srctable{margin-top:2px}
+  .srow{display:grid;grid-template-columns:1fr auto auto auto auto;gap:10px;align-items:baseline;padding:9px 4px;border-bottom:1px solid rgba(47,230,255,.08);font-family:var(--mono);font-size:14px}
+  .srow .sname{font-family:'Atkinson Hyperlegible';font-weight:700;color:var(--text)}
+  .srow .sv{color:var(--dim);font-size:13px} .srow .sv.gold{color:var(--gold)}
+  body.hivis .qbtn{font-size:17px;padding:22px 6px} body.hivis .funnel .fv{font-size:28px} body.hivis .srow{font-size:16px}
+
   /* ===== monthly numbers ===== */
   .numgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
   #numMonth{color-scheme:dark}
@@ -639,8 +662,10 @@
     <button class="mic" id="carBtn" title="Find a car / ask about inventory" style="font-size:18px">🚗</button>
     <button class="mic" id="statsBtn" title="Enter monthly sales numbers (backfill any month)" style="font-size:17px">📊</button>
     <button class="mic" id="briefBtn" title="CEO daily briefing — your morning board meeting" style="font-size:17px">◆</button>
+    <button class="mic" id="measureBtn" title="Measure — tap leads, appointments, sales by source" style="font-size:17px">📈</button>
     <div class="chips">
       <div class="chip" data-cmd="brief">◆ Daily Brief</div>
+      <div class="chip" data-cmd="measure">📈 Measure</div>
       <div class="chip" data-cmd="ask">◉ Ask CARVIS</div>
       <div class="chip" data-cmd="numbers">📊 Numbers</div>
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
@@ -821,6 +846,32 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       </div>
       <div class="ostat" id="aiStat"></div>
       <div class="mnote"><span>✦</span><span>Answers are <b>spoken aloud</b> when AUDIO is on. Dollar figures are estimates — verify before quoting a customer. Live answers need <b>ANTHROPIC_API_KEY</b> set on Netlify.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MEASURE (funnel + source capture) ============ -->
+<div class="overlay" id="measOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">📈</div>
+      <div><div class="mt">MEASURE</div><div class="ms">Tap as it happens — leads, appointments, sales</div></div>
+      <button class="x" id="measClose">✕</button>
+    </div>
+    <div class="mb">
+      <span class="olabel" style="margin-top:0">Source</span>
+      <div class="qsrc" id="mSrc"></div>
+      <div class="qlog">
+        <button class="qbtn lead" data-log="lead">＋ Lead</button>
+        <button class="qbtn appt" data-log="appt">＋ Appointment</button>
+        <button class="qbtn sale" data-log="sale">＋ Sale</button>
+      </div>
+      <div class="measrow"><span class="ostat" id="measToday"></span><button class="omanage" id="measUndo">↩ Undo last</button></div>
+      <span class="olabel" style="margin-top:16px">This month — funnel</span>
+      <div class="funnel" id="measFunnel"></div>
+      <span class="olabel" style="margin-top:16px">By source — who actually converts</span>
+      <div class="srctable" id="measSrc"></div>
+      <div class="mnote"><span>✦</span><span>The funnel &amp; source ROI live here; your official month totals stay in 📊 Numbers. One tap per event — rides cloud sync.</span></div>
     </div>
   </div>
 </div>
@@ -1324,6 +1375,7 @@ function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classLis
 function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
+  if(low==='measure'||low==='log'||low==='funnel'||low==='metrics'){ openMeasure(); $('#cmd').value=''; return; }
   if(low==='brief'||low==='briefing'||low==='board'||low==='daily'){ openBrief(); $('#cmd').value=''; return; }
   if(low==='ask'||low==='carvis'||low==='ai'){ openAI(); $('#cmd').value=''; return; }
   if(low==='numbers'||low==='stats'||low==='month'||low==='totals'){ openNumbers(); return; }
@@ -1707,10 +1759,11 @@ function snapshotStore(){
 function applyStore(store){
   let n=0;
   Object.entries(store||{}).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&k!=='carvis_synckey'&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
-  CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState();
+  CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState(); EVENTS=loadEvents();
   try{ refreshContactDropdown(); }catch(e){}
   renderHot(); renderTasks();
   try{ renderStats(); }catch(e){}   // reflect pulled/restored monthly numbers
+  try{ renderMeasure(); }catch(e){}   // reflect pulled/restored funnel events
   return n;
 }
 function setSyncStat(cls,msg){ const st=$('#syncStat'); if(st){ st.className='ostat '+(cls||''); st.textContent=msg||''; } }
@@ -1805,9 +1858,12 @@ function briefContext(){
   const recent=[]; for(let i=3;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); recent.push(shortMonth(d)+' '+d.getFullYear()+'='+monthData(monthKey(d)).sold); }
   const heat={hot:0,warm:0,cool:0}; HOT.forEach(p=>{ heat[p.heat]=(heat[p.heat]||0)+1; });
   const due=dueList();
+  const funnel=funnelOf(monthEvents());
+  const srcRows={}; monthEvents().forEach(e=>{ (srcRows[e.source]=srcRows[e.source]||{lead:0,sale:0})[e.type==='sale'?'sale':'lead']+=(e.type==='appt'?0:1); });
+  const topSrc=Object.keys(srcRows).sort((a,b)=>srcRows[b].sale-srcRows[a].sale||srcRows[b].lead-srcRows[a].lead)[0];
   const habitsDone=DATA.tasks.filter(t=>taskState[t.id]).length;
   const undone=DATA.tasks.filter(t=>!taskState[t.id]).map(t=>t.hp);
-  return { now, dom, dim, s, pace, recent, heat, due, habitsDone, habitsTotal:DATA.tasks.length, undone,
+  return { now, dom, dim, s, pace, recent, heat, due, funnel, topSrc, habitsDone, habitsTotal:DATA.tasks.length, undone,
            inv:(INVENTORY?INVENTORY.length:0) };
 }
 function renderPace(c){
@@ -1840,6 +1896,7 @@ THIS MONTH (month-to-date):
 RECENT MONTHS (cars sold): ${c.recent.join(', ')}
 HOT PROSPECTS (${c.heat.hot} hot, ${c.heat.warm} warm, ${c.heat.cool} cool) — ${c.due.length} DUE for follow-up today:
 ${hp}
+FUNNEL THIS MONTH (from tap-logged events): ${c.funnel.lead} leads -> ${c.funnel.appt} appts -> ${c.funnel.sale} sales${c.topSrc?'; best source so far: '+c.topSrc:''}
 HABITS TODAY: ${c.habitsDone}/${c.habitsTotal} done${c.undone.length?' — not yet: '+c.undone.join(', '):''}
 INVENTORY ON LOT: ${c.inv} units
 
@@ -1932,6 +1989,59 @@ async function askCarvis(){
   aiBusy=false; if(r0) r0.classList.remove('listening');
 }
 
+/* ---------- B2: measurement capture (funnel + source) ----------
+   Frictionless event logging: one tap records a lead / appointment / sale
+   tagged with the current source. Derives the monthly funnel and — the real
+   payoff — which sources actually convert to sales. Own store (carvis_events),
+   separate from the official month totals in Numbers to avoid double-counting. */
+const EVENTS_KEY='carvis_events', LASTSRC_KEY='carvis_lastsrc';
+const SOURCES=['FB','Referral','App','ManyChat','Walk-in','Repeat','Other'];
+const EVT={lead:{lbl:'Lead'},appt:{lbl:'Appt'},sale:{lbl:'Sale'}};
+function loadEvents(){ try{ const e=JSON.parse(localStorage.getItem(EVENTS_KEY)||'[]'); return Array.isArray(e)?e:[]; }catch(_){ return []; } }
+let EVENTS=loadEvents();
+let curSource=(localStorage.getItem(LASTSRC_KEY)||'FB');
+function saveEvents(){ try{ localStorage.setItem(EVENTS_KEY,JSON.stringify(EVENTS)); }catch(_){} scheduleCloudPush(); }
+const dayStr=ts=>new Date(ts).toLocaleDateString('en-CA'); // local YYYY-MM-DD
+function monthEvents(){ const mk=monthKey(); return EVENTS.filter(e=>monthKey(new Date(e.ts))===mk); }
+function todayEvents(){ const t=dayStr(Date.now()); return EVENTS.filter(e=>dayStr(e.ts)===t); }
+function funnelOf(list){ const f={lead:0,appt:0,sale:0}; list.forEach(e=>{ if(f[e.type]!=null) f[e.type]++; }); return f; }
+const pctOf=(a,b)=>b>0?Math.round(a/b*100)+'%':'—';
+function logEvent(type){
+  if(!EVT[type]) return;
+  EVENTS.push({ts:Date.now(), type, source:curSource});
+  saveEvents(); renderMeasure();
+  blip(type==='sale'?970:820,0.06,'sine',0.13);
+  toast('+1 '+EVT[type].lbl+' · '+curSource+(type==='sale'?'  🎉':''));
+}
+function undoLastEvent(){
+  if(!EVENTS.length){ toast('Nothing to undo'); return; }
+  const e=EVENTS.pop(); saveEvents(); renderMeasure();
+  blip(360,0.06,'sawtooth',0.1); toast('Removed last · '+EVT[e.type].lbl+' · '+e.source);
+}
+function setSource(s){ curSource=s; try{ localStorage.setItem(LASTSRC_KEY,s); }catch(_){} $$('#mSrc .qs').forEach(b=>b.classList.toggle('on',b.dataset.src===s)); }
+function renderMeasure(){
+  $$('#mSrc .qs').forEach(b=>b.classList.toggle('on',b.dataset.src===curSource));
+  const td=funnelOf(todayEvents());
+  const t=$('#measToday'); if(t) t.textContent=`Today: ${td.lead} lead${td.lead!==1?'s':''} · ${td.appt} appt${td.appt!==1?'s':''} · ${td.sale} sale${td.sale!==1?'s':''}`;
+  const mo=funnelOf(monthEvents());
+  const fn=$('#measFunnel'); if(fn) fn.innerHTML=
+    `<div class="fstat"><div class="fv" style="color:var(--cyan)">${mo.lead}</div><div class="fl">LEADS</div></div>`+
+    `<div class="farrow">→ ${pctOf(mo.appt,mo.lead)}</div>`+
+    `<div class="fstat"><div class="fv" style="color:var(--gold)">${mo.appt}</div><div class="fl">APPTS</div></div>`+
+    `<div class="farrow">→ ${pctOf(mo.sale,mo.appt)}</div>`+
+    `<div class="fstat"><div class="fv" style="color:var(--green)">${mo.sale}</div><div class="fl">SALES</div></div>`;
+  const rows={}; monthEvents().forEach(e=>{ (rows[e.source]=rows[e.source]||{lead:0,appt:0,sale:0})[e.type]++; });
+  const order=Object.keys(rows).sort((a,b)=>rows[b].sale-rows[a].sale||rows[b].lead-rows[a].lead);
+  const st=$('#measSrc'); if(st) st.innerHTML = order.length ? order.map(s=>
+    `<div class="srow"><span class="sname">${esc(s)}</span><span class="sv">${rows[s].lead} L</span><span class="sv">${rows[s].appt} A</span><span class="sv">${rows[s].sale} S</span><span class="sv gold">${pctOf(rows[s].sale,rows[s].lead)}</span></div>`
+  ).join('') : '<div class="hot-empty">No events yet this month — tap ＋ above as leads, appointments, and sales happen.</div>';
+}
+function openMeasure(){
+  if(!$('#mSrc').children.length) $('#mSrc').innerHTML=SOURCES.map(s=>`<button class="qs" data-src="${s}">${esc(s)}</button>`).join('');
+  renderMeasure(); $('#measOverlay').classList.add('show');
+}
+function closeMeasure(){ $('#measOverlay').classList.remove('show'); }
+
 /* ---------- monthly numbers modal ---------- */
 function loadMonthIntoForm(key){ const m=monthData(key);
   $('#numSold').value   = m.sold   || '';
@@ -2005,11 +2115,12 @@ function init(){
     if(e.target.closest('#numClose')||e.target===$('#numOverlay')) closeNumbers();
     if(e.target.closest('#aiClose')||e.target===$('#aiOverlay')) closeAI();
     if(e.target.closest('#briefClose')||e.target===$('#briefOverlay')) closeBrief();
+    if(e.target.closest('#measClose')||e.target===$('#measOverlay')) closeMeasure();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
     const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); closeMeasure(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
@@ -2042,6 +2153,12 @@ function init(){
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  // measurement (funnel + source)
+  $('#measureBtn').addEventListener('click', ()=>{ blip(780,0.06,'sine',0.12); openMeasure(); });
+  $('#measClose').addEventListener('click', closeMeasure);
+  $('#measUndo').addEventListener('click', undoLastEvent);
+  $('#mSrc').addEventListener('click', e=>{ const b=e.target.closest('.qs'); if(b) setSource(b.dataset.src); });
+  $('.qlog').addEventListener('click', e=>{ const b=e.target.closest('.qbtn'); if(b) logEvent(b.dataset.log); });
   // CEO daily briefing
   $('#briefBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); openBrief(); });
   $('#briefClose').addEventListener('click', closeBrief);
