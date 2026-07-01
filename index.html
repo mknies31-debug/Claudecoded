@@ -324,6 +324,23 @@
   .briefbar{display:flex;gap:10px;margin-top:12px}
   .briefbar .rgen{margin-top:0}
 
+  /* ===== playbook (SOP / prompt library) ===== */
+  .sopcard{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:rgba(47,230,255,.03)}
+  .soptop{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+  .soptitle{font-weight:700;font-size:16px;flex:1;min-width:0}
+  .sopk{font-family:'Orbitron';font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:20px;flex:0 0 auto}
+  .sopk.prompt{background:rgba(56,240,138,.16);color:var(--green)}
+  .sopk.script{background:rgba(255,201,102,.16);color:var(--gold)}
+  .sopbody{font-size:14px;line-height:1.5;color:var(--dim);white-space:pre-wrap;max-height:92px;overflow:auto;margin-bottom:6px}
+  .sopmeta{font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:8px}
+  .sopacts{display:flex;gap:7px;flex-wrap:wrap}
+  .sophist{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .sopver{margin-bottom:9px;font-family:var(--mono);font-size:11.5px;color:var(--dim);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
+  .sopver .sopvbody{white-space:pre-wrap;color:var(--text);font-family:'Atkinson Hyperlegible';font-size:13px;flex-basis:100%}
+  .sopform{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+  #sopKind{margin-bottom:0}
+  body.hivis .soptitle{font-size:19px} body.hivis .sopbody{font-size:17px}
+
   /* ===== measurement (funnel + source) ===== */
   .qsrc{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:2px}
   .qsrc .qs{font-family:'Orbitron';font-size:12px;letter-spacing:.5px;padding:9px 12px;border-radius:8px;border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:.15s}
@@ -663,9 +680,11 @@
     <button class="mic" id="statsBtn" title="Enter monthly sales numbers (backfill any month)" style="font-size:17px">📊</button>
     <button class="mic" id="briefBtn" title="CEO daily briefing — your morning board meeting" style="font-size:17px">◆</button>
     <button class="mic" id="measureBtn" title="Measure — tap leads, appointments, sales by source" style="font-size:17px">📈</button>
+    <button class="mic" id="playbookBtn" title="Playbook — reusable scripts & prompts" style="font-size:17px">📖</button>
     <div class="chips">
       <div class="chip" data-cmd="brief">◆ Daily Brief</div>
       <div class="chip" data-cmd="measure">📈 Measure</div>
+      <div class="chip" data-cmd="playbook">📖 Playbook</div>
       <div class="chip" data-cmd="ask">◉ Ask CARVIS</div>
       <div class="chip" data-cmd="numbers">📊 Numbers</div>
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
@@ -846,6 +865,33 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       </div>
       <div class="ostat" id="aiStat"></div>
       <div class="mnote"><span>✦</span><span>Answers are <b>spoken aloud</b> when AUDIO is on. Dollar figures are estimates — verify before quoting a customer. Live answers need <b>ANTHROPIC_API_KEY</b> set on Netlify.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PLAYBOOK (SOP / prompt library) ============ -->
+<div class="overlay" id="sopOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="av">📖</div>
+      <div><div class="mt">PLAYBOOK</div><div class="ms">Your scripts &amp; prompts — reused, versioned</div></div>
+      <button class="x" id="sopClose">✕</button>
+    </div>
+    <div class="mb">
+      <div class="otpl" id="sopFilter" style="margin-bottom:12px">
+        <button class="on" data-f="all">ALL</button>
+        <button data-f="script">SCRIPTS</button>
+        <button data-f="prompt">PROMPTS</button>
+      </div>
+      <div id="sopList"></div>
+      <div class="sopform">
+        <span class="olabel" style="margin-top:0">Add / edit a play</span>
+        <div class="seg" id="sopKind"><button class="on" data-k="script">SCRIPT</button><button data-k="prompt">PROMPT</button></div>
+        <input id="sopTitle" class="rin" style="margin-top:10px" placeholder="Title — e.g. “Trade-in talk track” or “Objection: too high”">
+        <textarea id="sopBody" class="rta" rows="3" style="margin-top:10px" placeholder="The script to paste, or the prompt to run. Use {vehicle} as a fill-in for prompts."></textarea>
+        <div class="orow"><button class="rgen" id="sopSave" style="flex:1;margin-top:0">＋ SAVE</button><button class="hadd" id="sopCancel" style="flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--dim)">CLEAR</button></div>
+      </div>
+      <div class="mnote"><span>✦</span><span>Scripts copy to paste; prompts run in the live brain (fill any {blanks} first). Editing keeps the old version. Rides cloud sync.</span></div>
     </div>
   </div>
 </div>
@@ -1375,6 +1421,7 @@ function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classLis
 function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
+  if(low==='playbook'||low==='sop'||low==='sops'||low==='scripts'||low==='plays'){ openSops(); $('#cmd').value=''; return; }
   if(low==='measure'||low==='log'||low==='funnel'||low==='metrics'){ openMeasure(); $('#cmd').value=''; return; }
   if(low==='brief'||low==='briefing'||low==='board'||low==='daily'){ openBrief(); $('#cmd').value=''; return; }
   if(low==='ask'||low==='carvis'||low==='ai'){ openAI(); $('#cmd').value=''; return; }
@@ -1759,11 +1806,12 @@ function snapshotStore(){
 function applyStore(store){
   let n=0;
   Object.entries(store||{}).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&k!=='carvis_synckey'&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
-  CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState(); EVENTS=loadEvents();
+  CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState(); EVENTS=loadEvents(); SOPS=loadSops();
   try{ refreshContactDropdown(); }catch(e){}
   renderHot(); renderTasks();
   try{ renderStats(); }catch(e){}   // reflect pulled/restored monthly numbers
   try{ renderMeasure(); }catch(e){}   // reflect pulled/restored funnel events
+  try{ renderSops(); }catch(e){}   // reflect pulled/restored playbook
   return n;
 }
 function setSyncStat(cls,msg){ const st=$('#syncStat'); if(st){ st.className='ostat '+(cls||''); st.textContent=msg||''; } }
@@ -1950,12 +1998,90 @@ async function generateBrief(force){
 function openBrief(){ $('#briefOverlay').classList.add('show'); generateBrief(false); }
 function closeBrief(){ $('#briefOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
 
-function openAI(seed){
+function openAI(seed, opts){
+  const send = !opts || opts.send!==false;
   $('#aiOverlay').classList.add('show');
   if(!$('#aiLog').children.length) aiAdd('bot','Ready when you are, Mick. Objections, customer texts, pricing strategy — fire away.');
-  if(seed){ $('#aiIn').value=seed; askCarvis(); }
+  if(seed){ $('#aiIn').value=seed;
+    if(send){ askCarvis(); }
+    else setTimeout(()=>{ try{ const el=$('#aiIn'); el.focus(); el.selectionStart=el.selectionEnd=el.value.length; }catch(e){} },60);
+  }
   else setTimeout(()=>{ try{ $('#aiIn').focus(); }catch(e){} },60);
 }
+
+/* ---------- B3: Playbook — SOP / prompt library ----------
+   The systemization layer: reusable scripts (paste to a customer) and prompts
+   (run in the live brain), each versioned so edits never lose the old wording,
+   with a use-counter so the plays you actually rely on rise to the top.
+   One store (carvis_sops), synced. Prompts support {fill-in} blanks. */
+const SOP_KEY='carvis_sops';
+function loadSops(){ try{ const s=JSON.parse(localStorage.getItem(SOP_KEY)||'[]'); return Array.isArray(s)?s:[]; }catch(_){ return []; } }
+let SOPS=loadSops(), sopFilter='all', sopKind='script', sopEdit=null;
+function saveSops(){ try{ localStorage.setItem(SOP_KEY,JSON.stringify(SOPS)); }catch(_){} scheduleCloudPush(); }
+const SOP_STARTERS=[
+  {kind:'prompt', title:'Objection: “your price is too high”', body:'A buyer says my price is too high on {vehicle}. Give me 3 responses (Direct, Softer, NEPQ) in my voice, under 3 sentences each. Trust-first, no pressure.'},
+  {kind:'prompt', title:'Revive a quiet lead', body:'Write ONE short revival text to a lead who went quiet on {vehicle}. My voice — warm, NEPQ, no pressure, under 3 sentences.'},
+  {kind:'prompt', title:'Ask for a referral', body:'Write a short, warm text asking a happy customer who just bought {vehicle} for a referral. My voice, no pressure, under 3 sentences.'},
+  {kind:'prompt', title:'Review request', body:'Write a short, friendly review-request text for a customer who bought {vehicle}. Say why it helps me. My voice, under 3 sentences.'},
+];
+function seedStarters(){ const now=Date.now(); SOP_STARTERS.forEach((s,i)=>SOPS.push({id:now+i, kind:s.kind, title:s.title, body:s.body, versions:[], updated:now+i, uses:0})); saveSops(); renderSops(); toast('Starter prompts added'); }
+function renderSops(){
+  $$('#sopFilter button').forEach(b=>b.classList.toggle('on',b.dataset.f===sopFilter));
+  const host=$('#sopList'); if(!host) return;
+  if(!SOPS.length){ host.innerHTML='<div class="hot-empty">No saved plays yet.<br>Add your best scripts &amp; prompts below — they compound every time you reuse them.<br><button class="omanage" id="sopSeed" style="margin-top:10px">＋ Add 4 starter prompts</button></div>'; return; }
+  const list=SOPS.filter(s=>sopFilter==='all'||s.kind===sopFilter).sort((a,b)=>(b.uses||0)-(a.uses||0)||b.updated-a.updated);
+  if(!list.length){ host.innerHTML='<div class="hot-empty">No '+sopFilter+'s yet.</div>'; return; }
+  host.innerHTML=list.map(s=>{
+    const badge=s.kind==='prompt'?'<span class="sopk prompt">PROMPT</span>':'<span class="sopk script">SCRIPT</span>';
+    const use=s.kind==='prompt'?'▶ RUN':'⧉ COPY';
+    const nv=(s.versions||[]).length;
+    return `<div class="sopcard" data-id="${s.id}">
+      <div class="soptop"><span class="soptitle">${esc(s.title)}</span>${badge}</div>
+      <div class="sopbody">${esc(s.body)}</div>
+      <div class="sopmeta">${s.uses||0} use${(s.uses||0)!==1?'s':''}${nv?' · '+nv+' older version'+(nv>1?'s':''):''}</div>
+      <div class="sopacts">
+        <button class="act go js-sop-use" data-id="${s.id}">${use}</button>
+        <button class="act js-sop-edit" data-id="${s.id}">EDIT</button>
+        ${nv?`<button class="act js-sop-hist" data-id="${s.id}">HISTORY</button>`:''}
+        <button class="act js-sop-del" data-id="${s.id}">✕</button>
+      </div>
+      <div class="sophist" id="sophist-${s.id}" hidden></div>
+    </div>`;
+  }).join('');
+}
+function useSop(id){
+  const s=SOPS.find(x=>x.id===id); if(!s) return;
+  s.uses=(s.uses||0)+1; saveSops(); renderSops();
+  if(s.kind==='prompt'){ closeSops(); openAI(s.body, {send:!/\{[^}]+\}/.test(s.body)}); }
+  else { navigator.clipboard?.writeText(s.body).catch(()=>{}); blip(980,0.05,'triangle',0.12); toast('Copied — paste to your customer'); }
+}
+function setSopKind(k){ sopKind=k; $$('#sopKind button').forEach(b=>b.classList.toggle('on',b.dataset.k===k)); }
+function editSop(id){ const s=SOPS.find(x=>x.id===id); if(!s) return; sopEdit=id; $('#sopTitle').value=s.title; $('#sopBody').value=s.body; setSopKind(s.kind); $('#sopSave').textContent='✓ UPDATE'; try{ $('#sopTitle').focus(); }catch(e){} }
+function clearSopForm(){ sopEdit=null; $('#sopTitle').value=''; $('#sopBody').value=''; setSopKind('script'); $('#sopSave').textContent='＋ SAVE'; }
+function saveSopForm(){
+  const title=$('#sopTitle').value.trim(), body=$('#sopBody').value.trim();
+  if(!title||!body){ toast('Add a title and body'); return; }
+  if(sopEdit){ const s=SOPS.find(x=>x.id===sopEdit);
+    if(s){ (s.versions=s.versions||[]).unshift({ts:s.updated||Date.now(), body:s.body}); s.versions=s.versions.slice(0,10); s.title=title; s.body=body; s.kind=sopKind; s.updated=Date.now(); }
+  } else { SOPS.push({id:Date.now(), kind:sopKind, title, body, versions:[], updated:Date.now(), uses:0}); }
+  saveSops(); clearSopForm(); renderSops(); blip(900,0.06,'sine',0.12); toast('Saved to Playbook');
+}
+function delSop(id){ SOPS=SOPS.filter(x=>x.id!==id); saveSops(); renderSops(); blip(360,0.06,'sawtooth',0.1); toast('Removed'); }
+function toggleHist(id){
+  const el=$('#sophist-'+id), s=SOPS.find(x=>x.id===id); if(!el||!s) return;
+  if(!el.hidden){ el.hidden=true; el.innerHTML=''; return; }
+  el.hidden=false;
+  el.innerHTML=(s.versions||[]).map((v,i)=>`<div class="sopver"><span>${new Date(v.ts).toLocaleString()}</span><button class="act js-sop-restore" data-id="${id}" data-i="${i}">RESTORE</button><div class="sopvbody">${esc(v.body)}</div></div>`).join('')||'<div class="sopmeta">No older versions.</div>';
+}
+function restoreSop(id,i){
+  const s=SOPS.find(x=>x.id===id); if(!s||!s.versions||!s.versions[i]) return;
+  const target=s.versions[i].body;
+  s.versions.unshift({ts:s.updated||Date.now(), body:s.body}); s.versions=s.versions.slice(0,10);
+  s.body=target; s.updated=Date.now();
+  saveSops(); renderSops(); toast('Restored earlier version');
+}
+function openSops(){ clearSopForm(); renderSops(); $('#sopOverlay').classList.add('show'); }
+function closeSops(){ $('#sopOverlay').classList.remove('show'); }
 function closeAI(){ $('#aiOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
 async function askCarvis(){
   if(aiBusy) return;
@@ -2102,6 +2228,15 @@ function init(){
     const fud=e.target.closest('.js-fu-draft'); if(fud){ blip(720,0.06,'sine',0.13); revivalDraft(+fud.dataset.id); return; }
     // click any CARVIS answer to copy it (handy for revival drafts)
     const bot=e.target.closest('#aiLog .aim.bot'); if(bot && !bot.classList.contains('thinking')){ navigator.clipboard?.writeText(bot.textContent||'').catch(()=>{}); blip(980,0.05,'triangle',0.12); toast('Copied'); return; }
+    // Playbook actions
+    if(e.target.closest('#sopSeed')){ seedStarters(); return; }
+    const su=e.target.closest('.js-sop-use'); if(su){ useSop(+su.dataset.id); return; }
+    const se=e.target.closest('.js-sop-edit'); if(se){ editSop(+se.dataset.id); return; }
+    const sh=e.target.closest('.js-sop-hist'); if(sh){ toggleHist(+sh.dataset.id); return; }
+    const sr=e.target.closest('.js-sop-restore'); if(sr){ restoreSop(+sr.dataset.id, +sr.dataset.i); return; }
+    const sd=e.target.closest('.js-sop-del'); if(sd){ delSop(+sd.dataset.id); return; }
+    const sf=e.target.closest('#sopFilter button'); if(sf){ sopFilter=sf.dataset.f; renderSops(); return; }
+    const sk=e.target.closest('#sopKind button'); if(sk){ setSopKind(sk.dataset.k); return; }
     const cp=e.target.closest('.js-copy'); if(cp){ blip(980,0.05,'triangle',0.12);
       navigator.clipboard?.writeText(cp.dataset.txt).catch(()=>{});
       cp.classList.add('done'); cp.textContent='✓ COPIED'; toast('Copied to clipboard');
@@ -2116,11 +2251,12 @@ function init(){
     if(e.target.closest('#aiClose')||e.target===$('#aiOverlay')) closeAI();
     if(e.target.closest('#briefClose')||e.target===$('#briefOverlay')) closeBrief();
     if(e.target.closest('#measClose')||e.target===$('#measOverlay')) closeMeasure();
+    if(e.target.closest('#sopClose')||e.target===$('#sopOverlay')) closeSops();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
     const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); closeMeasure(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); closeMeasure(); closeSops(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
@@ -2153,6 +2289,11 @@ function init(){
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  // playbook (SOP / prompt library)
+  $('#playbookBtn').addEventListener('click', ()=>{ blip(800,0.06,'sine',0.12); openSops(); });
+  $('#sopClose').addEventListener('click', closeSops);
+  $('#sopSave').addEventListener('click', saveSopForm);
+  $('#sopCancel').addEventListener('click', clearSopForm);
   // measurement (funnel + source)
   $('#measureBtn').addEventListener('click', ()=>{ blip(780,0.06,'sine',0.12); openMeasure(); });
   $('#measClose').addEventListener('click', closeMeasure);

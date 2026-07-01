@@ -43,6 +43,7 @@ multi-agent enterprise platform the vision describes. That gap is the roadmap.
 | 9 | **Cloud Sync + Backup** | ✅ Built | Home↔work continuity | All `carvis_*` keys | Netlify Blobs store + JSON file | Reliability |
 | 10 | **Accessibility** | ✅ Built | Low-vision default + A⁺ mode + time-of-day theme | — | Legible, high-contrast UI | Usability |
 | 11 | **Measurement (funnel + source)** | ✅ Built | One-tap capture of leads/appts/sales by source | Taps (source-tagged) | Monthly funnel, conversion %, source-ROI table | Lead→appt→sale rates, source ROI |
+| 12 | **Playbook (SOP / prompt library)** | ✅ Built | Reusable scripts + AI prompts, versioned | Titled plays | Copy-to-paste scripts, one-tap "run in brain" prompts, version history, use counts | Systemized knowledge, reuse |
 
 **What does NOT exist yet (the vision's core, honestly):** a content engine, any analytics
 pipeline, market/auction/BI monitoring, a referral *system* (vs. one-off emails), an
@@ -103,7 +104,13 @@ model-fallback, cloud sync, accessibility, PWA.
 - **Measurement capture** ✅ _Built._ One-tap Measure panel (📈): source-tagged leads /
   appointments / sales → monthly funnel with conversion %, and a **source-ROI table**
   (which channels actually convert to sales). Undo-last, sticky source, feeds the Briefing.
-- **SOP / Prompt Library** _(next)_ — reusable, versioned playbooks and AI prompts inside CarVis.
+- **SOP / Prompt Library** ✅ _Built._ The **Playbook** (📖): reusable scripts (copy-to-paste)
+  and prompts (one-tap "run in the brain", with `{fill-in}` blanks), each **versioned**
+  (edits keep the old wording; restore any version) and use-counted so your go-to plays
+  rise to the top. Ships with optional starter prompts.
+
+**Phase 1 is complete** — the Executive Layer (CEO Briefing + Follow-Up Engine + Measurement
++ Playbook) is live. Next is Phase 2 (Growth Engines): Content OS and Referral System.
 
 **Phase 2 — Growth Engines**
 - **Content OS** — daily 3-video plan (Reach/Trust/Action) cross-referencing inventory,
@@ -152,5 +159,6 @@ Efficiency: ROI, return on time invested (ROTI).
 | v1.1 | 2026-06 | Phase 1 begins: **CEO Daily Briefing** shipped (pace strip + AI board meeting, cached, read-aloud). |
 | v1.2 | 2026-06 | **Follow-Up Engine (B1)** shipped: prospect aging + SLA → daily due list, one-tap Logged / Call / AI revival draft; briefing now cites real quiet-timers. |
 | v1.3 | 2026-06 | **Measurement capture (B2)** shipped: one-tap funnel (leads→appts→sales) + source-ROI table; briefing cites the funnel + best source. |
+| v1.4 | 2026-06 | **Playbook / SOP library (B3)** shipped: versioned scripts + runnable prompts, use-counts, starters. **Phase 1 (Executive Layer) complete.** |
 
-_Next in Phase 1: **B3 SOP / Prompt Library** — reusable scripts + prompts, versioned, one-tap into the workflow. Then Phase 1 is complete._
+_Next: **Phase 2 — Growth Engines.** Content OS (daily 3-video plan) and the Referral System. Recommend Content OS first._
