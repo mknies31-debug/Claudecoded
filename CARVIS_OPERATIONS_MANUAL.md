@@ -34,7 +34,7 @@ multi-agent enterprise platform the vision describes. That gap is the roadmap.
 |---|--------|-------|---------|--------|---------|----------------------|
 | 1 | **HUD dashboard** | ✅ Built | At-a-glance command center | Monthly numbers | Hero count, goal ring, gauges, ticker | Goal pace, focus |
 | 2 | **Monthly Numbers** | ✅ Built | Real sales tracking, backfillable | Manual entry per month | Sold/Bought/Deals/Close-rate vs goals; 6-mo chart, 12-mo trend | Sales, acquisition, close rate |
-| 3 | **Hot Prospects** | ✅ Built | Manual priority list (hot/warm/cool) | Manual entry | Pinned, sortable list | Follow-up discipline |
+| 3 | **Hot Prospects + Follow-Up Engine** | ✅ Built | Priority list that ages by heat into a daily due list | Name/phone/note/heat | Pinned list + "Follow-Ups Due" (SLA, quiet-timer, Logged, AI revival draft) | Follow-up SLA, revival rate |
 | 4 | **High-Performance Habits** | ✅ Built | Burchard HP6 daily checklist | Daily checkmarks | Per-day completion, resets daily | Consistency, energy |
 | 5 | **Buyer Reply drafts** | ✅ Built (scripted) | 3 options (Direct/Softer/NEPQ) | Buyer message | Copy-paste replies | Response speed, tone |
 | 6 | **Outreach Email** | ✅ Built | 1:1 referral/review/follow-up email via Resend | Contacts + template | Sent email, reply-to Mick | Referrals, reviews |
@@ -62,7 +62,7 @@ Agents collaborate; they do not operate in isolation. Status is honest: most are
 | **Sales Agent** | Convert leads → appointments → sales | Numbers, drafts, prospects | Close rate, appts | ▶ Partial |
 | **Acquisition Agent** | Buy the right cars at the right price | Buy-side numbers, market | Cars bought, cost basis | ⬜ Planned |
 | **Content Agent** | Daily Reach/Trust/Action videos | Content OS | Views→DMs→appts | ⬜ Planned |
-| **CRM / Follow-up Agent** | Never let a lead go cold | Prospects, sequencer | Follow-up SLA, revival rate | ⬜ Planned |
+| **CRM / Follow-up Agent** | Never let a lead go cold | Prospects, follow-up engine | Follow-up SLA, revival rate | ✅ Built (aging + SLA + AI revival) |
 | **Referral Agent** | Turn happy customers into pipelines | Outreach, referral loop | Referrals/mo | ⬜ Planned |
 | **Reputation Agent** | Reviews & trust signals | Review requests | Reviews, rating | ⬜ Planned |
 | **BI / Market Agent** | Actionable market/auction/season intel | Market Pulse | Pricing edge | ⬜ Planned |
@@ -95,7 +95,12 @@ model-fallback, cloud sync, accessibility, PWA.
   command): a deterministic live pace strip (day-of-month vs goal, prospects, habits)
   plus an AI board briefing from the live brain — Top 3 Priorities, Quick Wins,
   Sales/Inventory/Lead/Referral focus, Blind spots. Cached per day; read-aloud button.
-- **Follow-up Engine** _(next)_ — prospect aging, "went quiet N days," daily call/text list with SLA.
+- **Follow-up Engine** ✅ _Built._ Hot Prospects now age by heat (SLA hot 1d / warm 3d /
+  cool 7d) into a **Follow-Ups Due** list — quiet-timer badges, urgency sort, one-tap
+  **Logged** (resets the clock), **Call** (`tel:`), and one-tap **AI revival draft**
+  (Fable-5, click-to-copy). Feeds the Daily Briefing's follow-up focus.
+- **Measurement capture** _(next)_ — frictionless entry for the 5 decision-driving metrics
+  (leads, appointments, sales, source), so everything after is data-informed.
 - **SOP / Prompt Library** — reusable, versioned playbooks and AI prompts inside CarVis.
 
 **Phase 2 — Growth Engines**
@@ -143,5 +148,6 @@ Efficiency: ROI, return on time invested (ROTI).
 |---------|------|--------|
 | v1.0 | 2026-06 | Foundation complete; Operations Manual established. Metrics start at 0; live Fable-5 brain wired with model-fallback. |
 | v1.1 | 2026-06 | Phase 1 begins: **CEO Daily Briefing** shipped (pace strip + AI board meeting, cached, read-aloud). |
+| v1.2 | 2026-06 | **Follow-Up Engine (B1)** shipped: prospect aging + SLA → daily due list, one-tap Logged / Call / AI revival draft; briefing now cites real quiet-timers. |
 
-_Next in Phase 1: the **Follow-up Engine** — turn Hot Prospects into a daily action list with aging + SLA._
+_Next in Phase 1: **B2 Measurement capture** — frictionless entry for leads → appointments → sales + source._

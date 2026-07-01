@@ -304,7 +304,8 @@
   .aim{max-width:90%;padding:11px 14px;border-radius:12px;font-size:17px;line-height:1.55;white-space:pre-wrap}
   .aim.you{align-self:flex-end;background:rgba(92,240,255,.12);border:1px solid var(--line)}
   .aim.bot{align-self:flex-start;background:rgba(6,14,24,.95);border:1px solid var(--line);border-left:3px solid var(--cyan)}
-  .aim.bot.thinking{color:var(--dim);font-style:italic}
+  .aim.bot{cursor:copy}
+  .aim.bot.thinking{color:var(--dim);font-style:italic;cursor:default}
   .airow{display:flex;gap:10px;align-items:flex-end}
   .airow .rta{margin-top:0}
   body.hivis .aim{font-size:21px}
@@ -566,6 +567,7 @@
           <div class="hot-add">
             <input id="hotName" class="hin" placeholder="Name — most important contact">
             <input id="hotNote" class="hin" placeholder="Vehicle / why they matter (optional)">
+            <input id="hotPhone" class="hin" inputmode="tel" placeholder="Phone (optional) — for call & text">
             <div class="hot-row">
               <div class="heatpick" id="hotHeat">
                 <button data-h="hot" class="on">🔥 HOT</button>
@@ -613,7 +615,7 @@
         </div>
       </div>
       <div class="panel dir">
-        <div class="ph"><span class="hbar"></span><h3>Directives</h3><span class="meta" id="dirMeta">TODAY</span></div>
+        <div class="ph"><span class="hbar"></span><h3>Follow-Ups</h3><span class="meta" id="dirMeta">ALL CLEAR</span></div>
         <div class="pbody" id="dirBody"></div>
       </div>
       <div class="panel mk">
@@ -644,7 +646,7 @@
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
       <div class="chip" data-cmd="reply">✉ Buyer reply</div>
       <div class="chip" data-cmd="outreach">📧 Outreach</div>
-      <div class="chip" data-cmd="directives">Directives</div>
+      <div class="chip" data-cmd="followups">Follow-ups</div>
       <div class="chip" data-cmd="market">Market</div>
     </div>
     <input id="cmd" type="text" placeholder="Command CARVIS — type a name to draft, or ask…" autocomplete="off">
@@ -1013,27 +1015,6 @@ function renderGauges(){
       <div class="gl">${g.label}</div>
     </div>`).join('');
 }
-function renderDirectives(){
-  const due = DATA.leads.slice().sort((a,b)=>(b.quiet||0)-(a.quiet||0));
-  if(!due.length){
-    $('#dirBody').innerHTML = '<div class="hot-empty">No directives yet.<br>Pin Hot Prospects or import contacts to build your day.</div>';
-    $('#dirMeta').textContent='—'; return;
-  }
-  $('#dirBody').innerHTML = due.map(l=>{
-    const tag = l.quiet?`<span class="tag quiet">QUIET ${l.quiet}D</span>`:`<span class="tag appt">APPT ${l.appt}</span>`;
-    const ac = l.quiet?'var(--red)':'var(--green)';
-    return `<div class="di" data-id="${l.id}" style="--ac:${ac}">
-      <div class="dtop"><span class="nm">${l.name}</span>${tag}</div>
-      <div class="veh">${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}</div>
-      <div class="acts">
-        <a class="act" href="tel:${l.phone}">CALL</a>
-        <button class="act go js-draft" data-id="${l.id}">DRAFT</button>
-        <button class="act js-done" data-id="${l.id}">DONE</button>
-      </div>
-    </div>`;
-  }).join('');
-  $('#dirMeta').textContent = due.length+' TODAY';
-}
 function renderTicker(){
   const s=STATS;
   const parts=[`CARS SOLD ${s.sold}/${s.soldGoal}`,`PURCHASED ${s.bought}/${s.buyGoal}`,
@@ -1361,7 +1342,7 @@ function runCmd(raw){
     if(isCarQuery(q) && !looksMsg && INVENTORY.length){ toast(`No match for "${q}" in inventory`); $('#cmd').value=''; return; } }
   // exact-match shortcuts only — full sentences fall through to the live brain
   if(low==='market'){ $('#mkList').scrollIntoView({behavior:'smooth'}); toast('Market pulse — see left panel'); $('#cmd').value=''; return; }
-  if(low==='directives'||low==='directive'){ toast(`${DATA.leads.length} directives queued — see right`); $('#cmd').value=''; return; }
+  if(low==='followups'||low==='follow-ups'||low==='follow up'||low==='followup'||low==='directives'){ const n=dueList().length; $('#dirBody').scrollIntoView({behavior:'smooth'}); toast(n?`${n} follow-up${n>1?'s':''} due — see the panel`:'All clear — no follow-ups overdue'); $('#cmd').value=''; return; }
   // anything else → hand it to the live CARVIS brain (Fable 5)
   openAI(q); $('#cmd').value='';
 }
@@ -1631,6 +1612,20 @@ const HEAT = {
   cool:{ac:'var(--cyan)', lbl:'COOL', rank:2},
 };
 let hotHeat='hot';
+// Follow-up aging: each prospect has an SLA by heat; once "days quiet" reaches
+// it, they surface in the Follow-Ups panel. lastContact defaults to id (the
+// creation stamp), so existing prospects age correctly with no migration.
+const SLA={hot:1,warm:3,cool:7};
+const lastContactMs=p=>p.lastContact||p.id||Date.now();
+const daysQuiet=p=>Math.max(0,Math.floor((Date.now()-lastContactMs(p))/86400000));
+const slaFor=p=>SLA[p.heat]!=null?SLA[p.heat]:3;
+const isDue=p=>daysQuiet(p)>=slaFor(p);
+function dueList(){
+  return HOT.filter(isDue).sort((a,b)=>
+    ((daysQuiet(b)-slaFor(b))-(daysQuiet(a)-slaFor(a)))
+    || ((HEAT[a.heat]||HEAT.warm).rank-(HEAT[b.heat]||HEAT.warm).rank)
+    || (b.id-a.id));
+}
 function loadHot(){ try{ const s=JSON.parse(localStorage.getItem('carvis_hot')||'[]'); return Array.isArray(s)?s:[]; }catch(e){ return []; } }
 let HOT=loadHot();
 function saveHot(){ try{ localStorage.setItem('carvis_hot',JSON.stringify(HOT)); }catch(e){} scheduleCloudPush(); }
@@ -1647,15 +1642,55 @@ function renderHot(){
       </div>
     </div>`;
   }).join('');
+  try{ renderFollowups(); }catch(e){}   // prospects and their aging stay in sync
 }
 function addHot(){
   const name=$('#hotName').value.trim(); if(!name){ toast('Add a name first'); $('#hotName').focus(); return; }
-  HOT.push({id:Date.now(), name, note:$('#hotNote').value.trim(), heat:hotHeat});
+  const now=Date.now();
+  HOT.push({id:now, name, note:$('#hotNote').value.trim(), phone:($('#hotPhone').value||'').trim(), heat:hotHeat, lastContact:now, touches:0});
   saveHot(); renderHot();
-  $('#hotName').value=''; $('#hotNote').value=''; $('#hotName').focus();
+  $('#hotName').value=''; $('#hotNote').value=''; $('#hotPhone').value=''; $('#hotName').focus();
   blip(900,0.06,'sine',0.12); toast('Prospect pinned');
 }
 function delHot(id){ HOT=HOT.filter(p=>p.id!==id); saveHot(); renderHot(); blip(360,0.06,'sawtooth',0.1); }
+// Log a touch → reset the quiet clock and drop them off today's due list.
+function logTouch(id){
+  const p=HOT.find(x=>x.id===id); if(!p) return;
+  p.lastContact=Date.now(); p.touches=(p.touches||0)+1;
+  saveHot(); renderHot();
+  blip(820,0.06,'sine',0.12); toast('Follow-up logged — clock reset');
+}
+// One-tap AI revival draft: seed Ask CARVIS with the prospect's real context.
+function revivalDraft(id){
+  const p=HOT.find(x=>x.id===id); if(!p) return;
+  const dq=daysQuiet(p);
+  openAI(`Write ONE short revival text to ${p.name}${p.note?', who was interested in '+p.note:''}, gone quiet ${dq} day${dq===1?'':'s'}. My voice — warm, NEPQ, no pressure, under 3 sentences. Just the message, no preamble.`);
+}
+/* ---------- follow-ups due (prospect aging + SLA) ---------- */
+function renderFollowups(){
+  const due=dueList(), meta=$('#dirMeta'), body=$('#dirBody'); if(!body) return;
+  if(!due.length){
+    body.innerHTML='<div class="hot-empty">All clear — no follow-ups overdue.<br>Pin prospects in Hot Prospects; CARVIS ages them by heat.</div>';
+    if(meta) meta.textContent='ALL CLEAR'; return;
+  }
+  if(meta) meta.textContent=due.length+' DUE';
+  body.innerHTML=due.map(p=>{
+    const dq=daysQuiet(p), over=dq-slaFor(p), h=HEAT[p.heat]||HEAT.warm;
+    const badge=`<span class="tag ${over>0?'quiet':'appt'}">QUIET ${dq}D</span>`;
+    const ac=over>0?'var(--red)':'var(--gold)';
+    const call=p.phone?`<a class="act" href="tel:${esc(p.phone)}">CALL</a>`:`<span class="act" style="opacity:.4">NO #</span>`;
+    const meta2=`${p.note?esc(p.note)+' · ':''}${h.lbl}${p.touches?' · '+p.touches+' touch'+(p.touches>1?'es':''):''}`;
+    return `<div class="di" data-id="${p.id}" style="--ac:${ac}">
+      <div class="dtop"><span class="nm">${esc(p.name)}</span>${badge}</div>
+      <div class="veh">${meta2}</div>
+      <div class="acts">
+        ${call}
+        <button class="act go js-fu-draft" data-id="${p.id}">✉ DRAFT</button>
+        <button class="act js-fu-log" data-id="${p.id}">✓ LOGGED</button>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 /* ---------- data sync (home ↔ work) ----------
    Two layers, same snapshot:
@@ -1769,9 +1804,10 @@ function briefContext(){
   const pace = s.soldGoal>0 ? +(s.sold - s.soldGoal*(dom/dim)).toFixed(1) : null; // + ahead / - behind
   const recent=[]; for(let i=3;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); recent.push(shortMonth(d)+' '+d.getFullYear()+'='+monthData(monthKey(d)).sold); }
   const heat={hot:0,warm:0,cool:0}; HOT.forEach(p=>{ heat[p.heat]=(heat[p.heat]||0)+1; });
+  const due=dueList();
   const habitsDone=DATA.tasks.filter(t=>taskState[t.id]).length;
   const undone=DATA.tasks.filter(t=>!taskState[t.id]).map(t=>t.hp);
-  return { now, dom, dim, s, pace, recent, heat, habitsDone, habitsTotal:DATA.tasks.length, undone,
+  return { now, dom, dim, s, pace, recent, heat, due, habitsDone, habitsTotal:DATA.tasks.length, undone,
            inv:(INVENTORY?INVENTORY.length:0) };
 }
 function renderPace(c){
@@ -1786,11 +1822,12 @@ function renderPace(c){
     `<span class="dim">Deals ${s.deals}${s.dealGoal?'/'+s.dealGoal:''}</span>`+
     `<span class="dim">Close ${s.closeRate}%</span>`+
     `<span class="dim">Hot ${c.heat.hot}·Warm ${c.heat.warm}·Cool ${c.heat.cool}</span>`+
+    `<span>${c.due.length?`<span class="behind">${c.due.length} follow-up${c.due.length>1?'s':''} due</span>`:`<span class="on">follow-ups clear</span>`}</span>`+
     `<span class="dim">Habits ${c.habitsDone}/${c.habitsTotal}</span>`;
 }
 function briefPrompt(c){
   const s=c.s;
-  const hp=HOT.slice(0,12).map(p=>`- ${p.name} — ${p.heat}${p.note?' — '+p.note:''}`).join('\n')||'- (none pinned)';
+  const hp=HOT.slice(0,12).map(p=>`- ${p.name} — ${p.heat} — quiet ${daysQuiet(p)}d${isDue(p)?' (DUE)':''}${p.note?' — '+p.note:''}`).join('\n')||'- (none pinned)';
   const paceLine = s.soldGoal>0 ? `${(c.pace>=0?'ahead/on pace by ':'behind by ')}${Math.abs(c.pace)} cars for day ${c.dom} of ${c.dim}` : 'no monthly goal set';
   return `Run today's CARVIS executive board briefing for Mick. Use ONLY this real data:
 
@@ -1801,7 +1838,7 @@ THIS MONTH (month-to-date):
 - Deals closed: ${s.deals}${s.dealGoal?' of goal '+s.dealGoal:''}
 - Close rate: ${s.closeRate}%
 RECENT MONTHS (cars sold): ${c.recent.join(', ')}
-HOT PROSPECTS (${c.heat.hot} hot, ${c.heat.warm} warm, ${c.heat.cool} cool):
+HOT PROSPECTS (${c.heat.hot} hot, ${c.heat.warm} warm, ${c.heat.cool} cool) — ${c.due.length} DUE for follow-up today:
 ${hp}
 HABITS TODAY: ${c.habitsDone}/${c.habitsTotal} done${c.undone.length?' — not yet: '+c.undone.join(', '):''}
 INVENTORY ON LOT: ${c.inv} units
@@ -1937,7 +1974,7 @@ function saveGoalsFromForm(){
 function init(){
   initSpace();
   applyTimeTheme(); setInterval(applyTimeTheme, 5*60*1000);
-  renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker(); renderTasks(); renderHot();
+  renderSystem(); renderMarket(); renderGauges(); renderFollowups(); renderTicker(); renderTasks(); renderHot();
   renderStats();   // fill hero/ring/gauges/readouts/ticker/chart from saved monthly numbers (0 until entered)
   tick(); setInterval(tick,1000);
   window.addEventListener('resize', drawChart);
@@ -1949,13 +1986,12 @@ function init(){
   document.addEventListener('click', e=>{
     const tk=e.target.closest('.task'); if(tk){ toggleTask(tk.dataset.id); return; }
     const hdl=e.target.closest('.js-hot-del'); if(hdl){ delHot(+hdl.dataset.id); return; }
-    const hdr=e.target.closest('.js-hot-draft'); if(hdr){ const p=HOT.find(x=>x.id===+hdr.dataset.id); if(p){ openReply(); $('#rVeh').value=p.note||''; } return; }
-    const dr=e.target.closest('.js-draft'); if(dr){ blip(720,0.06,'sine',0.13); openDraft(+dr.dataset.id); return; }
-    const dn=e.target.closest('.js-done'); if(dn){ blip(300,0.08,'sawtooth',0.12);
-      const di=dn.closest('.di'); di.style.transition='.25s'; di.style.opacity='0'; di.style.transform='translateX(16px)';
-      setTimeout(()=>{ di.remove(); $('#dirMeta').textContent=$$('.di').length+' TODAY'; },250);
-      toast('Directive cleared'); return;
-    }
+    const hdr=e.target.closest('.js-hot-draft'); if(hdr){ revivalDraft(+hdr.dataset.id); return; }
+    // Follow-Ups panel actions
+    const ful=e.target.closest('.js-fu-log'); if(ful){ blip(820,0.06,'sine',0.12); logTouch(+ful.dataset.id); return; }
+    const fud=e.target.closest('.js-fu-draft'); if(fud){ blip(720,0.06,'sine',0.13); revivalDraft(+fud.dataset.id); return; }
+    // click any CARVIS answer to copy it (handy for revival drafts)
+    const bot=e.target.closest('#aiLog .aim.bot'); if(bot && !bot.classList.contains('thinking')){ navigator.clipboard?.writeText(bot.textContent||'').catch(()=>{}); blip(980,0.05,'triangle',0.12); toast('Copied'); return; }
     const cp=e.target.closest('.js-copy'); if(cp){ blip(980,0.05,'triangle',0.12);
       navigator.clipboard?.writeText(cp.dataset.txt).catch(()=>{});
       cp.classList.add('done'); cp.textContent='✓ COPIED'; toast('Copied to clipboard');
@@ -2026,6 +2062,7 @@ function init(){
   // first (so we never overwrite them with older cloud data), else pull latest.
   document.addEventListener('visibilitychange', ()=>{
     if(document.visibilityState!=='visible' || !getSyncKey()) return;
+    try{ renderFollowups(); }catch(e){}   // re-age the follow-up list on return
     if(pendingPush){ clearTimeout(pushTimer); cloudPush({quiet:true}); return; }
     if(Date.now()-lastPull < 4000) return; lastPull=Date.now(); cloudPull({quiet:true});
   });
