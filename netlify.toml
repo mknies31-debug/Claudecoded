@@ -1,14 +1,19 @@
 # CARVIS — Netlify deploy config.
 #
-# Drag the carvis/ folder onto Netlify (or point a site at it). Static files are
-# served from the folder root; the Anthropic proxy runs as a serverless function.
-# There is NO local build step — Netlify bundles the function automatically.
+# IMPORTANT: deploy this with a BUILD-BASED deploy (connect the Git repo, or use
+# the Netlify CLI `netlify deploy`). Manual drag-and-drop does NOT run
+# `npm install` or bundle functions from source, so the serverless functions
+# (live AI proxy, cloud sync, email) will 404 and the "live brain" will fail.
+# A Git/CLI deploy installs @netlify/blobs and bundles everything automatically.
 #
-# Before it works: Site settings → Environment variables → add ANTHROPIC_API_KEY.
+# Before the AI works: Site settings → Environment variables → add
+# ANTHROPIC_API_KEY, then redeploy.
 
 [build]
   publish = "."
+  command = "npm install"      # ensure @netlify/blobs is installed for the functions
   functions = "netlify/functions"
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
