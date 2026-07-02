@@ -45,11 +45,32 @@ He has agents he's building with Claude: a weekly Market Intel Agent (built) and
 RESPONSE STYLE: Because Carvis talks out loud, keep spoken answers tight and natural — this is a conversation, not an essay. For customer messages give the three options clearly. Don't use markdown headers or bullets when speaking casually; just talk like a sharp right-hand man. Be useful, be quick, be Mick's guy.`;
 
 exports.handler = async (event) => {
+  const key = process.env.ANTHROPIC_API_KEY;
+
+  // Health check: open this function's URL in a browser (GET) to confirm the
+  // server can see the key — WITHOUT exposing the key itself. If keyConfigured
+  // is false, the variable isn't set on this deploy (add it, then redeploy with
+  // "Clear cache and deploy").
+  if (event.httpMethod === 'GET') {
+    return {
+      statusCode: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        service: 'CARVIS live brain proxy',
+        keyConfigured: !!key,
+        keyLength: key ? key.length : 0,
+        models: MODEL_CHAIN,
+        hint: key
+          ? 'Key is set on the server. If Ask CARVIS still errors, it is an auth (wrong key) or billing/credits issue on your Anthropic account — the exact reason shows in the red error text.'
+          : 'ANTHROPIC_API_KEY is NOT set on this deploy. Add it in Netlify → Site settings → Environment variables, then Deploys → Trigger deploy → Clear cache and deploy.',
+      }),
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
-  const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     return {
       statusCode: 500,
