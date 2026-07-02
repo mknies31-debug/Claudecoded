@@ -324,6 +324,31 @@
   .briefbar{display:flex;gap:10px;margin-top:12px}
   .briefbar .rgen{margin-top:0}
 
+  /* ===== customer intake ===== */
+  .ifiles{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+  .ifile{font-family:var(--mono);font-size:12px;color:var(--cyan);border:1px solid var(--line);border-radius:7px;padding:6px 10px;display:flex;gap:8px;align-items:center}
+  .ifile b{color:var(--dim);font-weight:400}
+  .isec{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .isec>h4{font-family:'Orbitron';font-size:12px;letter-spacing:1px;padding:10px 13px;margin:0;display:flex;align-items:center;gap:9px}
+  .isec.ready>h4{background:rgba(56,240,138,.12);color:var(--green)}
+  .isec.review>h4{background:rgba(255,201,102,.12);color:var(--gold)}
+  .isec.dupe>h4{background:rgba(124,150,255,.14);color:#a7b6ff}
+  .isec.miss>h4{background:rgba(255,121,134,.12);color:var(--red)}
+  .isec>h4 .ct{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .itbl{width:100%;overflow-x:auto}
+  .itbl table{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
+  .itbl th{font-family:var(--mono);font-size:10px;letter-spacing:.5px;color:var(--dim);text-align:left;text-transform:uppercase;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .itbl td{padding:8px 9px;border-bottom:1px solid rgba(47,230,255,.07);color:var(--text);vertical-align:top}
+  .itbl tr:last-child td{border-bottom:none}
+  .itbl td.dim{color:var(--dim)}
+  .stt{font-family:'Orbitron';font-size:9px;letter-spacing:.5px;padding:2px 7px;border-radius:20px;white-space:nowrap}
+  .stt.sold{background:rgba(56,240,138,.16);color:var(--green)}
+  .stt.prospect{background:rgba(92,240,255,.14);color:var(--cyan)}
+  .icreatebar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:11px 13px;background:rgba(56,240,138,.05)}
+  .icreatebar .hadd{background:linear-gradient(135deg,var(--green),#1f9d5e);color:#02140a}
+  .iempty{padding:12px 13px;color:var(--dim);font-family:var(--mono);font-size:12.5px}
+  body.hivis .itbl table{font-size:16px} body.hivis .isec>h4{font-size:15px}
+
   /* ===== playbook (SOP / prompt library) ===== */
   .sopcard{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:rgba(47,230,255,.03)}
   .soptop{display:flex;align-items:center;gap:9px;margin-bottom:5px}
@@ -681,10 +706,12 @@
     <button class="mic" id="briefBtn" title="CEO daily briefing — your morning board meeting" style="font-size:17px">◆</button>
     <button class="mic" id="measureBtn" title="Measure — tap leads, appointments, sales by source" style="font-size:17px">📈</button>
     <button class="mic" id="playbookBtn" title="Playbook — reusable scripts & prompts" style="font-size:17px">📖</button>
+    <button class="mic" id="intakeBtn" title="Customer Intake — upload files, extract customers to review & create" style="font-size:17px">⬆</button>
     <div class="chips">
       <div class="chip" data-cmd="brief">◆ Daily Brief</div>
       <div class="chip" data-cmd="measure">📈 Measure</div>
       <div class="chip" data-cmd="playbook">📖 Playbook</div>
+      <div class="chip" data-cmd="intake">⬆ Intake</div>
       <div class="chip" data-cmd="ask">◉ Ask CARVIS</div>
       <div class="chip" data-cmd="numbers">📊 Numbers</div>
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
@@ -865,6 +892,30 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       </div>
       <div class="ostat" id="aiStat"></div>
       <div class="mnote"><span>✦</span><span>Answers are <b>spoken aloud</b> when AUDIO is on. Dollar figures are estimates — verify before quoting a customer. Live answers need <b>ANTHROPIC_API_KEY</b> set on Netlify.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CUSTOMER INTAKE (upload → review → create) ============ -->
+<div class="overlay" id="intakeOverlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:820px">
+    <div class="mh">
+      <div class="av">⬆</div>
+      <div><div class="mt">CUSTOMER INTAKE</div><div class="ms">Command it → upload → review → create as prospects or sold customers</div></div>
+      <button class="x" id="intakeClose">✕</button>
+    </div>
+    <div class="mb">
+      <span class="olabel" style="margin-top:0">Tell CARVIS about this upload (a plain-English command)</span>
+      <input id="intakeCmd" class="rin" style="margin-top:0" placeholder="e.g. “this list is all sold customers from 2023” or “these are prospects”">
+      <span class="olabel">Upload files — photos, scans, screenshots, spreadsheets, exports (images / CSV / TXT / PDF)</span>
+      <label class="rgen" id="intakePickLabel" style="display:block;text-align:center;cursor:pointer">⬆ CHOOSE FILES<input type="file" id="intakeFiles" accept="image/*,.csv,.tsv,.txt,.pdf,application/pdf" multiple style="display:none"></label>
+      <div id="intakeFileList" class="ifiles"></div>
+      <span class="olabel">…or paste a list / export</span>
+      <textarea id="intakePaste" class="rta" rows="4" placeholder="Paste rows from a spreadsheet, CRM/DMS export, or a plain text customer list…"></textarea>
+      <button class="rgen" id="intakeRun" style="margin-top:12px">◉ EXTRACT CUSTOMERS</button>
+      <div class="ostat" id="intakeStat"></div>
+      <div id="intakeResults"></div>
+      <div class="mnote"><span>✦</span><span>Conservative by design — only clear customers reach <b>Ready to Create</b>; uncertain ones stay in review, nothing is invented. Repeat buyers become one record with multiple deals. Creating merges into anyone already on file. Uses the live brain (needs <b>ANTHROPIC_API_KEY</b>).</span></div>
     </div>
   </div>
 </div>
@@ -1283,10 +1334,17 @@ function parseImport(text){
     return {name,email,vehicle,type};
   }).filter(Boolean);
 }
+function contactTag(c){
+  if(c.type==='referral') return 'referral';
+  if((c.status||c.type)==='prospect') return 'prospect';
+  const n=(c.deals&&c.deals.length)||0;
+  if(n>1) return n+' deals'+(c.vehicle?' · '+c.vehicle:'');
+  return 'sold'+(c.vehicle?' · '+c.vehicle:'');
+}
 function refreshContactDropdown(){
   $('#oContact').innerHTML = CONTACTS.length
-    ? CONTACTS.map((c,i)=>`<option value="${i}">${c.name} — ${c.type==='sold'?'sold · '+(c.vehicle||'—'):'referral'}</option>`).join('')
-    : '<option value="">No contacts yet — use “Manage contacts” below to import</option>';
+    ? CONTACTS.map((c,i)=>`<option value="${i}">${esc(c.name)} — ${esc(contactTag(c))}</option>`).join('')
+    : '<option value="">No contacts yet — use “Manage contacts” or ⬆ Intake to add</option>';
 }
 function importText(text){
   text=(text||'').trim(); if(!text){ toast('Nothing to import'); return; }
@@ -1421,6 +1479,7 @@ function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classLis
 function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
+  if(low==='intake'||low==='upload'||low==='import'||low==='import customers'){ openIntake(); $('#cmd').value=''; return; }
   if(low==='playbook'||low==='sop'||low==='sops'||low==='scripts'||low==='plays'){ openSops(); $('#cmd').value=''; return; }
   if(low==='measure'||low==='log'||low==='funnel'||low==='metrics'){ openMeasure(); $('#cmd').value=''; return; }
   if(low==='brief'||low==='briefing'||low==='board'||low==='daily'){ openBrief(); $('#cmd').value=''; return; }
@@ -2082,6 +2141,156 @@ function restoreSop(id,i){
 }
 function openSops(){ clearSopForm(); renderSops(); $('#sopOverlay').classList.add('show'); }
 function closeSops(){ $('#sopOverlay').classList.remove('show'); }
+
+/* ---------- Customer Upload Intake (extract → review → create) ----------
+   Turns messy uploads (photos, scans, screenshots, spreadsheets, exports, text
+   lists) into clean, reviewable customer records for creation under the
+   "Sold Customer Upload" group. The live brain runs a strict, conservative
+   extraction prompt and returns JSON routed into 4 buckets. Nothing is
+   invented; only clearly-identified customers reach Ready to Create. */
+const INTAKE_GROUP='Sold Customer Upload';
+const INTAKE_SYSTEM=`You are Customer Upload Intake AI inside CarVis. Your only job: read the uploaded content, extract REAL people who are customers, classify each as a prospect or a sold customer, standardize the data, detect duplicates and missing fields, and prepare valid records for creation. Return structured JSON only.
+
+CLASSIFICATION — every real customer gets exactly one status:
+- "sold": has purchased at least one vehicle (any sign of a completed deal: a stock #, VIN, deal/sale/delivery date, sold price, or the word sold).
+- "prospect": a lead/inquiry with no completed purchase.
+Use the OPERATOR INSTRUCTION in the message as the PRIMARY signal. If the operator says the list is all sold customers, classify every clear customer as "sold" unless a row plainly contradicts it. If they say prospects/leads, classify "prospect". If there is NO instruction and a row is ambiguous between the two, put that person in needs_review (not ready).
+
+MULTIPLE DEALS PER PERSON — if the SAME person appears with MORE THAN ONE purchase (multiple stock numbers / VINs / vehicles / deal dates), output ONE record for that person with a "deals" array holding each purchase. Never split one person's repeat purchases into multiple people, and never merge two different people. Co-buyers are separate people = separate records.
+
+Rules (non-negotiable):
+- Extract only real customers (buyers, co-buyers, sold customers, or people clearly tied to the source list). One person per record.
+- NEVER guess or invent names, phones, emails, addresses, VINs, dates, or stock numbers. Leave unknown fields as "".
+- Do NOT treat salespeople, F&I, managers, employees, vendors, lenders, references, emergency contacts, or non-buying businesses as customers. If a role is unclear, use needs_review.
+- Standardize: proper-case names, split first/last, phone like (507) 555-0134, 2-letter state, dates as YYYY-MM-DD when possible. Keep notes brief and operational.
+- Route conservatively — ready only when the person is clearly a customer, the name is readable/reliable, it is not a likely duplicate, and the data is strong enough to create safely. When in doubt, do NOT put a record in ready.
+
+Return ONLY one JSON object — no prose, no markdown, no code fences — with EXACTLY these keys:
+{"ready":[{"full_name":"","first_name":"","last_name":"","phone":"","email":"","address":"","city":"","state":"","zip":"","status":"sold","deals":[{"stock":"","vehicle":"","vin":"","deal_date":"","notes":""}],"notes":""}],
+"needs_review":[{"full_name":"","problem":"","confidence_note":"","suggested_fix":""}],
+"duplicates":[{"record_1":"","record_2":"","reason":""}],
+"missing":[{"full_name":"","missing_fields":"","notes":""}]}
+status is "sold" or "prospect". For a prospect, "deals" may be empty (or a single entry with just the vehicle of interest). If no valid customers are found, return all arrays empty. Output valid JSON and nothing else.`;
+let intakeFiles=[], intakeBusy=false, intakeData=null;
+function readFileBlock(file){
+  return new Promise(resolve=>{
+    const isImg=/^image\//.test(file.type), isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+    const r=new FileReader();
+    if(isImg||isPdf){
+      r.onload=()=>{ const d=String(r.result||''), b64=d.slice(d.indexOf(',')+1);
+        resolve(isImg ? {type:'image', source:{type:'base64', media_type:file.type||'image/jpeg', data:b64}}
+                      : {type:'document', source:{type:'base64', media_type:'application/pdf', data:b64}}); };
+      r.onerror=()=>resolve(null); r.readAsDataURL(file);
+    } else {
+      r.onload=()=>resolve({type:'text', text:`[FILE: ${file.name}]\n`+String(r.result||'')});
+      r.onerror=()=>resolve(null); r.readAsText(file);
+    }
+  });
+}
+function renderIntakeFiles(){
+  $('#intakeFileList').innerHTML=intakeFiles.map((f,i)=>`<span class="ifile">${esc(f.name)} <b>${(f.size/1024).toFixed(0)}KB</b> <span class="js-ifile-del" data-i="${i}" style="cursor:pointer;color:var(--red)">✕</span></span>`).join('');
+}
+function openIntake(){ $('#intakeStat').textContent=''; $('#intakeStat').className='ostat'; $('#intakeResults').innerHTML=''; $('#intakeOverlay').classList.add('show'); }
+function closeIntake(){ $('#intakeOverlay').classList.remove('show'); }
+function parseIntakeJSON(text){
+  if(!text) return null;
+  let t=String(text).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  const a=t.indexOf('{'), b=t.lastIndexOf('}'); if(a<0||b<0) return null;
+  try{ const o=JSON.parse(t.slice(a,b+1)); return {ready:o.ready||[], needs_review:o.needs_review||[], duplicates:o.duplicates||[], missing:o.missing||[]}; }catch(e){ return null; }
+}
+async function runIntake(){
+  if(intakeBusy) return;
+  const paste=$('#intakePaste').value.trim();
+  if(!intakeFiles.length && !paste){ toast('Add a file or paste a list first'); return; }
+  const total=intakeFiles.reduce((a,f)=>a+f.size,0);
+  if(total>4.5*1024*1024){ $('#intakeStat').className='ostat err'; $('#intakeStat').textContent='Files too large together (~4.5MB max). Upload fewer at a time.'; return; }
+  intakeBusy=true; $('#intakeStat').className='ostat send'; $('#intakeStat').textContent='◉ Reading & extracting customers…'; $('#intakeResults').innerHTML='';
+  const r0=$('#reactor'); if(r0) r0.classList.add('listening');
+  try{
+    const cmd=$('#intakeCmd').value.trim();
+    const blocks=[{type:'text', text:`OPERATOR INSTRUCTION: ${cmd||'(none given — infer sold vs prospect from the data; when ambiguous, use needs_review)'}\n\nExtract customers from the following upload(s) and return the JSON described in your instructions.`}];
+    if(paste) blocks.push({type:'text', text:'[PASTED LIST]\n'+paste});
+    for(const f of intakeFiles){ const b=await readFileBlock(f); if(b) blocks.push(b); }
+    const r=await fetch('/.netlify/functions/carvis',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:INTAKE_SYSTEM, max_tokens:4096, messages:[{role:'user', content:blocks}]})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ const msg=(d&&d.error&&(d.error.message||d.error))||('HTTP '+r.status);
+      $('#intakeStat').className='ostat err'; $('#intakeStat').textContent='✕ '+msg; }
+    else {
+      const parsed=parseIntakeJSON((d.content||[]).map(b=>b.text||'').join('\n'));
+      if(!parsed){ $('#intakeStat').className='ostat err'; $('#intakeStat').textContent='✕ Could not read the extraction result — try fewer/clearer files.'; }
+      else { intakeData=parsed; renderIntakeResults(parsed);
+        $('#intakeStat').className='ostat ok'; $('#intakeStat').textContent=`✓ ${(parsed.ready||[]).length} ready · ${(parsed.needs_review||[]).length} review · ${(parsed.duplicates||[]).length} possible dupes · ${(parsed.missing||[]).length} missing fields`; blip(940,0.06,'sine',0.12); }
+    }
+  }catch(e){ $('#intakeStat').className='ostat err'; $('#intakeStat').textContent='✕ Intake brain not reachable — deploy on Netlify with ANTHROPIC_API_KEY set.'; }
+  intakeBusy=false; if(r0) r0.classList.remove('listening');
+}
+const iv=v=>esc(v==null?'':String(v));
+function renderIntakeResults(d){
+  const rows=d.ready||[]; let h='';
+  h+=`<div class="isec ready"><h4>✓ Ready to Create<span class="ct">${rows.length}</span></h4>`;
+  if(rows.length){
+    h+=`<div class="icreatebar"><label><input type="checkbox" id="iAll" checked> Select all</label><button class="hadd" id="iCreate">＋ CREATE SELECTED as Sold Customer Upload</button></div>`;
+    h+='<div class="itbl"><table><thead><tr><th></th><th>Name</th><th>Status</th><th>Phone</th><th>Email</th><th>Deals</th><th>City/State</th></tr></thead><tbody>';
+    h+=rows.map((r,i)=>{
+      const st=(r.status==='prospect')?'prospect':'sold';
+      const deals=Array.isArray(r.deals)?r.deals:[];
+      const dealTxt = deals.length>1
+        ? deals.length+' deals: '+deals.map(x=>x.stock?('#'+x.stock):(x.vehicle||'?')).filter(Boolean).join(', ')
+        : (deals[0] ? [deals[0].vehicle, deals[0].stock&&('#'+deals[0].stock)].filter(Boolean).join(' ') : '—');
+      return `<tr><td><input type="checkbox" class="i-pick" data-i="${i}" checked></td><td>${iv(r.full_name||((r.first_name||'')+' '+(r.last_name||'')).trim())}</td><td><span class="stt ${st}">${st.toUpperCase()}</span></td><td class="dim">${iv(r.phone)}</td><td class="dim">${iv(r.email)}</td><td class="dim">${iv(dealTxt)}</td><td class="dim">${iv([r.city,r.state].filter(Boolean).join(', '))}</td></tr>`;
+    }).join('');
+    h+='</tbody></table></div>';
+  } else h+='<div class="iempty">No records clear enough to create — check the review sections below.</div>';
+  h+='</div>';
+  const nr=d.needs_review||[];
+  h+=`<div class="isec review"><h4>⚠ Needs Review<span class="ct">${nr.length}</span></h4>`;
+  h+= nr.length?('<div class="itbl"><table><thead><tr><th>Name</th><th>Problem</th><th>Confidence</th><th>Suggested fix</th></tr></thead><tbody>'+nr.map(r=>`<tr><td>${iv(r.full_name)}</td><td class="dim">${iv(r.problem)}</td><td class="dim">${iv(r.confidence_note)}</td><td class="dim">${iv(r.suggested_fix)}</td></tr>`).join('')+'</tbody></table></div>'):'<div class="iempty">None.</div>'; h+='</div>';
+  const dp=d.duplicates||[];
+  h+=`<div class="isec dupe"><h4>⧉ Possible Duplicates<span class="ct">${dp.length}</span></h4>`;
+  h+= dp.length?('<div class="itbl"><table><thead><tr><th>Record 1</th><th>Record 2</th><th>Reason</th></tr></thead><tbody>'+dp.map(r=>`<tr><td>${iv(r.record_1)}</td><td>${iv(r.record_2)}</td><td class="dim">${iv(r.reason)}</td></tr>`).join('')+'</tbody></table></div>'):'<div class="iempty">None.</div>'; h+='</div>';
+  const ms=d.missing||[];
+  h+=`<div class="isec miss"><h4>▢ Missing Required Fields<span class="ct">${ms.length}</span></h4>`;
+  h+= ms.length?('<div class="itbl"><table><thead><tr><th>Name</th><th>Missing</th><th>Notes</th></tr></thead><tbody>'+ms.map(r=>`<tr><td>${iv(r.full_name)}</td><td class="dim">${iv(r.missing_fields)}</td><td class="dim">${iv(r.notes)}</td></tr>`).join('')+'</tbody></table></div>'):'<div class="iempty">None.</div>'; h+='</div>';
+  $('#intakeResults').innerHTML=h;
+}
+const dealKey=dl=>((dl.stock||'').toLowerCase().trim()) || (((dl.vehicle||'')+'|'+(dl.dealDate||dl.deal_date||'')).toLowerCase().trim());
+function normDeals(list){ return (Array.isArray(list)?list:[]).map(dl=>({stock:dl.stock||'', vehicle:dl.vehicle||'', vin:dl.vin||'', dealDate:dl.deal_date||dl.dealDate||'', notes:dl.notes||''})).filter(dl=>dl.stock||dl.vehicle||dl.vin||dl.dealDate); }
+function createIntakeSelected(){
+  if(!intakeData) return;
+  const picks=$$('.i-pick').filter(x=>x.checked).map(x=>+x.dataset.i);
+  const rows=(intakeData.ready||[]).filter((_,i)=>picks.includes(i));
+  if(!rows.length){ toast('Select at least one record'); return; }
+  let created=0, merged=0, addedDeals=0;
+  rows.forEach((r,k)=>{
+    const name=(r.full_name||((r.first_name||'')+' '+(r.last_name||'')).trim()).trim(); if(!name) return;
+    const email=(r.email||'').trim(), phone=(r.phone||'').trim();
+    const status=(r.status==='prospect')?'prospect':'sold';
+    const deals=normDeals(r.deals);
+    const existing=CONTACTS.find(c=> (email && (c.email||'').toLowerCase()===email.toLowerCase()) || (phone && (c.phone||'')===phone && (c.name||'').toLowerCase()===name.toLowerCase()));
+    if(existing){
+      existing.deals=existing.deals||[];
+      deals.forEach(dl=>{ if(!existing.deals.some(x=>dealKey(x)===dealKey(dl))){ existing.deals.push(dl); addedDeals++; } });
+      if(status==='sold') existing.status='sold';
+      existing.status=existing.status||status; existing.type=existing.status;
+      // backfill blank contact fields from the new record (never overwrite)
+      ['email','phone','address','city','state','zip','firstName','lastName'].forEach(f=>{ const src=f==='firstName'?r.first_name:f==='lastName'?r.last_name:r[f]; if(!existing[f]&&src) existing[f]=src; });
+      existing.vehicle=(existing.deals[existing.deals.length-1]||{}).vehicle||existing.vehicle||'';
+      merged++;
+    } else {
+      CONTACTS.push({ id:Date.now()+k, name, firstName:r.first_name||'', lastName:r.last_name||'', email, phone,
+        address:r.address||'', city:r.city||'', state:r.state||'', zip:r.zip||'',
+        status, type:status, deals, vehicle:(deals[deals.length-1]||{}).vehicle||'', notes:r.notes||'', source:'intake', group:INTAKE_GROUP });
+      created++;
+    }
+  });
+  if(created||addedDeals) saveContacts();
+  try{ refreshContactDropdown(); }catch(e){}
+  blip(960,0.07,'sine',0.13);
+  toast(`Created ${created} customer${created!==1?'s':''}${merged?` · updated ${merged} on file (+${addedDeals} deal${addedDeals!==1?'s':''})`:''}`);
+  intakeData.ready=(intakeData.ready||[]).filter((_,i)=>!picks.includes(i));
+  renderIntakeResults(intakeData);
+}
 function closeAI(){ $('#aiOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
 async function askCarvis(){
   if(aiBusy) return;
@@ -2230,6 +2439,9 @@ function init(){
     const bot=e.target.closest('#aiLog .aim.bot'); if(bot && !bot.classList.contains('thinking')){ navigator.clipboard?.writeText(bot.textContent||'').catch(()=>{}); blip(980,0.05,'triangle',0.12); toast('Copied'); return; }
     // Playbook actions
     if(e.target.closest('#sopSeed')){ seedStarters(); return; }
+    // Customer Intake actions
+    if(e.target.closest('#iCreate')){ createIntakeSelected(); return; }
+    const ifd=e.target.closest('.js-ifile-del'); if(ifd){ intakeFiles.splice(+ifd.dataset.i,1); renderIntakeFiles(); return; }
     const su=e.target.closest('.js-sop-use'); if(su){ useSop(+su.dataset.id); return; }
     const se=e.target.closest('.js-sop-edit'); if(se){ editSop(+se.dataset.id); return; }
     const sh=e.target.closest('.js-sop-hist'); if(sh){ toggleHist(+sh.dataset.id); return; }
@@ -2252,11 +2464,12 @@ function init(){
     if(e.target.closest('#briefClose')||e.target===$('#briefOverlay')) closeBrief();
     if(e.target.closest('#measClose')||e.target===$('#measOverlay')) closeMeasure();
     if(e.target.closest('#sopClose')||e.target===$('#sopOverlay')) closeSops();
+    if(e.target.closest('#intakeClose')||e.target===$('#intakeOverlay')) closeIntake();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
     const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); closeMeasure(); closeSops(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); closeMeasure(); closeSops(); closeIntake(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
@@ -2289,6 +2502,12 @@ function init(){
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  // customer intake
+  $('#intakeBtn').addEventListener('click', ()=>{ blip(800,0.06,'sine',0.12); openIntake(); });
+  $('#intakeClose').addEventListener('click', closeIntake);
+  $('#intakeFiles').addEventListener('change', e=>{ for(const f of e.target.files){ if(intakeFiles.length<8) intakeFiles.push(f); } e.target.value=''; renderIntakeFiles(); });
+  $('#intakeRun').addEventListener('click', runIntake);
+  $('#intakeResults').addEventListener('change', e=>{ if(e.target.id==='iAll'){ const on=e.target.checked; $$('.i-pick').forEach(c=>c.checked=on); } });
   // playbook (SOP / prompt library)
   $('#playbookBtn').addEventListener('click', ()=>{ blip(800,0.06,'sine',0.12); openSops(); });
   $('#sopClose').addEventListener('click', closeSops);

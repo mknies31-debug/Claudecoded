@@ -58,15 +58,21 @@ exports.handler = async (event) => {
     };
   }
 
-  let messages;
+  let messages, systemOverride, maxTokens;
   try {
-    ({ messages } = JSON.parse(event.body || '{}'));
+    const b = JSON.parse(event.body || '{}');
+    messages = b.messages;
+    systemOverride = typeof b.system === 'string' && b.system.trim() ? b.system : null;
+    maxTokens = Math.min(Math.max(parseInt(b.max_tokens, 10) || MAX_TOKENS, 1), 4096);
   } catch {
     return { statusCode: 400, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: 'Invalid JSON body.' }) };
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     return { statusCode: 400, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: 'messages must be a non-empty array.' }) };
   }
+  // Optional per-request system prompt (e.g. the Customer Upload Intake agent) —
+  // messages pass through verbatim, so image/document blocks (vision) work too.
+  const system = systemOverride || SYSTEM_PROMPT;
 
   // Detects "this model isn't available on your key" so we can fall back to the
   // next candidate (vs. an auth/credit error, which would fail on every model).
@@ -86,7 +92,7 @@ exports.handler = async (event) => {
           'x-api-key': key,
           'anthropic-version': '2023-06-01',
         },
-        body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT, messages }),
+        body: JSON.stringify({ model, max_tokens: maxTokens, system, messages }),
       });
     } catch (err) {
       lastStatus = 502;

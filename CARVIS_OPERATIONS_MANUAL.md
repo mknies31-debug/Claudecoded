@@ -44,6 +44,7 @@ multi-agent enterprise platform the vision describes. That gap is the roadmap.
 | 10 | **Accessibility** | ✅ Built | Low-vision default + A⁺ mode + time-of-day theme | — | Legible, high-contrast UI | Usability |
 | 11 | **Measurement (funnel + source)** | ✅ Built | One-tap capture of leads/appts/sales by source | Taps (source-tagged) | Monthly funnel, conversion %, source-ROI table | Lead→appt→sale rates, source ROI |
 | 12 | **Playbook (SOP / prompt library)** | ✅ Built | Reusable scripts + AI prompts, versioned | Titled plays | Copy-to-paste scripts, one-tap "run in brain" prompts, version history, use counts | Systemized knowledge, reuse |
+| 13 | **Customer Intake (⬆)** | ✅ Built | Command-driven extraction of customers from uploads | Files (photo/scan/screenshot/CSV/TXT/PDF) or pasted lists + a plain-English command | AI-classified prospect/sold records with multi-deal grouping, routed into Ready / Needs Review / Possible Duplicates / Missing; one-tap create + merge | Clean bulk import, no bad records |
 
 **What does NOT exist yet (the vision's core, honestly):** a content engine, any analytics
 pipeline, market/auction/BI monitoring, a referral *system* (vs. one-off emails), an
@@ -160,5 +161,6 @@ Efficiency: ROI, return on time invested (ROTI).
 | v1.2 | 2026-06 | **Follow-Up Engine (B1)** shipped: prospect aging + SLA → daily due list, one-tap Logged / Call / AI revival draft; briefing now cites real quiet-timers. |
 | v1.3 | 2026-06 | **Measurement capture (B2)** shipped: one-tap funnel (leads→appts→sales) + source-ROI table; briefing cites the funnel + best source. |
 | v1.4 | 2026-06 | **Playbook / SOP library (B3)** shipped: versioned scripts + runnable prompts, use-counts, starters. **Phase 1 (Executive Layer) complete.** |
+| v1.5 | 2026-07 | **Customer Intake** shipped: command-driven, vision-capable extraction of prospects/sold customers from any upload, with multi-deal grouping, 4-bucket review, and one-tap create + merge. Proxy now accepts a per-request system prompt + images/PDF. |
 
-_Next: **Phase 2 — Growth Engines.** Content OS (daily 3-video plan) and the Referral System. Recommend Content OS first._
+_Next: **Phase 2 — Growth Engines** (Content OS, Referral System). Intake now feeds the customer base that outreach + referral depend on._
