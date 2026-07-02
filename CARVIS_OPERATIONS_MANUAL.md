@@ -39,7 +39,7 @@ multi-agent enterprise platform the vision describes. That gap is the roadmap.
 | 5 | **Buyer Reply drafts** | ✅ Built (scripted) | 3 options (Direct/Softer/NEPQ) | Buyer message | Copy-paste replies | Response speed, tone |
 | 6 | **Outreach Email** | ✅ Built | 1:1 referral/review/follow-up email via Resend | Contacts + template | Sent email, reply-to Mick | Referrals, reviews |
 | 7 | **Vehicle Lookup** | ✅ Built | Search real inventory | `inventory.json` | Specs, price, payment est. | Sales enablement |
-| 8 | **Ask CARVIS (live AI)** | ✅ Built | Live answers in Mick's voice, voice in/out | Question | Spoken + written answer (Fable-5 proxy, model-fallback chain) | Speed, coaching, drafting |
+| 8 | **Ask CARVIS (live AI)** | ✅ Built | Live answers + **search over your own data** (customers, deals, numbers, follow-ups), voice in/out | Question (command bar or ◉) | Spoken + written answer grounded in a live data snapshot (Fable-5 proxy, model-fallback) | Speed, coaching, drafting, lookup |
 | 9 | **Cloud Sync + Backup** | ✅ Built | Home↔work continuity | All `carvis_*` keys | Netlify Blobs store + JSON file | Reliability |
 | 10 | **Accessibility** | ✅ Built | Low-vision default + A⁺ mode + time-of-day theme | — | Legible, high-contrast UI | Usability |
 | 11 | **Measurement (funnel + source)** | ✅ Built | One-tap capture of leads/appts/sales by source | Taps (source-tagged) | Monthly funnel, conversion %, source-ROI table | Lead→appt→sale rates, source ROI |

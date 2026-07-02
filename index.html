@@ -75,7 +75,7 @@
   .vtoggle.on{color:var(--gold);border-color:var(--gold)}
 
   /* ============ MAIN GRID ============ */
-  .main{display:grid;grid-template-columns:300px 1fr 348px;gap:18px;padding:18px 26px;min-height:0;overflow:hidden}
+  .main{display:grid;grid-template-columns:396px 1fr 444px;gap:18px;padding:18px 26px;min-height:0;overflow:hidden}
   .col{display:flex;flex-direction:column;gap:16px;min-height:0}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(4px);position:relative;overflow:hidden}
   .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.5}
@@ -257,7 +257,7 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast .tc{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
 
-  @media(max-width:1100px){ .main{display:block;overflow-y:auto} .col{min-height:auto;margin-bottom:16px} .stage{justify-content:flex-start;padding:10px 0} .reactor-wrap{width:300px;height:300px;margin:0 auto} }
+  @media(max-width:1300px){ .main{display:block;overflow-y:auto} .col{min-height:auto;margin-bottom:16px} .stage{justify-content:flex-start;padding:10px 0} .reactor-wrap{width:300px;height:300px;margin:0 auto} }
   @media(max-width:560px){ .top{flex-wrap:wrap;gap:10px;padding:12px 16px} .sess{display:none} .main{padding:14px} .cmd{padding:12px 14px 16px} .chips{display:none} .hero .v{font-size:43px} }
 
   /* ===== fun & cool layer ===== */
@@ -720,7 +720,7 @@
       <div class="chip" data-cmd="followups">Follow-ups</div>
       <div class="chip" data-cmd="market">Market</div>
     </div>
-    <input id="cmd" type="text" placeholder="Command CARVIS — type a name to draft, or ask…" autocomplete="off">
+    <input id="cmd" type="text" placeholder="Ask CARVIS anything — search customers, ask a question, or type a command…" autocomplete="off">
     <button class="send" id="send">➤</button>
   </div>
 </div>
@@ -887,7 +887,7 @@ Janelle Aas, janelle@email.com, referral"></textarea>
     <div class="mb">
       <div class="ailog" id="aiLog"></div>
       <div class="airow">
-        <textarea id="aiIn" class="rta" rows="2" placeholder="Ask anything — an objection, a customer text to write, a pricing approach…"></textarea>
+        <textarea id="aiIn" class="rta" rows="2" placeholder="Ask anything, or search your data — e.g. “who bought an F-150?”, “how many prospects?”, “draft a text for Dana”…"></textarea>
         <button class="send" id="aiSend" title="Send">➤</button>
       </div>
       <div class="ostat" id="aiStat"></div>
@@ -2292,6 +2292,31 @@ function createIntakeSelected(){
   renderIntakeResults(intakeData);
 }
 function closeAI(){ $('#aiOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
+// Build a compact snapshot of the operator's real CARVIS data so Ask CARVIS can
+// answer questions and SEARCH customers/numbers — not just chat. Keyword-filters
+// the customer base by the question so big lists don't blow the context.
+const ASK_STOP=new Set('the and for you your are was who how many what which with have has get any all can this that then them from into out about find list show tell give me my our'.split(' '));
+function askContext(q){
+  try{
+    refreshStats(); const s=STATS, f=funnelOf(monthEvents()), due=dueList().length;
+    const isP=c=>((c.status||c.type)==='prospect');
+    const sold=CONTACTS.filter(c=>!isP(c)&&c.type!=='referral').length, pros=CONTACTS.filter(isP).length;
+    const custLine=c=>`- ${c.name} [${(c.status||c.type)||'sold'}]${c.phone?' '+c.phone:''}${c.email?' '+c.email:''}${c.city?' '+c.city+(c.state?', '+c.state:''):''}`
+      +((c.deals&&c.deals.length)?' — deals: '+c.deals.map(d=>[d.vehicle,d.stock&&('#'+d.stock),d.dealDate].filter(Boolean).join(' ')).join('; ')
+        :(c.vehicle?' — '+c.vehicle:''));
+    const terms=(q.toLowerCase().match(/[a-z0-9]{3,}/g)||[]).filter(w=>!ASK_STOP.has(w));
+    let matches=[];
+    if(terms.length && CONTACTS.length){
+      matches=CONTACTS.filter(c=>{ const hay=[c.name,c.email,c.phone,c.city,c.state,c.vehicle,c.notes,(c.deals||[]).map(d=>d.vehicle+' '+d.stock+' '+d.vin).join(' ')].join(' ').toLowerCase();
+        return terms.some(t=>hay.includes(t)); }).slice(0,40);
+    }
+    let ctx=`[CARVIS DATA — ${new Date().toLocaleDateString()}]\nThis month: sold ${s.sold}${s.soldGoal?'/'+s.soldGoal:''}, bought ${s.bought}, deals ${s.deals}, close ${s.closeRate}%. Funnel: ${f.lead} leads → ${f.appt} appts → ${f.sale} sales. Follow-ups due now: ${due}. Customers on file: ${CONTACTS.length} (${sold} sold, ${pros} prospect).`;
+    if(matches.length) ctx+=`\nCustomers matching the question (${matches.length}${matches.length>=40?'+':''} shown):\n`+matches.map(custLine).join('\n');
+    else if(CONTACTS.length && /(customer|bought|buy|sold|prospect|lead|deal|vehicle|truck|suv|car|referral|email|phone|city|who|how many|find|list|search)/i.test(q))
+      ctx+=`\n(No direct match; ${CONTACTS.length} customers on file — most recent:)\n`+CONTACTS.slice(-15).map(custLine).join('\n');
+    return ctx+`\n\nAnswer from this data when relevant; if it isn't in the data, say so plainly.\nQUESTION: `;
+  }catch(e){ return ''; }
+}
 async function askCarvis(){
   if(aiBusy) return;
   const q=$('#aiIn').value.trim(); if(!q) return;
@@ -2302,8 +2327,13 @@ async function askCarvis(){
   $('#aiStat').className='ostat'; $('#aiStat').textContent='';
   const r0=$('#reactor'); if(r0) r0.classList.add('listening');
   try{
+    // send the rolling history, but augment only the latest question with a live
+    // snapshot of the operator's data (so it can search customers/numbers). The
+    // stored history stays clean so context doesn't compound each turn.
+    const send=AIMSGS.map(m=>({...m}));
+    send[send.length-1]={role:'user', content:askContext(q)+q};
     const r=await fetch('/.netlify/functions/carvis',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:AIMSGS})});
+      body:JSON.stringify({messages:send})});
     const d=await r.json().catch(()=>({}));
     th.remove();
     if(!r.ok){
