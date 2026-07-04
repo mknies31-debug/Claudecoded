@@ -20,9 +20,9 @@ Each faction receives the same ~**100-point** internal budget, distributed diffe
 | Battlefield control | 11 | 14 | 20 |
 | Technology scaling | 17 | 13 | 20 |
 | Ease of use | 18 | 10 | 11 |
-| **Total** | **123**\* | **150**\* | **139**\* |
+| **Total** | **143**\* | **150**\* | **149**\* |
 
-> \* **Open question for design:** the Bible calls this a "100-point budget" but the listed values sum higher and unequally (Directorate 123, Covenant 150, Array 139). Either the values are relative weights (not a strict 100-pt pool) or they need re-normalizing so each faction totals the same. Flagged, not silently changed — see [README open questions](../README.md#open-questions).
+> \* **Resolved in [11-budget-options.md](11-budget-options.md).** The Bible calls this a "100-point budget," but the listed values actually sum to **143 / 150 / 149** — not 100, and unequal. Worse, the "no faction #1 in more than 3 categories" rule is impossible with 10 categories × 3 factions (`3×3 = 9 < 10`) and the original already breaks it (Directorate and Covenant each lead 4). Three fixes — equal-100, 8-category, and difficulty-weighted — are laid out in [11-budget-options.md](11-budget-options.md); pick one to make canonical.
 
 ## Faction profiles
 

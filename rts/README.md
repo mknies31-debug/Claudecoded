@@ -41,7 +41,7 @@ Everything quantitative is JSON so a balance tool, simulator, or prototype can r
 ## Open questions
 _Things that need a design decision — flagged, not silently resolved._
 
-1. **Faction budget doesn't total 100.** §4 calls it a "100-point budget" but the listed category values sum to 123 (Directorate), 150 (Covenant), 139 (Array) — unequal. Decide: are these relative weights, or should each faction be re-normalized to an equal total? (See [design/01](design/01-factions.md).)
+1. **Faction budget doesn't total 100, and its "≤3 leads" rule is impossible.** §4 values sum to 143 / 150 / 149 (unequal, not 100), and "no faction #1 in >3 categories" can't hold with 10 categories × 3 factions. → **Three fix options laid out in [design/11-budget-options.md](design/11-budget-options.md)** (equal-100 / 8-category / difficulty-weighted); awaiting a pick. Recommended: Option B.
 2. **Faction names** — Directorate / Covenant / Array: final or placeholders?
 3. **Superweapon vs comeback tension** — §35 says superweapons must "force action"; confirm the discounted-collector emergency recovery (§14) and superweapon cadence don't combine into stalemate-y turtle metas.
 4. **Command capacity vs "no strict pop cap"** (§21) — confirm the soft-cap slowdown curve so it discourages extreme counts without dictating normal army size.
