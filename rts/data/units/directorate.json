@@ -41,7 +41,10 @@
       ],
       "notes": "Cheap backbone; garrisons buildings for cover & vision (§26).",
       "dmgType": "smallArms",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Missile Trooper",
@@ -80,7 +83,10 @@
       ],
       "notes": "The Directorate's dedicated heavy-armor & aircraft answer (§5).",
       "dmgType": "antiArmor",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 8,
+      "aoe": 2,
+      "mobile": true
     },
     {
       "name": "Field Engineer",
@@ -117,7 +123,10 @@
       ],
       "notes": "Captures neutral tech/economy (§14) and repairs structures; unarmed.",
       "dmgType": "none",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Recon Spotter",
@@ -156,7 +165,10 @@
       ],
       "notes": "Tier-1 mobile detector (§28); fast eyes and flanker vs enemy artillery.",
       "dmgType": "smallArms",
-      "armor": "light"
+      "armor": "light",
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Vanguard MBT",
@@ -198,7 +210,10 @@
       ],
       "notes": "The spammable core — carries 4 weaknesses (§9). Front armor rewards facing (§25).",
       "dmgType": "antiArmor",
-      "armor": "heavy"
+      "armor": "heavy",
+      "range": 5,
+      "aoe": 4,
+      "mobile": true
     },
     {
       "name": "Warden AA Halftrack",
@@ -236,7 +251,10 @@
       ],
       "notes": "Mobile flak; shreds aircraft and light infantry, folds to armor.",
       "dmgType": "explosive",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 8,
+      "aoe": 3,
+      "mobile": true
     },
     {
       "name": "Lancer Tank Destroyer",
@@ -255,7 +273,7 @@
         "air": 0,
         "siege": -10
       },
-      "dmg": 220,
+      "dmg": 300,
       "proj": 1,
       "reload": 3.5,
       "acc": 88,
@@ -275,7 +293,10 @@
       ],
       "notes": "Precision high-alpha gun; a key correct-counter piece vs epic units (§34).",
       "dmgType": "antiArmor",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 7,
+      "aoe": 2,
+      "mobile": true
     },
     {
       "name": "Howitzer",
@@ -316,7 +337,10 @@
       ],
       "notes": "Dominates static targets, collapses when reached (§22). Needs vision to hit max range.",
       "dmgType": "siege",
-      "armor": "artillery"
+      "armor": "artillery",
+      "range": 9,
+      "aoe": 6,
+      "mobile": true
     },
     {
       "name": "Falcon Gunship",
@@ -357,7 +381,10 @@
       ],
       "notes": "Airfield-bound (§27): 4 per field, predictable return path; strikes then rearms.",
       "dmgType": "air",
-      "armor": "aircraft"
+      "armor": "aircraft",
+      "range": 8,
+      "aoe": 3,
+      "mobile": true
     },
     {
       "name": "Collector Truck",
@@ -394,7 +421,10 @@
       ],
       "notes": "~117s payback at 12 cr/s (§11). Durable but unarmed — the harass target.",
       "dmgType": "none",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Repair Rig",
@@ -430,7 +460,10 @@
       ],
       "notes": "Field repair (§31): moderate rate, reduced under fire, damaged-in-last-3s penalty.",
       "dmgType": "none",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Bastion Land Battleship",
@@ -473,7 +506,10 @@
       ],
       "notes": "~8 MBTs + tech (§34). Repair aura for nearby units; must be supported — dies to an unopposed air+TD mix.",
       "dmgType": "siege",
-      "armor": "epic"
+      "armor": "epic",
+      "range": 6,
+      "aoe": 6,
+      "mobile": true
     },
     {
       "name": "Sentry Turret",
@@ -515,7 +551,10 @@
       ],
       "notes": "Structure (§30): more cost-efficient than a tank in its firing role because it can't move/retreat.",
       "dmgType": "antiArmor",
-      "armor": "structure"
+      "armor": "structure",
+      "range": 6,
+      "aoe": 2,
+      "mobile": false
     },
     {
       "name": "Flak Battery",
@@ -554,7 +593,10 @@
       ],
       "notes": "Static flak that doubles as a defensive detector (§28).",
       "dmgType": "explosive",
-      "armor": "structure"
+      "armor": "structure",
+      "range": 7,
+      "aoe": 3,
+      "mobile": false
     },
     {
       "name": "Judgment Cannon",
@@ -593,7 +635,10 @@
       ],
       "notes": "§35: visible facility, discoverable countdown, global warning, 4–7 min first charge, 5–8 min recharge. Damages a zone; must NOT erase a healthy HQ.",
       "dmgType": "none",
-      "armor": "epic"
+      "armor": "epic",
+      "range": 6,
+      "aoe": 0,
+      "mobile": true
     }
   ],
   "threatCoverage": {

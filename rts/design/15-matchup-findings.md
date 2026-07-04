@@ -77,3 +77,21 @@ These 5 are reported `[i]` (informational) because the outcome hinges on mechani
 | Lancer → MBT | **range / first-strike** — glass-cannon TDs win by shooting first, not attrition |
 
 Next sim iteration: add splash, range/first-strike, and a retreat threshold, then re-judge the `[i]` set.
+
+---
+
+## Pass 3 — simulator v2 (C resolved: direction)
+
+Rebuilt `matchup.mjs` as a **time-stepped v2** that models the missing mechanics:
+- **Splash / AoE** — `aoe` per unit; a shot hits up to N clustered targets (cannons 4, artillery 6, energy beams 1). Data added by [`../scripts/add-combat-stats.mjs`](../scripts/add-combat-stats.mjs).
+- **Range & first-strike** — longer-range side fires alone for a window before contact.
+- **Kiting** — an out-ranged unit returns less fire; **immobile** structures get kited hard (artillery vs static now works).
+- **Retreat (§27)** — reported separately (a side hitting 30% force is noted as "retreated, not annihilated"); it does **not** inflate the §8 strength number, which is judged to-death.
+
+The report now grades on **direction** (is the counter relationship correct?) and flags only wrong-direction results; a `~` means the counter works but its exact remaining% is off the ideal band (a first-order pooled sim can't nail exact %).
+
+**Result — all 12 curated matchups correct in direction, 0 broken:**
+- ✓ in-band: MBT mirror neutral · Marauder loses to Vanguard · Lancer loses to Bastion · **Lancer → MBT 38%** · **Rifleman loses to MBT** (tank splash now clears infantry) · **Missile → Falcon 32%** · **Howitzer → Sentry Turret 35%** (out-ranges the static turret).
+- `~` works, runs *stronger* than the ideal band (dominant vs strong) — pure fine-tuning left: Missile→MBT, Nullifier→Aegis, Disruptor→Aegis, Vanguard→Marauder, Warden AA→Falcon.
+
+**Open (fine-tuning, not blocking):** pull the five `~` counters down from "dominant" into the 25–45% band by nudging cost/DPS. This is §47-style small-change work best done with playtest data, not more sim over-fitting. Roster stays validated 0/0; the Lab reflects the tuned numbers.

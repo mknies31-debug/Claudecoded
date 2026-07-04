@@ -40,7 +40,10 @@
       ],
       "notes": "Dirt-cheap early pressure; expendable.",
       "dmgType": "smallArms",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Saboteur",
@@ -80,7 +83,10 @@
       ],
       "notes": "Cloaked (§28); plants charges on armor, defenses, and superweapon facilities.",
       "dmgType": "antiArmor",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 5,
+      "aoe": 2,
+      "mobile": true
     },
     {
       "name": "Hijacker",
@@ -119,7 +125,10 @@
       ],
       "notes": "Steals enemy vehicles — the Covenant answer to heavy armor & epics (§5). Unarmed.",
       "dmgType": "none",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Recon Hound",
@@ -157,7 +166,10 @@
       ],
       "notes": "Tier-1 mobile detector; disposable eyes and artillery-flanker.",
       "dmgType": "smallArms",
-      "armor": "light"
+      "armor": "light",
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Raider Buggy",
@@ -196,7 +208,10 @@
       ],
       "notes": "Signature harasser — fast enough to hit harvesters and flee the 8–15 s window (§13).",
       "dmgType": "smallArms",
-      "armor": "light"
+      "armor": "light",
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Rocket Technical",
@@ -235,7 +250,10 @@
       ],
       "notes": "Improvised launcher truck; flexible but fragile.",
       "dmgType": "antiArmor",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 7,
+      "aoe": 2,
+      "mobile": true
     },
     {
       "name": "Mine Layer",
@@ -274,7 +292,10 @@
       ],
       "notes": "Lays mines to deny armor pushes and expansion routes; mines are detectable.",
       "dmgType": "none",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Marauder Scrap Tank",
@@ -315,7 +336,10 @@
       ],
       "notes": "Cheaper, faster-built and weaker than a Directorate MBT — pressure, not staying power. 4 weaknesses (§9).",
       "dmgType": "antiArmor",
-      "armor": "heavy"
+      "armor": "heavy",
+      "range": 5,
+      "aoe": 4,
+      "mobile": true
     },
     {
       "name": "Ambush Tank",
@@ -355,7 +379,10 @@
       ],
       "notes": "Cloaked until firing (§28); alpha-strikes rear armor (§25) then repositions.",
       "dmgType": "antiArmor",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 7,
+      "aoe": 2,
+      "mobile": true
     },
     {
       "name": "Salvage Harvester",
@@ -392,7 +419,10 @@
       ],
       "notes": "Cheaper/faster than a Collector Truck but frailer; also salvages wreckage for credits (§14).",
       "dmgType": "none",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Interceptor Gyro",
@@ -433,7 +463,10 @@
       ],
       "notes": "Cheap, fast, glass — airfield-bound (§27); great for raids and picking off artillery/aircraft.",
       "dmgType": "air",
-      "armor": "aircraft"
+      "armor": "aircraft",
+      "range": 8,
+      "aoe": 3,
+      "mobile": true
     },
     {
       "name": "Sensor Spike",
@@ -471,7 +504,10 @@
       ],
       "notes": "Defensive detector (§28) with a light gun.",
       "dmgType": "smallArms",
-      "armor": "structure"
+      "armor": "structure",
+      "range": 6,
+      "aoe": 1,
+      "mobile": false
     },
     {
       "name": "Rocket Nest",
@@ -511,7 +547,10 @@
       ],
       "notes": "Cheap dual-purpose nest; frailer than a Directorate turret.",
       "dmgType": "antiArmor",
-      "armor": "structure"
+      "armor": "structure",
+      "range": 7,
+      "aoe": 2,
+      "mobile": false
     },
     {
       "name": "Ravager",
@@ -554,7 +593,10 @@
       ],
       "notes": "Fast, tears economy and defenses, salvages kills — but dies faster than the Directorate Bastion (§34). Must be supported.",
       "dmgType": "siege",
-      "armor": "epic"
+      "armor": "epic",
+      "range": 6,
+      "aoe": 6,
+      "mobile": true
     },
     {
       "name": "Locust Swarm",
@@ -595,7 +637,10 @@
       ],
       "notes": "§35: deploys autonomous drones over a marked zone — global warning, evacuation window, 4–7 min first charge, 5–8 min recharge. Harasses an area rather than deleting a base.",
       "dmgType": "none",
-      "armor": "epic"
+      "armor": "epic",
+      "range": 6,
+      "aoe": 0,
+      "mobile": true
     }
   ],
   "threatCoverage": {

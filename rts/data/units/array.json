@@ -40,7 +40,10 @@
       ],
       "notes": "Personal shield gives resist until EMP'd; pricier and sturdier than a Raider Squad.",
       "dmgType": "energy",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Disruptor",
@@ -81,7 +84,10 @@
       "notes": "Shield-disrupting energy beam — the Array's heavy-armor answer (§5); shreds shields and armor alike.",
       "dmgType": "energy",
       "armor": "infantry",
-      "ignoreResist": true
+      "ignoreResist": true,
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Architect",
@@ -118,7 +124,10 @@
       ],
       "notes": "Deploys/relocates mobile infrastructure (§4 identity), captures neutral tech, repairs; unarmed.",
       "dmgType": "none",
-      "armor": "infantry"
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Probe Skimmer",
@@ -158,7 +167,10 @@
       ],
       "notes": "Hover recon + Tier-1 detector (§28); flanks enemy artillery.",
       "dmgType": "smallArms",
-      "armor": "light"
+      "armor": "light",
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Extractor Core",
@@ -196,7 +208,10 @@
       ],
       "notes": "Array's economy is a stationary core rather than mobile harvesters — reliable output, but a fixed, exposed target (§11).",
       "dmgType": "none",
-      "armor": "structure"
+      "armor": "structure",
+      "range": 6,
+      "aoe": 0,
+      "mobile": false
     },
     {
       "name": "Aegis Tank",
@@ -237,7 +252,10 @@
       ],
       "notes": "Front shield makes it tanky until EMP'd; pricier and slower to replace than other MBTs (§9, 4 weaknesses).",
       "dmgType": "energy",
-      "armor": "heavy"
+      "armor": "heavy",
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Arc Walker",
@@ -276,7 +294,10 @@
       ],
       "notes": "Chain-arc energy; hits air and clumped infantry, folds to armor.",
       "dmgType": "energy",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 7,
+      "aoe": 3,
+      "mobile": true
     },
     {
       "name": "Warp Snare",
@@ -316,7 +337,10 @@
       ],
       "notes": "Projects a movement-disable field (§29: 1.5–4 s, diminishing returns) — pins armor and epics for focus fire; no weapon of its own.",
       "dmgType": "none",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Nullifier",
@@ -357,7 +381,10 @@
       "notes": "Expensive shield-disrupting lance; the Array's dedicated armor/epic killer (§5).",
       "dmgType": "energy",
       "armor": "medium",
-      "ignoreResist": true
+      "ignoreResist": true,
+      "range": 7,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Prism Artillery",
@@ -398,7 +425,10 @@
       ],
       "notes": "Beam siege; dominates static targets, collapses when reached (§22).",
       "dmgType": "siege",
-      "armor": "artillery"
+      "armor": "artillery",
+      "range": 9,
+      "aoe": 6,
+      "mobile": true
     },
     {
       "name": "Restorer Drone",
@@ -435,7 +465,10 @@
       ],
       "notes": "Recharges nearby shields and repairs (§31); vulnerable support piece.",
       "dmgType": "none",
-      "armor": "medium"
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
     },
     {
       "name": "Phase Interceptor",
@@ -476,7 +509,10 @@
       ],
       "notes": "Airfield-bound (§27); precise energy strikes, and raids superweapon facilities.",
       "dmgType": "air",
-      "armor": "aircraft"
+      "armor": "aircraft",
+      "range": 8,
+      "aoe": 3,
+      "mobile": true
     },
     {
       "name": "Pylon Turret",
@@ -517,7 +553,10 @@
       ],
       "notes": "Structure (§30) that also serves as a defensive detector (§28).",
       "dmgType": "energy",
-      "armor": "structure"
+      "armor": "structure",
+      "range": 6,
+      "aoe": 1,
+      "mobile": false
     },
     {
       "name": "Arbiter",
@@ -560,7 +599,10 @@
       ],
       "notes": "Slowest/priciest epic; projects a shield aura over nearby units (§34). Devastating supported, helpless once EMP'd and flanked.",
       "dmgType": "energy",
-      "armor": "epic"
+      "armor": "epic",
+      "range": 6,
+      "aoe": 1,
+      "mobile": true
     },
     {
       "name": "Stasis Lance",
@@ -601,7 +643,10 @@
       ],
       "notes": "§35: freezes and damages a marked zone (control, not deletion) — global warning, evacuation window, 4–7 min first charge, 5–8 min recharge.",
       "dmgType": "none",
-      "armor": "epic"
+      "armor": "epic",
+      "range": 6,
+      "aoe": 0,
+      "mobile": true
     }
   ],
   "threatCoverage": {
