@@ -1,0 +1,625 @@
+{
+  "_source": "Directorate roster v1. Fields match rts/lab schema; validated by scripts/validate-roster.mjs.",
+  "faction": "Directorate",
+  "identity": "Durable combined-arms, reliable economy, strong repair, easy to use. Weak stealth, mobility, expansion, early harassment.",
+  "buildTechNote": "Tier gates per §17. Costs in credits, build in seconds, pop = command capacity (§21).",
+  "units": [
+    {
+      "name": "Rifleman Squad",
+      "tier": 1,
+      "class": "Basic infantry",
+      "role": "anti-infantry / garrison",
+      "cost": 200,
+      "build": 8,
+      "pop": 1,
+      "hp": 260,
+      "resist": {
+        "smallArms": 10,
+        "explosive": -20,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -30
+      },
+      "dmg": 14,
+      "proj": 4,
+      "reload": 1,
+      "acc": 70,
+      "general": false,
+      "weaknesses": [
+        "area damage",
+        "static defense"
+      ],
+      "answers": [
+        "massInfantry",
+        "harassment"
+      ],
+      "counteredBy": [
+        "tanks",
+        "artillery",
+        "flame/area"
+      ],
+      "notes": "Cheap backbone; garrisons buildings for cover & vision (§26)."
+    },
+    {
+      "name": "Missile Trooper",
+      "tier": 1,
+      "class": "Specialist infantry",
+      "role": "anti-armor / anti-air",
+      "cost": 350,
+      "build": 13,
+      "pop": 1,
+      "hp": 180,
+      "resist": {
+        "smallArms": 5,
+        "explosive": -25,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -30
+      },
+      "dmg": 60,
+      "proj": 1,
+      "reload": 3,
+      "acc": 80,
+      "general": false,
+      "weaknesses": [
+        "anti-tank infantry",
+        "area damage",
+        "dispersed light infantry"
+      ],
+      "answers": [
+        "heavyArmor",
+        "aircraft"
+      ],
+      "counteredBy": [
+        "area damage",
+        "focused fire"
+      ],
+      "notes": "The Directorate's dedicated heavy-armor & aircraft answer (§5)."
+    },
+    {
+      "name": "Field Engineer",
+      "tier": 1,
+      "class": "Specialist infantry",
+      "role": "capture / field repair",
+      "cost": 300,
+      "build": 14,
+      "pop": 1,
+      "hp": 150,
+      "resist": {
+        "smallArms": 0,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "focused fire",
+        "dispersed light infantry"
+      ],
+      "answers": [
+        "economicExpansion",
+        "staticDefenses"
+      ],
+      "counteredBy": [
+        "any direct fire"
+      ],
+      "notes": "Captures neutral tech/economy (§14) and repairs structures; unarmed."
+    },
+    {
+      "name": "Recon Spotter",
+      "tier": 1,
+      "class": "Scout vehicle",
+      "role": "recon + mobile detector",
+      "cost": 350,
+      "build": 14,
+      "pop": 1,
+      "hp": 300,
+      "resist": {
+        "smallArms": 20,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 10,
+      "proj": 1,
+      "reload": 1.2,
+      "acc": 70,
+      "general": false,
+      "weaknesses": [
+        "anti-tank infantry",
+        "aircraft",
+        "focused fire"
+      ],
+      "answers": [
+        "stealth",
+        "harassment",
+        "artillery"
+      ],
+      "counteredBy": [
+        "anything heavier"
+      ],
+      "notes": "Tier-1 mobile detector (§28); fast eyes and flanker vs enemy artillery."
+    },
+    {
+      "name": "Vanguard MBT",
+      "tier": 2,
+      "class": "Main battle tank",
+      "role": "general-purpose armor",
+      "cost": 900,
+      "build": 28,
+      "pop": 3,
+      "hp": 1600,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 10,
+        "antiArmor": 0,
+        "energy": 5,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 120,
+      "proj": 1,
+      "reload": 1.8,
+      "acc": 85,
+      "general": true,
+      "weaknesses": [
+        "anti-tank infantry",
+        "aircraft",
+        "dispersed light infantry",
+        "slow turning"
+      ],
+      "answers": [
+        "heavyArmor",
+        "staticDefenses",
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "missile infantry",
+        "aircraft",
+        "tank destroyers"
+      ],
+      "notes": "The spammable core — carries 4 weaknesses (§9). Front armor rewards facing (§25)."
+    },
+    {
+      "name": "Warden AA Halftrack",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "anti-air / anti-infantry",
+      "cost": 700,
+      "build": 38,
+      "pop": 2,
+      "hp": 620,
+      "resist": {
+        "smallArms": 30,
+        "explosive": 0,
+        "antiArmor": -10,
+        "energy": 0,
+        "air": 0,
+        "siege": -20
+      },
+      "dmg": 30,
+      "proj": 2,
+      "reload": 0.8,
+      "acc": 75,
+      "general": false,
+      "weaknesses": [
+        "heavy armor",
+        "artillery"
+      ],
+      "answers": [
+        "aircraft",
+        "massInfantry"
+      ],
+      "counteredBy": [
+        "tanks",
+        "artillery"
+      ],
+      "notes": "Mobile flak; shreds aircraft and light infantry, folds to armor."
+    },
+    {
+      "name": "Lancer Tank Destroyer",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "dedicated anti-armor",
+      "cost": 1000,
+      "build": 42,
+      "pop": 3,
+      "hp": 900,
+      "resist": {
+        "smallArms": 25,
+        "explosive": 10,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 220,
+      "proj": 1,
+      "reload": 3.5,
+      "acc": 88,
+      "general": false,
+      "weaknesses": [
+        "infantry",
+        "aircraft",
+        "poor vs structures"
+      ],
+      "answers": [
+        "heavyArmor",
+        "epicUnits"
+      ],
+      "counteredBy": [
+        "infantry swarm",
+        "aircraft"
+      ],
+      "notes": "Precision high-alpha gun; a key correct-counter piece vs epic units (§34)."
+    },
+    {
+      "name": "Howitzer",
+      "tier": 2,
+      "class": "Artillery",
+      "role": "siege artillery",
+      "cost": 1100,
+      "build": 40,
+      "pop": 4,
+      "hp": 500,
+      "resist": {
+        "smallArms": 15,
+        "explosive": -10,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 180,
+      "proj": 1,
+      "reload": 5,
+      "acc": 60,
+      "general": false,
+      "weaknesses": [
+        "minimum-range",
+        "low durability",
+        "deployment time",
+        "flanking"
+      ],
+      "answers": [
+        "staticDefenses",
+        "massInfantry",
+        "artillery"
+      ],
+      "counteredBy": [
+        "fast flankers",
+        "aircraft"
+      ],
+      "notes": "Dominates static targets, collapses when reached (§22). Needs vision to hit max range."
+    },
+    {
+      "name": "Falcon Gunship",
+      "tier": 3,
+      "class": "Aircraft",
+      "role": "precision strike",
+      "cost": 1200,
+      "build": 35,
+      "pop": 4,
+      "hp": 700,
+      "resist": {
+        "smallArms": 10,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 150,
+      "proj": 1,
+      "reload": 2.5,
+      "acc": 90,
+      "general": false,
+      "weaknesses": [
+        "aircraft",
+        "ammunition",
+        "expensive replacement"
+      ],
+      "answers": [
+        "heavyArmor",
+        "artillery",
+        "epicUnits",
+        "superweapons"
+      ],
+      "counteredBy": [
+        "dedicated AA",
+        "flak"
+      ],
+      "notes": "Airfield-bound (§27): 4 per field, predictable return path; strikes then rearms."
+    },
+    {
+      "name": "Collector Truck",
+      "tier": 1,
+      "class": "Advanced vehicle",
+      "role": "economy / harvester",
+      "cost": 1400,
+      "build": 40,
+      "pop": 2,
+      "hp": 1000,
+      "resist": {
+        "smallArms": 30,
+        "explosive": 10,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "harassment",
+        "focused fire"
+      ],
+      "answers": [
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "raiders",
+        "harassment"
+      ],
+      "notes": "~117s payback at 12 cr/s (§11). Durable but unarmed — the harass target."
+    },
+    {
+      "name": "Repair Rig",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "field repair support",
+      "cost": 600,
+      "build": 36,
+      "pop": 2,
+      "hp": 600,
+      "resist": {
+        "smallArms": 20,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "focused fire",
+        "aircraft"
+      ],
+      "answers": [
+        "epicUnits"
+      ],
+      "counteredBy": [
+        "focus fire"
+      ],
+      "notes": "Field repair (§31): moderate rate, reduced under fire, damaged-in-last-3s penalty."
+    },
+    {
+      "name": "Bastion Land Battleship",
+      "tier": 3,
+      "class": "Epic unit",
+      "role": "epic assault + army support",
+      "cost": 7500,
+      "build": 150,
+      "pop": 15,
+      "hp": 9000,
+      "resist": {
+        "smallArms": 60,
+        "explosive": 40,
+        "antiArmor": 20,
+        "energy": 20,
+        "air": -10,
+        "siege": 30
+      },
+      "dmg": 300,
+      "proj": 1,
+      "reload": 3,
+      "acc": 82,
+      "general": false,
+      "weaknesses": [
+        "no air defense",
+        "vulnerable rear",
+        "EMP susceptibility",
+        "slow movement",
+        "visible construction"
+      ],
+      "answers": [
+        "heavyArmor",
+        "staticDefenses",
+        "massInfantry"
+      ],
+      "counteredBy": [
+        "aircraft",
+        "tank destroyers + correct counters",
+        "EMP then focus"
+      ],
+      "notes": "~8 MBTs + tech (§34). Repair aura for nearby units; must be supported — dies to an unopposed air+TD mix."
+    },
+    {
+      "name": "Sentry Turret",
+      "tier": 1,
+      "class": "Structure",
+      "role": "static anti-vehicle defense",
+      "cost": 700,
+      "build": 20,
+      "pop": 0,
+      "hp": 1200,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 20,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 90,
+      "proj": 1,
+      "reload": 2,
+      "acc": 90,
+      "general": false,
+      "weaknesses": [
+        "artillery",
+        "aircraft",
+        "cannot move",
+        "can be bypassed"
+      ],
+      "answers": [
+        "harassment",
+        "heavyArmor",
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "artillery",
+        "air",
+        "flanking"
+      ],
+      "notes": "Structure (§30): more cost-efficient than a tank in its firing role because it can't move/retreat."
+    },
+    {
+      "name": "Flak Battery",
+      "tier": 2,
+      "class": "Structure",
+      "role": "static anti-air + detector",
+      "cost": 800,
+      "build": 22,
+      "pop": 0,
+      "hp": 900,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 20,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 45,
+      "proj": 2,
+      "reload": 0.9,
+      "acc": 80,
+      "general": false,
+      "weaknesses": [
+        "heavy armor",
+        "artillery",
+        "cannot move"
+      ],
+      "answers": [
+        "aircraft",
+        "stealth"
+      ],
+      "counteredBy": [
+        "ground assault",
+        "artillery"
+      ],
+      "notes": "Static flak that doubles as a defensive detector (§28)."
+    },
+    {
+      "name": "Judgment Cannon",
+      "tier": 3,
+      "class": "Epic unit",
+      "role": "superweapon",
+      "cost": 5000,
+      "build": 120,
+      "pop": 0,
+      "hp": 2500,
+      "resist": {
+        "smallArms": 30,
+        "explosive": 20,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "visible construction",
+        "destroyable facility",
+        "long recharge"
+      ],
+      "answers": [
+        "staticDefenses",
+        "superweapons"
+      ],
+      "counteredBy": [
+        "destroy the facility",
+        "evacuate the target"
+      ],
+      "notes": "§35: visible facility, discoverable countdown, global warning, 4–7 min first charge, 5–8 min recharge. Damages a zone; must NOT erase a healthy HQ."
+    }
+  ],
+  "threatCoverage": {
+    "massInfantry": [
+      "Rifleman Squad",
+      "Warden AA Halftrack",
+      "Howitzer",
+      "Bastion Land Battleship"
+    ],
+    "heavyArmor": [
+      "Missile Trooper",
+      "Vanguard MBT",
+      "Lancer Tank Destroyer",
+      "Falcon Gunship",
+      "Sentry Turret"
+    ],
+    "aircraft": [
+      "Missile Trooper",
+      "Warden AA Halftrack",
+      "Flak Battery"
+    ],
+    "artillery": [
+      "Recon Spotter",
+      "Howitzer",
+      "Falcon Gunship"
+    ],
+    "stealth": [
+      "Recon Spotter",
+      "Flak Battery"
+    ],
+    "staticDefenses": [
+      "Howitzer",
+      "Falcon Gunship",
+      "Judgment Cannon",
+      "Field Engineer"
+    ],
+    "harassment": [
+      "Rifleman Squad",
+      "Recon Spotter",
+      "Sentry Turret"
+    ],
+    "epicUnits": [
+      "Lancer Tank Destroyer",
+      "Falcon Gunship",
+      "Missile Trooper (combined arms)"
+    ],
+    "superweapons": [
+      "Falcon Gunship",
+      "Judgment Cannon",
+      "any raid on the facility"
+    ],
+    "economicExpansion": [
+      "Vanguard MBT",
+      "Falcon Gunship",
+      "Sentry Turret",
+      "Field Engineer"
+    ]
+  }
+}

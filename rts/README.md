@@ -20,6 +20,8 @@ A structured, buildable version of the **Competitive Balance Bible** for a moder
 | [design/09-process.md](design/09-process.md) | patch process, patch size, warning signs | 47–49 |
 | [design/10-art-direction.md](design/10-art-direction.md) · [style/](style/index.html) | "slightly cartoon, but detailed" — palettes, cel-shading, damage states, + a visual style guide | — |
 | [design/11-budget-options.md](design/11-budget-options.md) | faction-budget fix (Option B canonical) | 4 |
+| [design/12-directorate-roster.md](design/12-directorate-roster.md) · [data/units/directorate.json](data/units/directorate.json) | first full faction roster (15 units, validated) | 5, 9, 20 |
+| [lab/](lab/index.html) | interactive balance calculator + budget validator | 6–9 |
 | [CHECKLIST.md](CHECKLIST.md) | launch certification gate | 50 |
 
 ## Data files (the numbers)
