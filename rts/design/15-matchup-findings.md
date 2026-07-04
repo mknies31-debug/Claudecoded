@@ -52,3 +52,28 @@ The simulator is a first-order **sustained-DPS attrition** model. It under-value
 4. Only then extend the sim with **alpha/range/retreat (C)** and re-check artillery & AA.
 
 Nothing here is a crisis — it's the framework working as designed: the rosters were a plausible first draft, and the tool turned "looks reasonable" into a concrete, prioritized tuning list.
+
+---
+
+## Pass 2 — resolved (A & B)
+
+Applied the fixes and re-ran `matchup.mjs --report`: **0 of the sim-judgeable matchups now flag.**
+
+- **A · Armor table** encoded in [`../data/armor-table.json`](../data/armor-table.json) and applied to all 45 units by [`../scripts/apply-armor.mjs`](../scripts/apply-armor.mjs) (class→archetype; each unit now carries an `armor` tag). Heavy armor takes bonus antiArmor damage; infantry resist AP; structures fold to siege, etc.
+- **B · Shield-break** — `ignoreResist:true` on the Disruptor & Nullifier; the sim bypasses the target's resistance for them.
+- **DPS tune** — the slow anti-armor/shield units were under-firing for the attrition model; nudged Missile Trooper (reload 3.0→2.0, dmg 60→68), Nullifier (dmg 240→300, reload 3.6→2.8), Disruptor (dmg 70→95, reload 3.0→1.7).
+
+**Result:** Missile Trooper→MBT **30%**, Nullifier→Aegis **29%**, Disruptor→Aegis **31%** — all "strong counter" (25–45%). The MBT mirror stays neutral; Marauder still loses to the Vanguard; Lancer still loses 1v1 to the Bastion epic. Rosters remain validated 0/0 and the lab is rebuilt with the new numbers.
+
+## Still outstanding — C (sim model), tracked not fixed
+
+These 5 are reported `[i]` (informational) because the outcome hinges on mechanics the sustained-DPS sim doesn't model. They need a **sim upgrade**, not roster edits:
+
+| Matchup | Needs |
+|---|---|
+| Rifleman → MBT (sim: infantry win 72%) | **AoE/splash** so tanks clear massed infantry |
+| Warden AA / Missile → Falcon (sim: over-strong) | **air-targeting + first-strike + retreat** (§27) |
+| Howitzer → Sentry Turret (sim: turret 94%) | **alpha strike + range** (§22) — artillery shouldn't trade blows |
+| Lancer → MBT | **range / first-strike** — glass-cannon TDs win by shooting first, not attrition |
+
+Next sim iteration: add splash, range/first-strike, and a retreat threshold, then re-judge the `[i]` set.

@@ -14,12 +14,12 @@
       "pop": 1,
       "hp": 260,
       "resist": {
-        "smallArms": 10,
-        "explosive": -20,
-        "antiArmor": 0,
+        "smallArms": 0,
+        "explosive": -25,
+        "antiArmor": 65,
         "energy": 0,
         "air": 0,
-        "siege": -30
+        "siege": -25
       },
       "dmg": 14,
       "proj": 4,
@@ -40,7 +40,8 @@
         "flame/area"
       ],
       "notes": "Cheap backbone; garrisons buildings for cover & vision (§26).",
-      "dmgType": "smallArms"
+      "dmgType": "smallArms",
+      "armor": "infantry"
     },
     {
       "name": "Missile Trooper",
@@ -52,16 +53,16 @@
       "pop": 1,
       "hp": 180,
       "resist": {
-        "smallArms": 5,
+        "smallArms": 0,
         "explosive": -25,
-        "antiArmor": 0,
+        "antiArmor": 65,
         "energy": 0,
         "air": 0,
-        "siege": -30
+        "siege": -25
       },
-      "dmg": 60,
+      "dmg": 68,
       "proj": 1,
-      "reload": 3,
+      "reload": 2,
       "acc": 80,
       "general": false,
       "weaknesses": [
@@ -78,7 +79,8 @@
         "focused fire"
       ],
       "notes": "The Directorate's dedicated heavy-armor & aircraft answer (§5).",
-      "dmgType": "antiArmor"
+      "dmgType": "antiArmor",
+      "armor": "infantry"
     },
     {
       "name": "Field Engineer",
@@ -91,11 +93,11 @@
       "hp": 150,
       "resist": {
         "smallArms": 0,
-        "explosive": 0,
-        "antiArmor": 0,
+        "explosive": -25,
+        "antiArmor": 65,
         "energy": 0,
         "air": 0,
-        "siege": 0
+        "siege": -25
       },
       "dmg": 0,
       "proj": 0,
@@ -114,7 +116,8 @@
         "any direct fire"
       ],
       "notes": "Captures neutral tech/economy (§14) and repairs structures; unarmed.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "infantry"
     },
     {
       "name": "Recon Spotter",
@@ -127,11 +130,11 @@
       "hp": 300,
       "resist": {
         "smallArms": 20,
-        "explosive": 0,
-        "antiArmor": 0,
+        "explosive": -10,
+        "antiArmor": -5,
         "energy": 0,
         "air": 0,
-        "siege": 0
+        "siege": -10
       },
       "dmg": 10,
       "proj": 1,
@@ -152,7 +155,8 @@
         "anything heavier"
       ],
       "notes": "Tier-1 mobile detector (§28); fast eyes and flanker vs enemy artillery.",
-      "dmgType": "smallArms"
+      "dmgType": "smallArms",
+      "armor": "light"
     },
     {
       "name": "Vanguard MBT",
@@ -164,10 +168,10 @@
       "pop": 3,
       "hp": 1600,
       "resist": {
-        "smallArms": 40,
-        "explosive": 10,
-        "antiArmor": 0,
-        "energy": 5,
+        "smallArms": 55,
+        "explosive": 20,
+        "antiArmor": -30,
+        "energy": 0,
         "air": 0,
         "siege": -10
       },
@@ -193,7 +197,8 @@
         "tank destroyers"
       ],
       "notes": "The spammable core — carries 4 weaknesses (§9). Front armor rewards facing (§25).",
-      "dmgType": "antiArmor"
+      "dmgType": "antiArmor",
+      "armor": "heavy"
     },
     {
       "name": "Warden AA Halftrack",
@@ -205,12 +210,12 @@
       "pop": 2,
       "hp": 620,
       "resist": {
-        "smallArms": 30,
-        "explosive": 0,
-        "antiArmor": -10,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
         "energy": 0,
         "air": 0,
-        "siege": -20
+        "siege": -10
       },
       "dmg": 30,
       "proj": 2,
@@ -230,7 +235,8 @@
         "artillery"
       ],
       "notes": "Mobile flak; shreds aircraft and light infantry, folds to armor.",
-      "dmgType": "explosive"
+      "dmgType": "explosive",
+      "armor": "medium"
     },
     {
       "name": "Lancer Tank Destroyer",
@@ -242,9 +248,9 @@
       "pop": 3,
       "hp": 900,
       "resist": {
-        "smallArms": 25,
-        "explosive": 10,
-        "antiArmor": 0,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
         "energy": 0,
         "air": 0,
         "siege": -10
@@ -268,7 +274,8 @@
         "aircraft"
       ],
       "notes": "Precision high-alpha gun; a key correct-counter piece vs epic units (§34).",
-      "dmgType": "antiArmor"
+      "dmgType": "antiArmor",
+      "armor": "medium"
     },
     {
       "name": "Howitzer",
@@ -280,9 +287,9 @@
       "pop": 4,
       "hp": 500,
       "resist": {
-        "smallArms": 15,
+        "smallArms": 10,
         "explosive": -10,
-        "antiArmor": 0,
+        "antiArmor": -15,
         "energy": 0,
         "air": 0,
         "siege": 0
@@ -308,7 +315,8 @@
         "aircraft"
       ],
       "notes": "Dominates static targets, collapses when reached (§22). Needs vision to hit max range.",
-      "dmgType": "siege"
+      "dmgType": "siege",
+      "armor": "artillery"
     },
     {
       "name": "Falcon Gunship",
@@ -320,12 +328,12 @@
       "pop": 4,
       "hp": 700,
       "resist": {
-        "smallArms": 10,
+        "smallArms": 55,
         "explosive": 0,
         "antiArmor": 0,
-        "energy": 0,
+        "energy": 10,
         "air": 0,
-        "siege": 0
+        "siege": 45
       },
       "dmg": 150,
       "proj": 1,
@@ -348,7 +356,8 @@
         "flak"
       ],
       "notes": "Airfield-bound (§27): 4 per field, predictable return path; strikes then rearms.",
-      "dmgType": "air"
+      "dmgType": "air",
+      "armor": "aircraft"
     },
     {
       "name": "Collector Truck",
@@ -360,12 +369,12 @@
       "pop": 2,
       "hp": 1000,
       "resist": {
-        "smallArms": 30,
-        "explosive": 10,
-        "antiArmor": 0,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
         "energy": 0,
         "air": 0,
-        "siege": 0
+        "siege": -10
       },
       "dmg": 0,
       "proj": 0,
@@ -384,7 +393,8 @@
         "harassment"
       ],
       "notes": "~117s payback at 12 cr/s (§11). Durable but unarmed — the harass target.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "medium"
     },
     {
       "name": "Repair Rig",
@@ -396,12 +406,12 @@
       "pop": 2,
       "hp": 600,
       "resist": {
-        "smallArms": 20,
-        "explosive": 0,
-        "antiArmor": 0,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
         "energy": 0,
         "air": 0,
-        "siege": 0
+        "siege": -10
       },
       "dmg": 0,
       "proj": 0,
@@ -419,7 +429,8 @@
         "focus fire"
       ],
       "notes": "Field repair (§31): moderate rate, reduced under fire, damaged-in-last-3s penalty.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "medium"
     },
     {
       "name": "Bastion Land Battleship",
@@ -432,11 +443,11 @@
       "hp": 9000,
       "resist": {
         "smallArms": 60,
-        "explosive": 40,
-        "antiArmor": 20,
-        "energy": 20,
+        "explosive": 35,
+        "antiArmor": 5,
+        "energy": 0,
         "air": -10,
-        "siege": 30
+        "siege": 20
       },
       "dmg": 300,
       "proj": 1,
@@ -461,7 +472,8 @@
         "EMP then focus"
       ],
       "notes": "~8 MBTs + tech (§34). Repair aura for nearby units; must be supported — dies to an unopposed air+TD mix.",
-      "dmgType": "siege"
+      "dmgType": "siege",
+      "armor": "epic"
     },
     {
       "name": "Sentry Turret",
@@ -473,12 +485,12 @@
       "pop": 0,
       "hp": 1200,
       "resist": {
-        "smallArms": 40,
-        "explosive": 20,
-        "antiArmor": 0,
+        "smallArms": 55,
+        "explosive": 25,
+        "antiArmor": 20,
         "energy": 0,
-        "air": 0,
-        "siege": -10
+        "air": -10,
+        "siege": -25
       },
       "dmg": 90,
       "proj": 1,
@@ -502,7 +514,8 @@
         "flanking"
       ],
       "notes": "Structure (§30): more cost-efficient than a tank in its firing role because it can't move/retreat.",
-      "dmgType": "antiArmor"
+      "dmgType": "antiArmor",
+      "armor": "structure"
     },
     {
       "name": "Flak Battery",
@@ -514,12 +527,12 @@
       "pop": 0,
       "hp": 900,
       "resist": {
-        "smallArms": 40,
-        "explosive": 20,
-        "antiArmor": 0,
+        "smallArms": 55,
+        "explosive": 25,
+        "antiArmor": 20,
         "energy": 0,
-        "air": 0,
-        "siege": -10
+        "air": -10,
+        "siege": -25
       },
       "dmg": 45,
       "proj": 2,
@@ -540,7 +553,8 @@
         "artillery"
       ],
       "notes": "Static flak that doubles as a defensive detector (§28).",
-      "dmgType": "explosive"
+      "dmgType": "explosive",
+      "armor": "structure"
     },
     {
       "name": "Judgment Cannon",
@@ -552,12 +566,12 @@
       "pop": 0,
       "hp": 2500,
       "resist": {
-        "smallArms": 30,
-        "explosive": 20,
-        "antiArmor": 0,
+        "smallArms": 60,
+        "explosive": 35,
+        "antiArmor": 5,
         "energy": 0,
-        "air": 0,
-        "siege": 0
+        "air": -10,
+        "siege": 20
       },
       "dmg": 0,
       "proj": 0,
@@ -578,7 +592,8 @@
         "evacuate the target"
       ],
       "notes": "§35: visible facility, discoverable countdown, global warning, 4–7 min first charge, 5–8 min recharge. Damages a zone; must NOT erase a healthy HQ.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "epic"
     }
   ],
   "threatCoverage": {

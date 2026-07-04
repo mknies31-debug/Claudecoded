@@ -14,12 +14,12 @@
       "pop": 1,
       "hp": 240,
       "resist": {
-        "smallArms": 25,
-        "explosive": 0,
-        "antiArmor": 0,
-        "energy": 30,
+        "smallArms": 0,
+        "explosive": -25,
+        "antiArmor": 65,
+        "energy": 25,
         "air": 0,
-        "siege": -20
+        "siege": -25
       },
       "dmg": 16,
       "proj": 2,
@@ -39,7 +39,8 @@
         "area damage"
       ],
       "notes": "Personal shield gives resist until EMP'd; pricier and sturdier than a Raider Squad.",
-      "dmgType": "energy"
+      "dmgType": "energy",
+      "armor": "infantry"
     },
     {
       "name": "Disruptor",
@@ -51,16 +52,16 @@
       "pop": 1,
       "hp": 200,
       "resist": {
-        "smallArms": 10,
-        "explosive": -10,
-        "antiArmor": 0,
-        "energy": 20,
+        "smallArms": 0,
+        "explosive": -25,
+        "antiArmor": 65,
+        "energy": 25,
         "air": 0,
         "siege": -25
       },
-      "dmg": 70,
+      "dmg": 95,
       "proj": 1,
-      "reload": 3,
+      "reload": 1.7,
       "acc": 82,
       "general": false,
       "weaknesses": [
@@ -78,7 +79,9 @@
         "focused fire"
       ],
       "notes": "Shield-disrupting energy beam — the Array's heavy-armor answer (§5); shreds shields and armor alike.",
-      "dmgType": "energy"
+      "dmgType": "energy",
+      "armor": "infantry",
+      "ignoreResist": true
     },
     {
       "name": "Architect",
@@ -90,12 +93,12 @@
       "pop": 1,
       "hp": 170,
       "resist": {
-        "smallArms": 5,
-        "explosive": 0,
-        "antiArmor": 0,
-        "energy": 10,
+        "smallArms": 0,
+        "explosive": -25,
+        "antiArmor": 65,
+        "energy": 0,
         "air": 0,
-        "siege": 0
+        "siege": -25
       },
       "dmg": 0,
       "proj": 0,
@@ -114,7 +117,8 @@
         "any direct fire"
       ],
       "notes": "Deploys/relocates mobile infrastructure (§4 identity), captures neutral tech, repairs; unarmed.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "infantry"
     },
     {
       "name": "Probe Skimmer",
@@ -126,12 +130,12 @@
       "pop": 1,
       "hp": 280,
       "resist": {
-        "smallArms": 15,
-        "explosive": 0,
-        "antiArmor": 0,
-        "energy": 20,
+        "smallArms": 20,
+        "explosive": -10,
+        "antiArmor": -5,
+        "energy": 25,
         "air": 0,
-        "siege": 0
+        "siege": -10
       },
       "dmg": 10,
       "proj": 1,
@@ -153,7 +157,8 @@
         "anything heavier"
       ],
       "notes": "Hover recon + Tier-1 detector (§28); flanks enemy artillery.",
-      "dmgType": "smallArms"
+      "dmgType": "smallArms",
+      "armor": "light"
     },
     {
       "name": "Extractor Core",
@@ -165,12 +170,12 @@
       "pop": 0,
       "hp": 1300,
       "resist": {
-        "smallArms": 30,
-        "explosive": 15,
-        "antiArmor": 0,
-        "energy": 20,
-        "air": 0,
-        "siege": 0
+        "smallArms": 55,
+        "explosive": 25,
+        "antiArmor": 20,
+        "energy": 0,
+        "air": -10,
+        "siege": -25
       },
       "dmg": 0,
       "proj": 0,
@@ -190,7 +195,8 @@
         "siege"
       ],
       "notes": "Array's economy is a stationary core rather than mobile harvesters — reliable output, but a fixed, exposed target (§11).",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "structure"
     },
     {
       "name": "Aegis Tank",
@@ -202,12 +208,12 @@
       "pop": 3,
       "hp": 1500,
       "resist": {
-        "smallArms": 45,
+        "smallArms": 55,
         "explosive": 20,
-        "antiArmor": 0,
-        "energy": 30,
+        "antiArmor": -30,
+        "energy": 25,
         "air": 0,
-        "siege": -5
+        "siege": -10
       },
       "dmg": 115,
       "proj": 1,
@@ -230,7 +236,8 @@
         "aircraft"
       ],
       "notes": "Front shield makes it tanky until EMP'd; pricier and slower to replace than other MBTs (§9, 4 weaknesses).",
-      "dmgType": "energy"
+      "dmgType": "energy",
+      "armor": "heavy"
     },
     {
       "name": "Arc Walker",
@@ -242,12 +249,12 @@
       "pop": 2,
       "hp": 640,
       "resist": {
-        "smallArms": 25,
-        "explosive": 0,
-        "antiArmor": -10,
-        "energy": 20,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 25,
         "air": 0,
-        "siege": -15
+        "siege": -10
       },
       "dmg": 34,
       "proj": 2,
@@ -268,7 +275,8 @@
         "artillery"
       ],
       "notes": "Chain-arc energy; hits air and clumped infantry, folds to armor.",
-      "dmgType": "energy"
+      "dmgType": "energy",
+      "armor": "medium"
     },
     {
       "name": "Warp Snare",
@@ -280,12 +288,12 @@
       "pop": 3,
       "hp": 560,
       "resist": {
-        "smallArms": 20,
-        "explosive": 0,
-        "antiArmor": 0,
-        "energy": 25,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 0,
         "air": 0,
-        "siege": 0
+        "siege": -10
       },
       "dmg": 0,
       "proj": 0,
@@ -307,7 +315,8 @@
         "spread out"
       ],
       "notes": "Projects a movement-disable field (§29: 1.5–4 s, diminishing returns) — pins armor and epics for focus fire; no weapon of its own.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "medium"
     },
     {
       "name": "Nullifier",
@@ -319,16 +328,16 @@
       "pop": 4,
       "hp": 850,
       "resist": {
-        "smallArms": 25,
-        "explosive": 10,
-        "antiArmor": 0,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
         "energy": 25,
         "air": 0,
         "siege": -10
       },
-      "dmg": 240,
+      "dmg": 300,
       "proj": 1,
-      "reload": 3.6,
+      "reload": 2.8,
       "acc": 88,
       "general": false,
       "weaknesses": [
@@ -346,7 +355,9 @@
         "aircraft"
       ],
       "notes": "Expensive shield-disrupting lance; the Array's dedicated armor/epic killer (§5).",
-      "dmgType": "energy"
+      "dmgType": "energy",
+      "armor": "medium",
+      "ignoreResist": true
     },
     {
       "name": "Prism Artillery",
@@ -358,10 +369,10 @@
       "pop": 4,
       "hp": 520,
       "resist": {
-        "smallArms": 15,
+        "smallArms": 10,
         "explosive": -10,
-        "antiArmor": 0,
-        "energy": 20,
+        "antiArmor": -15,
+        "energy": 25,
         "air": 0,
         "siege": 0
       },
@@ -386,7 +397,8 @@
         "aircraft"
       ],
       "notes": "Beam siege; dominates static targets, collapses when reached (§22).",
-      "dmgType": "siege"
+      "dmgType": "siege",
+      "armor": "artillery"
     },
     {
       "name": "Restorer Drone",
@@ -398,12 +410,12 @@
       "pop": 2,
       "hp": 520,
       "resist": {
-        "smallArms": 20,
-        "explosive": 0,
-        "antiArmor": 0,
-        "energy": 25,
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 0,
         "air": 0,
-        "siege": 0
+        "siege": -10
       },
       "dmg": 0,
       "proj": 0,
@@ -422,7 +434,8 @@
         "focus fire"
       ],
       "notes": "Recharges nearby shields and repairs (§31); vulnerable support piece.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "medium"
     },
     {
       "name": "Phase Interceptor",
@@ -434,12 +447,12 @@
       "pop": 4,
       "hp": 680,
       "resist": {
-        "smallArms": 10,
+        "smallArms": 55,
         "explosive": 0,
         "antiArmor": 0,
-        "energy": 15,
+        "energy": 35,
         "air": 0,
-        "siege": 0
+        "siege": 45
       },
       "dmg": 145,
       "proj": 1,
@@ -462,7 +475,8 @@
         "flak"
       ],
       "notes": "Airfield-bound (§27); precise energy strikes, and raids superweapon facilities.",
-      "dmgType": "air"
+      "dmgType": "air",
+      "armor": "aircraft"
     },
     {
       "name": "Pylon Turret",
@@ -474,12 +488,12 @@
       "pop": 0,
       "hp": 1150,
       "resist": {
-        "smallArms": 40,
-        "explosive": 20,
-        "antiArmor": 0,
+        "smallArms": 55,
+        "explosive": 25,
+        "antiArmor": 20,
         "energy": 25,
-        "air": 0,
-        "siege": -10
+        "air": -10,
+        "siege": -25
       },
       "dmg": 85,
       "proj": 1,
@@ -502,7 +516,8 @@
         "flanking"
       ],
       "notes": "Structure (§30) that also serves as a defensive detector (§28).",
-      "dmgType": "energy"
+      "dmgType": "energy",
+      "armor": "structure"
     },
     {
       "name": "Arbiter",
@@ -514,12 +529,12 @@
       "pop": 15,
       "hp": 8000,
       "resist": {
-        "smallArms": 55,
+        "smallArms": 60,
         "explosive": 35,
-        "antiArmor": 20,
-        "energy": 40,
+        "antiArmor": 5,
+        "energy": 25,
         "air": -10,
-        "siege": 25
+        "siege": 20
       },
       "dmg": 280,
       "proj": 1,
@@ -544,7 +559,8 @@
         "correct counters"
       ],
       "notes": "Slowest/priciest epic; projects a shield aura over nearby units (§34). Devastating supported, helpless once EMP'd and flanked.",
-      "dmgType": "energy"
+      "dmgType": "energy",
+      "armor": "epic"
     },
     {
       "name": "Stasis Lance",
@@ -556,12 +572,12 @@
       "pop": 0,
       "hp": 2600,
       "resist": {
-        "smallArms": 30,
-        "explosive": 20,
-        "antiArmor": 0,
-        "energy": 25,
-        "air": 0,
-        "siege": 0
+        "smallArms": 60,
+        "explosive": 35,
+        "antiArmor": 5,
+        "energy": 0,
+        "air": -10,
+        "siege": 20
       },
       "dmg": 0,
       "proj": 0,
@@ -584,7 +600,8 @@
         "spread out"
       ],
       "notes": "§35: freezes and damages a marked zone (control, not deletion) — global warning, evacuation window, 4–7 min first charge, 5–8 min recharge.",
-      "dmgType": "none"
+      "dmgType": "none",
+      "armor": "epic"
     }
   ],
   "threatCoverage": {

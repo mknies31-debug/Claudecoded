@@ -12,7 +12,8 @@ for (const f of ['directorate','covenant','array']) {
 const U = n => units[n] || (()=>{throw new Error('unknown unit: '+n)})();
 
 const pdps = u => u.reload>0 ? (u.dmg*u.proj/u.reload)*(u.acc/100) : 0;
-const effHP = (def, atkType) => {
+const effHP = (def, atkType, atk) => {
+  if (atk && atk.ignoreResist) return def.hp;            // shield-break: bypass resistance (§15-B)
   const r = (def.resist?.[atkType] ?? 0)/100;
   return r < 1 ? def.hp/(1-r) : Infinity;
 };
@@ -22,7 +23,7 @@ function fight(aName, bName, budget=3000){
   const A=U(aName), B=U(bName);
   const nA=Math.max(1,Math.floor(budget/A.cost)), nB=Math.max(1,Math.floor(budget/B.cost));
   const dA=nA*pdps(A), dB=nB*pdps(B);
-  const hA=nA*effHP(A, B.dmgType), hB=nB*effHP(B, A.dmgType);
+  const hA=nA*effHP(A, B.dmgType, B), hB=nB*effHP(B, A.dmgType, A);
   if (dA<=0 && dB<=0) return {draw:true, note:'neither can attack'};
   const tA = dA>0 ? hB/dA : Infinity;   // time for A to kill all B
   const tB = dB>0 ? hA/dB : Infinity;   // time for B to kill all A
@@ -51,28 +52,36 @@ function printFight(r){
 }
 
 // ---- curated report ----
+// 4th field 'model' = outcome depends on mechanics this sustained-DPS sim
+// doesn't model (AoE/splash, alpha, range/first-strike, air-targeting, §15-C).
+// Those are reported for information only and never counted as failures.
 const CURATED = [
   ['Missile Trooper','Vanguard MBT','strongCounter'],
-  ['Lancer Tank Destroyer','Vanguard MBT','strongCounter'],
+  ['Nullifier','Aegis Tank','strongCounter'],
+  ['Disruptor','Aegis Tank','strongCounter'],
   ['Vanguard MBT','Vanguard MBT','neutral'],
   ['Vanguard MBT','Marauder Scrap Tank','moderateAdvantage'],
   ['Marauder Scrap Tank','Vanguard MBT','loses'],
-  ['Warden AA Halftrack','Falcon Gunship','strongCounter'],
-  ['Missile Trooper','Falcon Gunship','strongCounter'],
-  ['Rifleman Squad','Vanguard MBT','loses'],
-  ['Nullifier','Aegis Tank','strongCounter'],
-  ['Disruptor','Aegis Tank','strongCounter'],
   ['Lancer Tank Destroyer','Bastion Land Battleship','loses'],
-  ['Howitzer','Sentry Turret','strongCounter'],
+  ['Lancer Tank Destroyer','Vanguard MBT','strongCounter','model'],
+  ['Warden AA Halftrack','Falcon Gunship','strongCounter','model'],
+  ['Missile Trooper','Falcon Gunship','strongCounter','model'],
+  ['Rifleman Squad','Vanguard MBT','loses','model'],
+  ['Howitzer','Sentry Turret','strongCounter','model'],
 ];
 const bandKey = r => r.remainPct>45?'dominant':r.remainPct>=25?'strongCounter':r.remainPct>=10?'moderateAdvantage':'neutral';
 
 if (process.argv[2]==='--report'){
   console.log('\nMatchup report (equal 3000 cr, §8 expectations)\n');
   let flags=0;
-  for (const [a,b,exp] of CURATED){
+  for (const [a,b,exp,tag] of CURATED){
     const r=fight(a,b);
     const wonByA = r.winner===a;
+    if (tag==='model'){
+      console.log(`  [i] ${a}  vs  ${b}   (model-limited — needs AoE/alpha/range/air; judge by hand)`);
+      console.log(`        sim says: ${r.winner} keeps ${r.remainPct.toFixed(0)}%  [${band(r.remainPct)}]`);
+      continue;
+    }
     let verdict='ok', why='';
     if (exp==='loses'){
       if (wonByA){ verdict='FLAG'; why=`expected ${a} to lose, but it won (${r.remainPct.toFixed(0)}%)`; }
