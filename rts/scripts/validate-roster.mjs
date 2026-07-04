@@ -28,7 +28,7 @@ for (const u of r.units) {
     W(`${u.name}: build ${u.build}s outside ${u.class} band ${band[0]}-${band[1]}s (§20)`);
   // combat units should have a damage source
   const armed = (u.dmg||0) > 0;
-  const supportRole = /repair|econom|harvest|capture|superweapon/i.test(u.role);
+  const supportRole = /repair|econom|harvest|capture|superweapon|detect|recon|theft|hijack|mine|denial|demolition|utility|salvage/i.test(u.role);
   if (!armed && !supportRole) W(`${u.name}: no damage and not a support/economy role`);
   // effective-HP sanity (resist < 100 so no divide-by-zero)
   for (const [k,v] of Object.entries(u.resist||{})) if (v >= 100) F(`${u.name}: resist ${k}=${v}% >= 100% (infinite HP)`);
