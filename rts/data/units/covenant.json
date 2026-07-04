@@ -4,122 +4,647 @@
   "identity": "Fast, cheap, stealthy harass-and-expand; salvage economy; solves armor via ambush/hijack/mines/rear-armor instead of frontal power. Weak durability, direct late-game combat, tech, ease of use.",
   "buildTechNote": "Cheaper and faster-built than Directorate equivalents, but more fragile and micro-intensive (§4 budget: peaks in pressure/mobility/stealth).",
   "units": [
-    { "name": "Raider Squad", "tier": 1, "class": "Basic infantry", "role": "anti-infantry / harass",
-      "cost": 160, "build": 7, "pop": 1, "hp": 180,
-      "resist": {"smallArms": 5, "explosive": -25, "antiArmor": 0, "energy": 0, "air": 0, "siege": -35},
-      "dmg": 12, "proj": 3, "reload": 1.0, "acc": 68,
-      "general": false, "weaknesses": ["area damage", "vehicles"],
-      "answers": ["massInfantry", "harassment"], "counteredBy": ["tanks", "area damage"],
-      "notes": "Dirt-cheap early pressure; expendable." },
-    { "name": "Saboteur", "tier": 1, "class": "Specialist infantry", "role": "stealth demolition / anti-armor",
-      "cost": 400, "build": 15, "pop": 1, "hp": 140,
-      "resist": {"smallArms": 0, "explosive": -20, "antiArmor": 0, "energy": 0, "air": 0, "siege": -30},
-      "dmg": 90, "proj": 1, "reload": 4.0, "acc": 85,
-      "general": false, "weaknesses": ["detection", "area damage", "focused fire"],
-      "answers": ["heavyArmor", "staticDefenses", "superweapons"], "counteredBy": ["detectors", "area damage"],
-      "notes": "Cloaked (§28); plants charges on armor, defenses, and superweapon facilities." },
-    { "name": "Hijacker", "tier": 1, "class": "Specialist infantry", "role": "vehicle theft",
-      "cost": 500, "build": 16, "pop": 1, "hp": 130,
-      "resist": {"smallArms": 0, "explosive": 0, "antiArmor": 0, "energy": 0, "air": 0, "siege": 0},
-      "dmg": 0, "proj": 0, "reload": 0, "acc": 0,
-      "general": false, "weaknesses": ["infantry", "detection", "focused fire"],
-      "answers": ["heavyArmor", "epicUnits"], "counteredBy": ["infantry escort", "detection"],
-      "notes": "Steals enemy vehicles — the Covenant answer to heavy armor & epics (§5). Unarmed." },
-    { "name": "Recon Hound", "tier": 1, "class": "Scout vehicle", "role": "recon + mobile detector",
-      "cost": 300, "build": 12, "pop": 1, "hp": 220,
-      "resist": {"smallArms": 15, "explosive": 0, "antiArmor": 0, "energy": 0, "air": 0, "siege": 0},
-      "dmg": 8, "proj": 1, "reload": 1.2, "acc": 66,
-      "general": false, "weaknesses": ["anything heavier", "aircraft"],
-      "answers": ["stealth", "harassment", "artillery"], "counteredBy": ["any direct fire"],
-      "notes": "Tier-1 mobile detector; disposable eyes and artillery-flanker." },
-    { "name": "Raider Buggy", "tier": 1, "class": "Scout vehicle", "role": "fast economy raider",
-      "cost": 420, "build": 14, "pop": 2, "hp": 480,
-      "resist": {"smallArms": 15, "explosive": 0, "antiArmor": 0, "energy": 0, "air": 0, "siege": -10},
-      "dmg": 44, "proj": 2, "reload": 1.2, "acc": 78,
-      "general": false, "weaknesses": ["static defense", "focused fire"],
-      "answers": ["economicExpansion", "harassment", "massInfantry"], "counteredBy": ["turrets", "AA"],
-      "notes": "Signature harasser — fast enough to hit harvesters and flee the 8–15 s window (§13)." },
-    { "name": "Rocket Technical", "tier": 2, "class": "Advanced vehicle", "role": "anti-air / anti-armor",
-      "cost": 650, "build": 36, "pop": 2, "hp": 500,
-      "resist": {"smallArms": 20, "explosive": 0, "antiArmor": -10, "energy": 0, "air": 0, "siege": -20},
-      "dmg": 55, "proj": 1, "reload": 2.2, "acc": 76,
-      "general": false, "weaknesses": ["heavy armor", "area damage", "artillery"],
-      "answers": ["aircraft", "heavyArmor"], "counteredBy": ["tanks", "artillery"],
-      "notes": "Improvised launcher truck; flexible but fragile." },
-    { "name": "Mine Layer", "tier": 2, "class": "Advanced vehicle", "role": "area denial",
-      "cost": 550, "build": 35, "pop": 2, "hp": 520,
-      "resist": {"smallArms": 20, "explosive": 0, "antiArmor": 0, "energy": 0, "air": 0, "siege": 0},
-      "dmg": 0, "proj": 0, "reload": 0, "acc": 0,
-      "general": false, "weaknesses": ["detection", "focused fire"],
-      "answers": ["heavyArmor", "harassment", "economicExpansion"], "counteredBy": ["detectors", "clearing units"],
-      "notes": "Lays mines to deny armor pushes and expansion routes; mines are detectable." },
-    { "name": "Marauder Scrap Tank", "tier": 2, "class": "Main battle tank", "role": "general-purpose light armor",
-      "cost": 700, "build": 24, "pop": 2, "hp": 1050,
-      "resist": {"smallArms": 30, "explosive": 5, "antiArmor": 0, "energy": 0, "air": 0, "siege": -15},
-      "dmg": 95, "proj": 1, "reload": 1.9, "acc": 80,
-      "general": true, "weaknesses": ["anti-tank infantry", "aircraft", "tank destroyers", "dispersed light infantry"],
-      "answers": ["heavyArmor", "staticDefenses", "economicExpansion"], "counteredBy": ["dedicated anti-armor", "aircraft"],
-      "notes": "Cheaper, faster-built and weaker than a Directorate MBT — pressure, not staying power. 4 weaknesses (§9)." },
-    { "name": "Ambush Tank", "tier": 2, "class": "Advanced vehicle", "role": "stealth flanker",
-      "cost": 900, "build": 40, "pop": 3, "hp": 700,
-      "resist": {"smallArms": 20, "explosive": 0, "antiArmor": 0, "energy": 0, "air": 0, "siege": -10},
-      "dmg": 160, "proj": 1, "reload": 3.2, "acc": 85,
-      "general": false, "weaknesses": ["detection", "sustained fights", "aircraft"],
-      "answers": ["heavyArmor", "artillery", "epicUnits"], "counteredBy": ["detectors", "prolonged engagement"],
-      "notes": "Cloaked until firing (§28); alpha-strikes rear armor (§25) then repositions." },
-    { "name": "Salvage Harvester", "tier": 1, "class": "Advanced vehicle", "role": "economy / salvage",
-      "cost": 1200, "build": 36, "pop": 2, "hp": 850,
-      "resist": {"smallArms": 20, "explosive": 0, "antiArmor": 0, "energy": 0, "air": 0, "siege": 0},
-      "dmg": 0, "proj": 0, "reload": 0, "acc": 0,
-      "general": false, "weaknesses": ["harassment", "focused fire"],
-      "answers": ["economicExpansion"], "counteredBy": ["raiders", "harassment"],
-      "notes": "Cheaper/faster than a Collector Truck but frailer; also salvages wreckage for credits (§14)." },
-    { "name": "Interceptor Gyro", "tier": 3, "class": "Aircraft", "role": "fast anti-air / harass",
-      "cost": 850, "build": 28, "pop": 3, "hp": 520,
-      "resist": {"smallArms": 5, "explosive": 0, "antiArmor": 0, "energy": 0, "air": 0, "siege": 0},
-      "dmg": 70, "proj": 2, "reload": 1.6, "acc": 82,
-      "general": false, "weaknesses": ["dedicated AA", "ammunition", "fragile"],
-      "answers": ["aircraft", "artillery", "superweapons", "harassment"], "counteredBy": ["flak", "AA"],
-      "notes": "Cheap, fast, glass — airfield-bound (§27); great for raids and picking off artillery/aircraft." },
-    { "name": "Sensor Spike", "tier": 1, "class": "Structure", "role": "static detector",
-      "cost": 500, "build": 18, "pop": 0, "hp": 700,
-      "resist": {"smallArms": 30, "explosive": 10, "antiArmor": 0, "energy": 0, "air": 0, "siege": -10},
-      "dmg": 20, "proj": 1, "reload": 1.5, "acc": 85,
-      "general": false, "weaknesses": ["artillery", "can be bypassed"],
-      "answers": ["stealth", "harassment"], "counteredBy": ["artillery", "flanking"],
-      "notes": "Defensive detector (§28) with a light gun." },
-    { "name": "Rocket Nest", "tier": 2, "class": "Structure", "role": "static anti-vehicle / air",
-      "cost": 650, "build": 20, "pop": 0, "hp": 900,
-      "resist": {"smallArms": 30, "explosive": 10, "antiArmor": 0, "energy": 0, "air": 0, "siege": -10},
-      "dmg": 60, "proj": 1, "reload": 1.8, "acc": 85,
-      "general": false, "weaknesses": ["artillery", "infantry rush", "cannot move"],
-      "answers": ["harassment", "heavyArmor", "aircraft"], "counteredBy": ["artillery", "infantry"],
-      "notes": "Cheap dual-purpose nest; frailer than a Directorate turret." },
-    { "name": "Ravager", "tier": 3, "class": "Epic unit", "role": "fast epic raider + salvage",
-      "cost": 6500, "build": 130, "pop": 14, "hp": 6500,
-      "resist": {"smallArms": 45, "explosive": 25, "antiArmor": 10, "energy": 10, "air": -10, "siege": 20},
-      "dmg": 220, "proj": 1, "reload": 2.6, "acc": 80,
-      "general": false, "weaknesses": ["low durability for an epic", "EMP susceptibility", "no air defense", "vulnerable rear", "visible construction"],
-      "answers": ["massInfantry", "staticDefenses", "economicExpansion"], "counteredBy": ["air + focused fire", "EMP then swarm", "correct counters"],
-      "notes": "Fast, tears economy and defenses, salvages kills — but dies faster than the Directorate Bastion (§34). Must be supported." },
-    { "name": "Locust Swarm", "tier": 3, "class": "Epic unit", "role": "superweapon (drone swarm)",
-      "cost": 4500, "build": 110, "pop": 0, "hp": 2000,
-      "resist": {"smallArms": 20, "explosive": 10, "antiArmor": 0, "energy": 0, "air": 0, "siege": 0},
-      "dmg": 0, "proj": 0, "reload": 0, "acc": 0,
-      "general": false, "weaknesses": ["visible construction", "destroyable facility", "long recharge"],
-      "answers": ["staticDefenses", "superweapons", "massInfantry"], "counteredBy": ["destroy the facility", "evacuate", "AA over the zone"],
-      "notes": "§35: deploys autonomous drones over a marked zone — global warning, evacuation window, 4–7 min first charge, 5–8 min recharge. Harasses an area rather than deleting a base." }
+    {
+      "name": "Raider Squad",
+      "tier": 1,
+      "class": "Basic infantry",
+      "role": "anti-infantry / harass",
+      "cost": 160,
+      "build": 7,
+      "pop": 1,
+      "hp": 180,
+      "resist": {
+        "smallArms": 5,
+        "explosive": -25,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -35
+      },
+      "dmg": 12,
+      "proj": 3,
+      "reload": 1,
+      "acc": 68,
+      "general": false,
+      "weaknesses": [
+        "area damage",
+        "vehicles"
+      ],
+      "answers": [
+        "massInfantry",
+        "harassment"
+      ],
+      "counteredBy": [
+        "tanks",
+        "area damage"
+      ],
+      "notes": "Dirt-cheap early pressure; expendable.",
+      "dmgType": "smallArms"
+    },
+    {
+      "name": "Saboteur",
+      "tier": 1,
+      "class": "Specialist infantry",
+      "role": "stealth demolition / anti-armor",
+      "cost": 400,
+      "build": 15,
+      "pop": 1,
+      "hp": 140,
+      "resist": {
+        "smallArms": 0,
+        "explosive": -20,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -30
+      },
+      "dmg": 90,
+      "proj": 1,
+      "reload": 4,
+      "acc": 85,
+      "general": false,
+      "weaknesses": [
+        "detection",
+        "area damage",
+        "focused fire"
+      ],
+      "answers": [
+        "heavyArmor",
+        "staticDefenses",
+        "superweapons"
+      ],
+      "counteredBy": [
+        "detectors",
+        "area damage"
+      ],
+      "notes": "Cloaked (§28); plants charges on armor, defenses, and superweapon facilities.",
+      "dmgType": "antiArmor"
+    },
+    {
+      "name": "Hijacker",
+      "tier": 1,
+      "class": "Specialist infantry",
+      "role": "vehicle theft",
+      "cost": 500,
+      "build": 16,
+      "pop": 1,
+      "hp": 130,
+      "resist": {
+        "smallArms": 0,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "infantry",
+        "detection",
+        "focused fire"
+      ],
+      "answers": [
+        "heavyArmor",
+        "epicUnits"
+      ],
+      "counteredBy": [
+        "infantry escort",
+        "detection"
+      ],
+      "notes": "Steals enemy vehicles — the Covenant answer to heavy armor & epics (§5). Unarmed.",
+      "dmgType": "none"
+    },
+    {
+      "name": "Recon Hound",
+      "tier": 1,
+      "class": "Scout vehicle",
+      "role": "recon + mobile detector",
+      "cost": 300,
+      "build": 12,
+      "pop": 1,
+      "hp": 220,
+      "resist": {
+        "smallArms": 15,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 8,
+      "proj": 1,
+      "reload": 1.2,
+      "acc": 66,
+      "general": false,
+      "weaknesses": [
+        "anything heavier",
+        "aircraft"
+      ],
+      "answers": [
+        "stealth",
+        "harassment",
+        "artillery"
+      ],
+      "counteredBy": [
+        "any direct fire"
+      ],
+      "notes": "Tier-1 mobile detector; disposable eyes and artillery-flanker.",
+      "dmgType": "smallArms"
+    },
+    {
+      "name": "Raider Buggy",
+      "tier": 1,
+      "class": "Scout vehicle",
+      "role": "fast economy raider",
+      "cost": 420,
+      "build": 14,
+      "pop": 2,
+      "hp": 480,
+      "resist": {
+        "smallArms": 15,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 44,
+      "proj": 2,
+      "reload": 1.2,
+      "acc": 78,
+      "general": false,
+      "weaknesses": [
+        "static defense",
+        "focused fire"
+      ],
+      "answers": [
+        "economicExpansion",
+        "harassment",
+        "massInfantry"
+      ],
+      "counteredBy": [
+        "turrets",
+        "AA"
+      ],
+      "notes": "Signature harasser — fast enough to hit harvesters and flee the 8–15 s window (§13).",
+      "dmgType": "smallArms"
+    },
+    {
+      "name": "Rocket Technical",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "anti-air / anti-armor",
+      "cost": 650,
+      "build": 36,
+      "pop": 2,
+      "hp": 500,
+      "resist": {
+        "smallArms": 20,
+        "explosive": 0,
+        "antiArmor": -10,
+        "energy": 0,
+        "air": 0,
+        "siege": -20
+      },
+      "dmg": 55,
+      "proj": 1,
+      "reload": 2.2,
+      "acc": 76,
+      "general": false,
+      "weaknesses": [
+        "heavy armor",
+        "area damage",
+        "artillery"
+      ],
+      "answers": [
+        "aircraft",
+        "heavyArmor"
+      ],
+      "counteredBy": [
+        "tanks",
+        "artillery"
+      ],
+      "notes": "Improvised launcher truck; flexible but fragile.",
+      "dmgType": "antiArmor"
+    },
+    {
+      "name": "Mine Layer",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "area denial",
+      "cost": 550,
+      "build": 35,
+      "pop": 2,
+      "hp": 520,
+      "resist": {
+        "smallArms": 20,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "detection",
+        "focused fire"
+      ],
+      "answers": [
+        "heavyArmor",
+        "harassment",
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "detectors",
+        "clearing units"
+      ],
+      "notes": "Lays mines to deny armor pushes and expansion routes; mines are detectable.",
+      "dmgType": "none"
+    },
+    {
+      "name": "Marauder Scrap Tank",
+      "tier": 2,
+      "class": "Main battle tank",
+      "role": "general-purpose light armor",
+      "cost": 700,
+      "build": 24,
+      "pop": 2,
+      "hp": 1050,
+      "resist": {
+        "smallArms": 30,
+        "explosive": 5,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -15
+      },
+      "dmg": 95,
+      "proj": 1,
+      "reload": 1.9,
+      "acc": 80,
+      "general": true,
+      "weaknesses": [
+        "anti-tank infantry",
+        "aircraft",
+        "tank destroyers",
+        "dispersed light infantry"
+      ],
+      "answers": [
+        "heavyArmor",
+        "staticDefenses",
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "dedicated anti-armor",
+        "aircraft"
+      ],
+      "notes": "Cheaper, faster-built and weaker than a Directorate MBT — pressure, not staying power. 4 weaknesses (§9).",
+      "dmgType": "antiArmor"
+    },
+    {
+      "name": "Ambush Tank",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "stealth flanker",
+      "cost": 900,
+      "build": 40,
+      "pop": 3,
+      "hp": 700,
+      "resist": {
+        "smallArms": 20,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 160,
+      "proj": 1,
+      "reload": 3.2,
+      "acc": 85,
+      "general": false,
+      "weaknesses": [
+        "detection",
+        "sustained fights",
+        "aircraft"
+      ],
+      "answers": [
+        "heavyArmor",
+        "artillery",
+        "epicUnits"
+      ],
+      "counteredBy": [
+        "detectors",
+        "prolonged engagement"
+      ],
+      "notes": "Cloaked until firing (§28); alpha-strikes rear armor (§25) then repositions.",
+      "dmgType": "antiArmor"
+    },
+    {
+      "name": "Salvage Harvester",
+      "tier": 1,
+      "class": "Advanced vehicle",
+      "role": "economy / salvage",
+      "cost": 1200,
+      "build": 36,
+      "pop": 2,
+      "hp": 850,
+      "resist": {
+        "smallArms": 20,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "harassment",
+        "focused fire"
+      ],
+      "answers": [
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "raiders",
+        "harassment"
+      ],
+      "notes": "Cheaper/faster than a Collector Truck but frailer; also salvages wreckage for credits (§14).",
+      "dmgType": "none"
+    },
+    {
+      "name": "Interceptor Gyro",
+      "tier": 3,
+      "class": "Aircraft",
+      "role": "fast anti-air / harass",
+      "cost": 850,
+      "build": 28,
+      "pop": 3,
+      "hp": 520,
+      "resist": {
+        "smallArms": 5,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 70,
+      "proj": 2,
+      "reload": 1.6,
+      "acc": 82,
+      "general": false,
+      "weaknesses": [
+        "dedicated AA",
+        "ammunition",
+        "fragile"
+      ],
+      "answers": [
+        "aircraft",
+        "artillery",
+        "superweapons",
+        "harassment"
+      ],
+      "counteredBy": [
+        "flak",
+        "AA"
+      ],
+      "notes": "Cheap, fast, glass — airfield-bound (§27); great for raids and picking off artillery/aircraft.",
+      "dmgType": "air"
+    },
+    {
+      "name": "Sensor Spike",
+      "tier": 1,
+      "class": "Structure",
+      "role": "static detector",
+      "cost": 500,
+      "build": 18,
+      "pop": 0,
+      "hp": 700,
+      "resist": {
+        "smallArms": 30,
+        "explosive": 10,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 20,
+      "proj": 1,
+      "reload": 1.5,
+      "acc": 85,
+      "general": false,
+      "weaknesses": [
+        "artillery",
+        "can be bypassed"
+      ],
+      "answers": [
+        "stealth",
+        "harassment"
+      ],
+      "counteredBy": [
+        "artillery",
+        "flanking"
+      ],
+      "notes": "Defensive detector (§28) with a light gun.",
+      "dmgType": "smallArms"
+    },
+    {
+      "name": "Rocket Nest",
+      "tier": 2,
+      "class": "Structure",
+      "role": "static anti-vehicle / air",
+      "cost": 650,
+      "build": 20,
+      "pop": 0,
+      "hp": 900,
+      "resist": {
+        "smallArms": 30,
+        "explosive": 10,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 60,
+      "proj": 1,
+      "reload": 1.8,
+      "acc": 85,
+      "general": false,
+      "weaknesses": [
+        "artillery",
+        "infantry rush",
+        "cannot move"
+      ],
+      "answers": [
+        "harassment",
+        "heavyArmor",
+        "aircraft"
+      ],
+      "counteredBy": [
+        "artillery",
+        "infantry"
+      ],
+      "notes": "Cheap dual-purpose nest; frailer than a Directorate turret.",
+      "dmgType": "antiArmor"
+    },
+    {
+      "name": "Ravager",
+      "tier": 3,
+      "class": "Epic unit",
+      "role": "fast epic raider + salvage",
+      "cost": 6500,
+      "build": 130,
+      "pop": 14,
+      "hp": 6500,
+      "resist": {
+        "smallArms": 45,
+        "explosive": 25,
+        "antiArmor": 10,
+        "energy": 10,
+        "air": -10,
+        "siege": 20
+      },
+      "dmg": 220,
+      "proj": 1,
+      "reload": 2.6,
+      "acc": 80,
+      "general": false,
+      "weaknesses": [
+        "low durability for an epic",
+        "EMP susceptibility",
+        "no air defense",
+        "vulnerable rear",
+        "visible construction"
+      ],
+      "answers": [
+        "massInfantry",
+        "staticDefenses",
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "air + focused fire",
+        "EMP then swarm",
+        "correct counters"
+      ],
+      "notes": "Fast, tears economy and defenses, salvages kills — but dies faster than the Directorate Bastion (§34). Must be supported.",
+      "dmgType": "siege"
+    },
+    {
+      "name": "Locust Swarm",
+      "tier": 3,
+      "class": "Epic unit",
+      "role": "superweapon (drone swarm)",
+      "cost": 4500,
+      "build": 110,
+      "pop": 0,
+      "hp": 2000,
+      "resist": {
+        "smallArms": 20,
+        "explosive": 10,
+        "antiArmor": 0,
+        "energy": 0,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "visible construction",
+        "destroyable facility",
+        "long recharge"
+      ],
+      "answers": [
+        "staticDefenses",
+        "superweapons",
+        "massInfantry"
+      ],
+      "counteredBy": [
+        "destroy the facility",
+        "evacuate",
+        "AA over the zone"
+      ],
+      "notes": "§35: deploys autonomous drones over a marked zone — global warning, evacuation window, 4–7 min first charge, 5–8 min recharge. Harasses an area rather than deleting a base.",
+      "dmgType": "none"
+    }
   ],
   "threatCoverage": {
-    "massInfantry": ["Raider Squad", "Raider Buggy", "Marauder Scrap Tank", "Ravager", "Locust Swarm"],
-    "heavyArmor": ["Saboteur", "Hijacker", "Rocket Technical", "Mine Layer", "Ambush Tank", "Marauder Scrap Tank", "Rocket Nest"],
-    "aircraft": ["Rocket Technical", "Interceptor Gyro", "Rocket Nest"],
-    "artillery": ["Recon Hound", "Raider Buggy", "Ambush Tank", "Interceptor Gyro"],
-    "stealth": ["Recon Hound", "Sensor Spike"],
-    "staticDefenses": ["Saboteur", "Interceptor Gyro", "Ravager", "Locust Swarm"],
-    "harassment": ["Raider Squad", "Raider Buggy", "Recon Hound", "Mine Layer", "Sensor Spike", "Rocket Nest"],
-    "epicUnits": ["Hijacker (steal it)", "Ambush Tank (rear)", "Mine Layer", "Rocket Technical (swarm)"],
-    "superweapons": ["Saboteur (infiltrate facility)", "Interceptor Gyro", "Locust Swarm"],
-    "economicExpansion": ["Raider Buggy", "Ambush Tank", "Mine Layer", "Ravager"]
+    "massInfantry": [
+      "Raider Squad",
+      "Raider Buggy",
+      "Marauder Scrap Tank",
+      "Ravager",
+      "Locust Swarm"
+    ],
+    "heavyArmor": [
+      "Saboteur",
+      "Hijacker",
+      "Rocket Technical",
+      "Mine Layer",
+      "Ambush Tank",
+      "Marauder Scrap Tank",
+      "Rocket Nest"
+    ],
+    "aircraft": [
+      "Rocket Technical",
+      "Interceptor Gyro",
+      "Rocket Nest"
+    ],
+    "artillery": [
+      "Recon Hound",
+      "Raider Buggy",
+      "Ambush Tank",
+      "Interceptor Gyro"
+    ],
+    "stealth": [
+      "Recon Hound",
+      "Sensor Spike"
+    ],
+    "staticDefenses": [
+      "Saboteur",
+      "Interceptor Gyro",
+      "Ravager",
+      "Locust Swarm"
+    ],
+    "harassment": [
+      "Raider Squad",
+      "Raider Buggy",
+      "Recon Hound",
+      "Mine Layer",
+      "Sensor Spike",
+      "Rocket Nest"
+    ],
+    "epicUnits": [
+      "Hijacker (steal it)",
+      "Ambush Tank (rear)",
+      "Mine Layer",
+      "Rocket Technical (swarm)"
+    ],
+    "superweapons": [
+      "Saboteur (infiltrate facility)",
+      "Interceptor Gyro",
+      "Locust Swarm"
+    ],
+    "economicExpansion": [
+      "Raider Buggy",
+      "Ambush Tank",
+      "Mine Layer",
+      "Ravager"
+    ]
   }
 }
