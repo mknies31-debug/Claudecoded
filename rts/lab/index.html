@@ -92,7 +92,8 @@
     <div class="grid">
       <div class="panel">
         <h2>Unit Definition</h2>
-        <div class="presets" id="presets"></div>
+        <label style="margin-top:0">Load a unit from the rosters</label>
+        <select id="preset" onchange="loadUnit(this.value)"></select>
         <label>Name</label><input id="u-name" oninput="calc()">
         <div class="row">
           <div><label>Faction</label><select id="u-faction" onchange="calc()"><option>Directorate</option><option>Covenant</option><option>Array</option></select></div>
@@ -175,32 +176,1266 @@ const BUDGET = {
 };
 const FCOLOR={Directorate:"var(--dir)",Covenant:"var(--cov)",Array:"var(--arr)"};
 
-const SAMPLES = {
-  "Directorate · Vanguard MBT":{faction:"Directorate",cls:"Main battle tank",cost:900,build:28,pop:3,hp:1600,
-    resist:{smallArms:40,explosive:10,antiArmor:0,energy:5,air:0,siege:-10},dmg:120,proj:1,reload:1.8,acc:85,
-    general:"yes",weaks:["anti-tank infantry","aircraft"],destroyed:1000},
-  "Covenant · Raider Buggy":{faction:"Covenant",cls:"Scout vehicle",cost:420,build:14,pop:2,hp:480,
-    resist:{smallArms:15,explosive:0,antiArmor:0,energy:0,air:0,siege:0},dmg:44,proj:2,reload:1.2,acc:78,
-    general:"no",weaks:["static defense","focused fire"],destroyed:430},
-  "Array · Warden Walker":{faction:"Array",cls:"Advanced vehicle",cost:1100,build:40,pop:4,hp:1000,
-    resist:{smallArms:20,explosive:15,antiArmor:10,energy:25,air:0,siege:0},dmg:90,proj:1,reload:2.0,acc:90,
-    general:"no",weaks:["EMP","rear-armor","aircraft"],destroyed:1150},
-  "Blank / new unit":{faction:"Directorate",cls:"Main battle tank",cost:600,build:26,pop:3,hp:800,
-    resist:{smallArms:0,explosive:0,antiArmor:0,energy:0,air:0,siege:0},dmg:60,proj:1,reload:2,acc:80,
-    general:"yes",weaks:[],destroyed:""}
-};
+// Unit presets — generated from rts/data/units/*.json by scripts/build-lab-data.mjs.
+// Do not hand-edit between the markers; run the build script to refresh.
+const SAMPLES = /*ROSTER_START*/{
+  "Blank / new unit": {
+    "faction": "Directorate",
+    "cls": "Main battle tank",
+    "cost": 600,
+    "build": 26,
+    "pop": 3,
+    "hp": 800,
+    "resist": {
+      "smallArms": 0,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 60,
+    "proj": 1,
+    "reload": 2,
+    "acc": 80,
+    "general": "yes",
+    "weaks": [],
+    "destroyed": ""
+  },
+  "Directorate · Rifleman Squad": {
+    "faction": "Directorate",
+    "cls": "Basic infantry",
+    "cost": 200,
+    "build": 8,
+    "pop": 1,
+    "hp": 260,
+    "resist": {
+      "smallArms": 10,
+      "explosive": -20,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -30
+    },
+    "dmg": 14,
+    "proj": 4,
+    "reload": 1,
+    "acc": 70,
+    "general": "no",
+    "weaks": [
+      "area damage",
+      "static defense"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Missile Trooper": {
+    "faction": "Directorate",
+    "cls": "Specialist infantry",
+    "cost": 350,
+    "build": 13,
+    "pop": 1,
+    "hp": 180,
+    "resist": {
+      "smallArms": 5,
+      "explosive": -25,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -30
+    },
+    "dmg": 60,
+    "proj": 1,
+    "reload": 3,
+    "acc": 80,
+    "general": "no",
+    "weaks": [
+      "anti-tank infantry",
+      "area damage",
+      "dispersed light infantry"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Field Engineer": {
+    "faction": "Directorate",
+    "cls": "Specialist infantry",
+    "cost": 300,
+    "build": 14,
+    "pop": 1,
+    "hp": 150,
+    "resist": {
+      "smallArms": 0,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "focused fire",
+      "dispersed light infantry"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Recon Spotter": {
+    "faction": "Directorate",
+    "cls": "Scout vehicle",
+    "cost": 350,
+    "build": 14,
+    "pop": 1,
+    "hp": 300,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 10,
+    "proj": 1,
+    "reload": 1.2,
+    "acc": 70,
+    "general": "no",
+    "weaks": [
+      "anti-tank infantry",
+      "aircraft",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Vanguard MBT": {
+    "faction": "Directorate",
+    "cls": "Main battle tank",
+    "cost": 900,
+    "build": 28,
+    "pop": 3,
+    "hp": 1600,
+    "resist": {
+      "smallArms": 40,
+      "explosive": 10,
+      "antiArmor": 0,
+      "energy": 5,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 120,
+    "proj": 1,
+    "reload": 1.8,
+    "acc": 85,
+    "general": "yes",
+    "weaks": [
+      "anti-tank infantry",
+      "aircraft",
+      "dispersed light infantry",
+      "slow turning"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Warden AA Halftrack": {
+    "faction": "Directorate",
+    "cls": "Advanced vehicle",
+    "cost": 700,
+    "build": 38,
+    "pop": 2,
+    "hp": 620,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 0,
+      "antiArmor": -10,
+      "energy": 0,
+      "air": 0,
+      "siege": -20
+    },
+    "dmg": 30,
+    "proj": 2,
+    "reload": 0.8,
+    "acc": 75,
+    "general": "no",
+    "weaks": [
+      "heavy armor",
+      "artillery"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Lancer Tank Destroyer": {
+    "faction": "Directorate",
+    "cls": "Advanced vehicle",
+    "cost": 1000,
+    "build": 42,
+    "pop": 3,
+    "hp": 900,
+    "resist": {
+      "smallArms": 25,
+      "explosive": 10,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 220,
+    "proj": 1,
+    "reload": 3.5,
+    "acc": 88,
+    "general": "no",
+    "weaks": [
+      "infantry",
+      "aircraft",
+      "poor vs structures"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Howitzer": {
+    "faction": "Directorate",
+    "cls": "Artillery",
+    "cost": 1100,
+    "build": 40,
+    "pop": 4,
+    "hp": 500,
+    "resist": {
+      "smallArms": 15,
+      "explosive": -10,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 180,
+    "proj": 1,
+    "reload": 5,
+    "acc": 60,
+    "general": "no",
+    "weaks": [
+      "minimum-range",
+      "low durability",
+      "deployment time",
+      "flanking"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Falcon Gunship": {
+    "faction": "Directorate",
+    "cls": "Aircraft",
+    "cost": 1200,
+    "build": 35,
+    "pop": 4,
+    "hp": 700,
+    "resist": {
+      "smallArms": 10,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 150,
+    "proj": 1,
+    "reload": 2.5,
+    "acc": 90,
+    "general": "no",
+    "weaks": [
+      "aircraft",
+      "ammunition",
+      "expensive replacement"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Collector Truck": {
+    "faction": "Directorate",
+    "cls": "Advanced vehicle",
+    "cost": 1400,
+    "build": 40,
+    "pop": 2,
+    "hp": 1000,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 10,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "harassment",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Repair Rig": {
+    "faction": "Directorate",
+    "cls": "Advanced vehicle",
+    "cost": 600,
+    "build": 36,
+    "pop": 2,
+    "hp": 600,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "focused fire",
+      "aircraft"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Bastion Land Battleship": {
+    "faction": "Directorate",
+    "cls": "Epic unit",
+    "cost": 7500,
+    "build": 150,
+    "pop": 15,
+    "hp": 9000,
+    "resist": {
+      "smallArms": 60,
+      "explosive": 40,
+      "antiArmor": 20,
+      "energy": 20,
+      "air": -10,
+      "siege": 30
+    },
+    "dmg": 300,
+    "proj": 1,
+    "reload": 3,
+    "acc": 82,
+    "general": "no",
+    "weaks": [
+      "no air defense",
+      "vulnerable rear",
+      "EMP susceptibility",
+      "slow movement",
+      "visible construction"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Sentry Turret": {
+    "faction": "Directorate",
+    "cls": "Structure",
+    "cost": 700,
+    "build": 20,
+    "pop": 0,
+    "hp": 1200,
+    "resist": {
+      "smallArms": 40,
+      "explosive": 20,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 90,
+    "proj": 1,
+    "reload": 2,
+    "acc": 90,
+    "general": "no",
+    "weaks": [
+      "artillery",
+      "aircraft",
+      "cannot move",
+      "can be bypassed"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Flak Battery": {
+    "faction": "Directorate",
+    "cls": "Structure",
+    "cost": 800,
+    "build": 22,
+    "pop": 0,
+    "hp": 900,
+    "resist": {
+      "smallArms": 40,
+      "explosive": 20,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 45,
+    "proj": 2,
+    "reload": 0.9,
+    "acc": 80,
+    "general": "no",
+    "weaks": [
+      "heavy armor",
+      "artillery",
+      "cannot move"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Judgment Cannon": {
+    "faction": "Directorate",
+    "cls": "Epic unit",
+    "cost": 5000,
+    "build": 120,
+    "pop": 0,
+    "hp": 2500,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 20,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "visible construction",
+      "destroyable facility",
+      "long recharge"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Raider Squad": {
+    "faction": "Covenant",
+    "cls": "Basic infantry",
+    "cost": 160,
+    "build": 7,
+    "pop": 1,
+    "hp": 180,
+    "resist": {
+      "smallArms": 5,
+      "explosive": -25,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -35
+    },
+    "dmg": 12,
+    "proj": 3,
+    "reload": 1,
+    "acc": 68,
+    "general": "no",
+    "weaks": [
+      "area damage",
+      "vehicles"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Saboteur": {
+    "faction": "Covenant",
+    "cls": "Specialist infantry",
+    "cost": 400,
+    "build": 15,
+    "pop": 1,
+    "hp": 140,
+    "resist": {
+      "smallArms": 0,
+      "explosive": -20,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -30
+    },
+    "dmg": 90,
+    "proj": 1,
+    "reload": 4,
+    "acc": 85,
+    "general": "no",
+    "weaks": [
+      "detection",
+      "area damage",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Hijacker": {
+    "faction": "Covenant",
+    "cls": "Specialist infantry",
+    "cost": 500,
+    "build": 16,
+    "pop": 1,
+    "hp": 130,
+    "resist": {
+      "smallArms": 0,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "infantry",
+      "detection",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Recon Hound": {
+    "faction": "Covenant",
+    "cls": "Scout vehicle",
+    "cost": 300,
+    "build": 12,
+    "pop": 1,
+    "hp": 220,
+    "resist": {
+      "smallArms": 15,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 8,
+    "proj": 1,
+    "reload": 1.2,
+    "acc": 66,
+    "general": "no",
+    "weaks": [
+      "anything heavier",
+      "aircraft"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Raider Buggy": {
+    "faction": "Covenant",
+    "cls": "Scout vehicle",
+    "cost": 420,
+    "build": 14,
+    "pop": 2,
+    "hp": 480,
+    "resist": {
+      "smallArms": 15,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 44,
+    "proj": 2,
+    "reload": 1.2,
+    "acc": 78,
+    "general": "no",
+    "weaks": [
+      "static defense",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Rocket Technical": {
+    "faction": "Covenant",
+    "cls": "Advanced vehicle",
+    "cost": 650,
+    "build": 36,
+    "pop": 2,
+    "hp": 500,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": -10,
+      "energy": 0,
+      "air": 0,
+      "siege": -20
+    },
+    "dmg": 55,
+    "proj": 1,
+    "reload": 2.2,
+    "acc": 76,
+    "general": "no",
+    "weaks": [
+      "heavy armor",
+      "area damage",
+      "artillery"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Mine Layer": {
+    "faction": "Covenant",
+    "cls": "Advanced vehicle",
+    "cost": 550,
+    "build": 35,
+    "pop": 2,
+    "hp": 520,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "detection",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Marauder Scrap Tank": {
+    "faction": "Covenant",
+    "cls": "Main battle tank",
+    "cost": 700,
+    "build": 24,
+    "pop": 2,
+    "hp": 1050,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 5,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -15
+    },
+    "dmg": 95,
+    "proj": 1,
+    "reload": 1.9,
+    "acc": 80,
+    "general": "yes",
+    "weaks": [
+      "anti-tank infantry",
+      "aircraft",
+      "tank destroyers",
+      "dispersed light infantry"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Ambush Tank": {
+    "faction": "Covenant",
+    "cls": "Advanced vehicle",
+    "cost": 900,
+    "build": 40,
+    "pop": 3,
+    "hp": 700,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 160,
+    "proj": 1,
+    "reload": 3.2,
+    "acc": 85,
+    "general": "no",
+    "weaks": [
+      "detection",
+      "sustained fights",
+      "aircraft"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Salvage Harvester": {
+    "faction": "Covenant",
+    "cls": "Advanced vehicle",
+    "cost": 1200,
+    "build": 36,
+    "pop": 2,
+    "hp": 850,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "harassment",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Interceptor Gyro": {
+    "faction": "Covenant",
+    "cls": "Aircraft",
+    "cost": 850,
+    "build": 28,
+    "pop": 3,
+    "hp": 520,
+    "resist": {
+      "smallArms": 5,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 70,
+    "proj": 2,
+    "reload": 1.6,
+    "acc": 82,
+    "general": "no",
+    "weaks": [
+      "dedicated AA",
+      "ammunition",
+      "fragile"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Sensor Spike": {
+    "faction": "Covenant",
+    "cls": "Structure",
+    "cost": 500,
+    "build": 18,
+    "pop": 0,
+    "hp": 700,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 10,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 20,
+    "proj": 1,
+    "reload": 1.5,
+    "acc": 85,
+    "general": "no",
+    "weaks": [
+      "artillery",
+      "can be bypassed"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Rocket Nest": {
+    "faction": "Covenant",
+    "cls": "Structure",
+    "cost": 650,
+    "build": 20,
+    "pop": 0,
+    "hp": 900,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 10,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 60,
+    "proj": 1,
+    "reload": 1.8,
+    "acc": 85,
+    "general": "no",
+    "weaks": [
+      "artillery",
+      "infantry rush",
+      "cannot move"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Ravager": {
+    "faction": "Covenant",
+    "cls": "Epic unit",
+    "cost": 6500,
+    "build": 130,
+    "pop": 14,
+    "hp": 6500,
+    "resist": {
+      "smallArms": 45,
+      "explosive": 25,
+      "antiArmor": 10,
+      "energy": 10,
+      "air": -10,
+      "siege": 20
+    },
+    "dmg": 220,
+    "proj": 1,
+    "reload": 2.6,
+    "acc": 80,
+    "general": "no",
+    "weaks": [
+      "low durability for an epic",
+      "EMP susceptibility",
+      "no air defense",
+      "vulnerable rear",
+      "visible construction"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Locust Swarm": {
+    "faction": "Covenant",
+    "cls": "Epic unit",
+    "cost": 4500,
+    "build": 110,
+    "pop": 0,
+    "hp": 2000,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 10,
+      "antiArmor": 0,
+      "energy": 0,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "visible construction",
+      "destroyable facility",
+      "long recharge"
+    ],
+    "destroyed": ""
+  },
+  "Array · Sentinel Trooper": {
+    "faction": "Array",
+    "cls": "Basic infantry",
+    "cost": 260,
+    "build": 9,
+    "pop": 1,
+    "hp": 240,
+    "resist": {
+      "smallArms": 25,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 30,
+      "air": 0,
+      "siege": -20
+    },
+    "dmg": 16,
+    "proj": 2,
+    "reload": 1.1,
+    "acc": 74,
+    "general": "no",
+    "weaks": [
+      "EMP (drops shield)",
+      "area damage"
+    ],
+    "destroyed": ""
+  },
+  "Array · Disruptor": {
+    "faction": "Array",
+    "cls": "Specialist infantry",
+    "cost": 450,
+    "build": 16,
+    "pop": 1,
+    "hp": 200,
+    "resist": {
+      "smallArms": 10,
+      "explosive": -10,
+      "antiArmor": 0,
+      "energy": 20,
+      "air": 0,
+      "siege": -25
+    },
+    "dmg": 70,
+    "proj": 1,
+    "reload": 3,
+    "acc": 82,
+    "general": "no",
+    "weaks": [
+      "anti-tank infantry",
+      "area damage",
+      "dispersed light infantry"
+    ],
+    "destroyed": ""
+  },
+  "Array · Architect": {
+    "faction": "Array",
+    "cls": "Specialist infantry",
+    "cost": 320,
+    "build": 15,
+    "pop": 1,
+    "hp": 170,
+    "resist": {
+      "smallArms": 5,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 10,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "focused fire",
+      "dispersed light infantry"
+    ],
+    "destroyed": ""
+  },
+  "Array · Probe Skimmer": {
+    "faction": "Array",
+    "cls": "Scout vehicle",
+    "cost": 380,
+    "build": 16,
+    "pop": 1,
+    "hp": 280,
+    "resist": {
+      "smallArms": 15,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 20,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 10,
+    "proj": 1,
+    "reload": 1.2,
+    "acc": 72,
+    "general": "no",
+    "weaks": [
+      "anti-air",
+      "focused fire",
+      "EMP"
+    ],
+    "destroyed": ""
+  },
+  "Array · Extractor Core": {
+    "faction": "Array",
+    "cls": "Structure",
+    "cost": 1600,
+    "build": 25,
+    "pop": 0,
+    "hp": 1300,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 15,
+      "antiArmor": 0,
+      "energy": 20,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "harassment",
+      "immobile",
+      "cannot flee"
+    ],
+    "destroyed": ""
+  },
+  "Array · Aegis Tank": {
+    "faction": "Array",
+    "cls": "Main battle tank",
+    "cost": 1050,
+    "build": 32,
+    "pop": 3,
+    "hp": 1500,
+    "resist": {
+      "smallArms": 45,
+      "explosive": 20,
+      "antiArmor": 0,
+      "energy": 30,
+      "air": 0,
+      "siege": -5
+    },
+    "dmg": 115,
+    "proj": 1,
+    "reload": 1.9,
+    "acc": 84,
+    "general": "yes",
+    "weaks": [
+      "EMP (drops shield)",
+      "anti-armor specialists",
+      "aircraft",
+      "slow replacement"
+    ],
+    "destroyed": ""
+  },
+  "Array · Arc Walker": {
+    "faction": "Array",
+    "cls": "Advanced vehicle",
+    "cost": 780,
+    "build": 40,
+    "pop": 2,
+    "hp": 640,
+    "resist": {
+      "smallArms": 25,
+      "explosive": 0,
+      "antiArmor": -10,
+      "energy": 20,
+      "air": 0,
+      "siege": -15
+    },
+    "dmg": 34,
+    "proj": 2,
+    "reload": 0.9,
+    "acc": 78,
+    "general": "no",
+    "weaks": [
+      "heavy armor",
+      "artillery",
+      "EMP"
+    ],
+    "destroyed": ""
+  },
+  "Array · Warp Snare": {
+    "faction": "Array",
+    "cls": "Advanced vehicle",
+    "cost": 850,
+    "build": 42,
+    "pop": 3,
+    "hp": 560,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 25,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "focused fire",
+      "EMP",
+      "aircraft"
+    ],
+    "destroyed": ""
+  },
+  "Array · Nullifier": {
+    "faction": "Array",
+    "cls": "Advanced vehicle",
+    "cost": 1300,
+    "build": 48,
+    "pop": 4,
+    "hp": 850,
+    "resist": {
+      "smallArms": 25,
+      "explosive": 10,
+      "antiArmor": 0,
+      "energy": 25,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 240,
+    "proj": 1,
+    "reload": 3.6,
+    "acc": 88,
+    "general": "no",
+    "weaks": [
+      "infantry",
+      "aircraft",
+      "expensive",
+      "slow to field"
+    ],
+    "destroyed": ""
+  },
+  "Array · Prism Artillery": {
+    "faction": "Array",
+    "cls": "Artillery",
+    "cost": 1200,
+    "build": 44,
+    "pop": 4,
+    "hp": 520,
+    "resist": {
+      "smallArms": 15,
+      "explosive": -10,
+      "antiArmor": 0,
+      "energy": 20,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 190,
+    "proj": 1,
+    "reload": 5,
+    "acc": 62,
+    "general": "no",
+    "weaks": [
+      "minimum-range",
+      "low durability",
+      "deployment time",
+      "flanking"
+    ],
+    "destroyed": ""
+  },
+  "Array · Restorer Drone": {
+    "faction": "Array",
+    "cls": "Advanced vehicle",
+    "cost": 650,
+    "build": 36,
+    "pop": 2,
+    "hp": 520,
+    "resist": {
+      "smallArms": 20,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 25,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "focused fire",
+      "EMP",
+      "aircraft"
+    ],
+    "destroyed": ""
+  },
+  "Array · Phase Interceptor": {
+    "faction": "Array",
+    "cls": "Aircraft",
+    "cost": 1250,
+    "build": 40,
+    "pop": 4,
+    "hp": 680,
+    "resist": {
+      "smallArms": 10,
+      "explosive": 0,
+      "antiArmor": 0,
+      "energy": 15,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 145,
+    "proj": 1,
+    "reload": 2.4,
+    "acc": 90,
+    "general": "no",
+    "weaks": [
+      "dedicated AA",
+      "ammunition",
+      "expensive replacement"
+    ],
+    "destroyed": ""
+  },
+  "Array · Pylon Turret": {
+    "faction": "Array",
+    "cls": "Structure",
+    "cost": 750,
+    "build": 22,
+    "pop": 0,
+    "hp": 1150,
+    "resist": {
+      "smallArms": 40,
+      "explosive": 20,
+      "antiArmor": 0,
+      "energy": 25,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 85,
+    "proj": 1,
+    "reload": 1.9,
+    "acc": 90,
+    "general": "no",
+    "weaks": [
+      "artillery",
+      "cannot move",
+      "can be bypassed"
+    ],
+    "destroyed": ""
+  },
+  "Array · Arbiter": {
+    "faction": "Array",
+    "cls": "Epic unit",
+    "cost": 8000,
+    "build": 165,
+    "pop": 15,
+    "hp": 8000,
+    "resist": {
+      "smallArms": 55,
+      "explosive": 35,
+      "antiArmor": 20,
+      "energy": 40,
+      "air": -10,
+      "siege": 25
+    },
+    "dmg": 280,
+    "proj": 1,
+    "reload": 2.9,
+    "acc": 82,
+    "general": "no",
+    "weaks": [
+      "EMP susceptibility (drops shield)",
+      "no air defense",
+      "vulnerable rear",
+      "slow movement",
+      "visible construction"
+    ],
+    "destroyed": ""
+  },
+  "Array · Stasis Lance": {
+    "faction": "Array",
+    "cls": "Epic unit",
+    "cost": 5200,
+    "build": 130,
+    "pop": 0,
+    "hp": 2600,
+    "resist": {
+      "smallArms": 30,
+      "explosive": 20,
+      "antiArmor": 0,
+      "energy": 25,
+      "air": 0,
+      "siege": 0
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "visible construction",
+      "destroyable facility",
+      "long recharge"
+    ],
+    "destroyed": ""
+  }
+}/*ROSTER_END*/;
 
 // ---- Build the form ----
 function buildForm(){
-  document.getElementById('presets').innerHTML = Object.keys(SAMPLES).map(k=>`<button onclick="loadUnit('${k.replace(/'/g,"\\'")}')">${k}</button>`).join('');
-  document.getElementById('u-class').innerHTML = Object.keys(BUILD_TIMES).map(c=>`<option>${c}</option>`).join('');
+  // group presets by faction into <optgroup>s
+  const byF={};
+  Object.keys(SAMPLES).forEach(k=>{const f=SAMPLES[k].faction||'Other';(byF[f]=byF[f]||[]).push(k);});
+  const order=['Directorate','Covenant','Array','Other'];
+  document.getElementById('preset').innerHTML = order.filter(f=>byF[f]).map(f=>
+    `<optgroup label="${f}">`+byF[f].map(k=>`<option value="${k.replace(/"/g,'&quot;')}">${k.split('·').pop().trim()}</option>`).join('')+`</optgroup>`).join('');
+  document.getElementById('u-class').innerHTML = [...Object.keys(BUILD_TIMES),'Structure'].map(c=>`<option>${c}</option>`).join('');
   document.getElementById('resist').innerHTML = DMG_TYPES.map(t=>
     `<div><label style="margin:0 0 2px">${t}</label><input id="r-${t}" type="number" oninput="calc()" value="0"></div>`).join('');
   document.getElementById('weaks').innerHTML = WEAKNESS_OPTIONS.map(w=>
     `<label><input type="checkbox" class="wk" value="${w}" onchange="calc()">${w}</label>`).join('');
 }
 function loadUnit(key){
-  const u=SAMPLES[key];
+  const u=SAMPLES[key]; if(!u) return;
+  const sel=document.getElementById('preset'); if(sel && sel.value!==key) sel.value=key;
   document.getElementById('u-name').value = key.split('·').pop().trim();
   document.getElementById('u-faction').value=u.faction;
   document.getElementById('u-class').value=u.cls;
@@ -210,7 +1445,16 @@ function loadUnit(key){
   document.getElementById('u-dmg').value=u.dmg; document.getElementById('u-proj').value=u.proj;
   document.getElementById('u-reload').value=u.reload; document.getElementById('u-acc').value=u.acc;
   document.getElementById('u-general').value=u.general; document.getElementById('u-destroyed').value=u.destroyed;
-  document.querySelectorAll('.wk').forEach(cb=>cb.checked=u.weaks.includes(cb.value));
+  // weaknesses: check matching fixed options, then inject the unit's own free-form ones (checked)
+  document.querySelectorAll('.wk-extra').forEach(e=>e.closest('label').remove());
+  document.querySelectorAll('.wk').forEach(cb=>cb.checked=(u.weaks||[]).includes(cb.value));
+  const known=new Set([...document.querySelectorAll('.wk')].map(cb=>cb.value));
+  const box=document.getElementById('weaks');
+  (u.weaks||[]).filter(w=>!known.has(w)).forEach(w=>{
+    const lab=document.createElement('label');
+    lab.innerHTML=`<input type="checkbox" class="wk wk-extra" value="${String(w).replace(/"/g,'&quot;')}" checked onchange="calc()">${w}`;
+    box.appendChild(lab);
+  });
   calc();
 }
 
@@ -335,7 +1579,7 @@ function showTab(t){
   document.getElementById('tab-budget').classList.toggle('on',t==='budget');
 }
 
-buildForm(); loadUnit("Directorate · Vanguard MBT"); buildBudget();
+buildForm(); loadUnit(document.getElementById('preset').value); buildBudget();
 </script>
 </body>
 </html>
