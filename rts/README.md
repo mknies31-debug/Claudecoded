@@ -22,6 +22,7 @@ A structured, buildable version of the **Competitive Balance Bible** for a moder
 | [design/11-budget-options.md](design/11-budget-options.md) | faction-budget fix (Option B canonical) | 4 |
 | [design/12-directorate-roster.md](design/12-directorate-roster.md) · [data/units/directorate.json](data/units/directorate.json) | Directorate roster (15 units, validated) | 5, 9, 20 |
 | [design/13-covenant-roster.md](design/13-covenant-roster.md) · [data/units/covenant.json](data/units/covenant.json) | Covenant roster (15 units, validated) | 5, 9, 20 |
+| [design/14-array-roster.md](design/14-array-roster.md) · [data/units/array.json](data/units/array.json) | Array roster (15 units, validated) — all 3 factions complete | 5, 9, 20 |
 | [lab/](lab/index.html) | interactive balance calculator + budget validator | 6–9 |
 | [CHECKLIST.md](CHECKLIST.md) | launch certification gate | 50 |
 
