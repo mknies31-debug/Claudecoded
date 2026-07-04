@@ -1,0 +1,51 @@
+{
+  "_source": "Balance Bible §4 (Power budget), §5 (Counter coverage)",
+  "_rules": [
+    "Each faction gets the same ~100-point total budget, distributed differently.",
+    "No faction should rank first in more than three major categories.",
+    "Values are internal (not shown to players) and used to verify a faction isn't stacking too many advantages."
+  ],
+  "budgetCategories": [
+    "economyReliability", "expansionSpeed", "earlyPressure", "directCombat",
+    "mobility", "durability", "stealthDeception", "battlefieldControl",
+    "technologyScaling", "easeOfUse"
+  ],
+  "factions": {
+    "Directorate": {
+      "profile": "High durability, reliable economy, strong repair, strong combined arms, straightforward controls.",
+      "sacrifices": ["expansion speed", "stealth", "early harassment", "strategic mobility"],
+      "budget": {
+        "economyReliability": 18, "expansionSpeed": 11, "earlyPressure": 13, "directCombat": 19,
+        "mobility": 11, "durability": 20, "stealthDeception": 5, "battlefieldControl": 11,
+        "technologyScaling": 17, "easeOfUse": 18
+      }
+    },
+    "Covenant": {
+      "profile": "Fast expansion, harassment, stealth, cheap field presence, salvage, tactical flexibility.",
+      "sacrifices": ["durability", "direct late-game combat", "ease of use", "reliable frontal defense"],
+      "budget": {
+        "economyReliability": 15, "expansionSpeed": 19, "earlyPressure": 19, "directCombat": 12,
+        "mobility": 19, "durability": 9, "stealthDeception": 20, "battlefieldControl": 14,
+        "technologyScaling": 13, "easeOfUse": 10
+      }
+    },
+    "Array": {
+      "profile": "Strong tech scaling, battlefield manipulation, shields, mobile infrastructure, specialists.",
+      "sacrifices": ["early pressure", "replacement speed", "economic reliability", "simplicity", "early army size"],
+      "budget": {
+        "economyReliability": 13, "expansionSpeed": 14, "earlyPressure": 10, "directCombat": 17,
+        "mobility": 16, "durability": 16, "stealthDeception": 12, "battlefieldControl": 20,
+        "technologyScaling": 20, "easeOfUse": 11
+      }
+    }
+  },
+  "counterCoverage": {
+    "_rule": "Every faction must answer each threat. The answer need not be equivalent.",
+    "threats": ["massInfantry", "heavyArmor", "aircraft", "artillery", "stealth", "staticDefenses", "harassment", "epicUnits", "superweapons", "economicExpansion"],
+    "exampleHeavyArmorAnswers": {
+      "Directorate": ["dedicated missile infantry", "precision aircraft", "heavy tank destroyer"],
+      "Covenant": ["mines", "ambush infantry", "hijacking", "rear-armor attacks"],
+      "Array": ["shield-disrupting energy weapon", "immobilization field", "expensive anti-armor specialist"]
+    }
+  }
+}

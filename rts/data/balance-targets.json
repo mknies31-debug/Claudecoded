@@ -1,0 +1,44 @@
+{
+  "_source": "Balance Bible §2 (Objectives), §8 (Cost-Efficiency), §45 (Efficiency), §46 (Skill tiers), §49 (Warning signs)",
+  "_note": "Warning indicators, not automatic proof. A faction at exactly 50% can still be unhealthy.",
+  "launchTargets": {
+    "factionWinRate":        { "min": 0.48, "max": 0.52, "unit": "ratio" },
+    "matchupWinRate":        { "min": 0.46, "max": 0.54, "unit": "ratio" },
+    "spawnPositionWinRate":  { "min": 0.49, "max": 0.51, "unit": "ratio" },
+    "avgRankedMatchMinutes": { "min": 18, "max": 25, "unit": "minutes" },
+    "matchesUnder5min":      { "max": 0.08, "unit": "ratio" },
+    "matchesOver40min":      { "max": 0.10, "unit": "ratio" },
+    "superweaponOnlyWins":   { "max": 0.05, "unit": "ratio" },
+    "highestUnitPickRate":   { "max": 0.70, "unit": "ratio", "preferred": true },
+    "lowestStdUnitPickRate": { "min": 0.10, "unit": "ratio", "preferred": true }
+  },
+  "costEfficiency": {
+    "_note": "Expected result at equal cost, equal control, no terrain/veterancy/support/defenses.",
+    "strongCounter":       { "winsWithRemaining": [0.25, 0.45] },
+    "moderateAdvantage":   { "winsWithRemaining": [0.10, 0.25] },
+    "neutral":             { "eitherSurvivesUnder": 0.15 },
+    "moderateDisadvantage":{ "losesAfterDealing": [0.60, 0.85] },
+    "strongDisadvantage":  { "losesAfterDealing": [0.30, 0.60] }
+  },
+  "unitEfficiencyScore": {
+    "_formula": "valueDestroyed / unitCost",
+    "weak":     { "max": 0.7 },
+    "normal":   { "min": 0.8, "max": 1.2 },
+    "strong":   { "min": 1.3 },
+    "problematic": { "min": 1.6, "note": "consistently above 1.6 = likely problematic" }
+  },
+  "warningSigns": [
+    "One opening exceeds 60% usage",
+    "One faction exceeds 54% matchup win rate",
+    "One unit appears in nearly every army",
+    "One unit is almost never built",
+    "Average match time rises sharply",
+    "Early surrender rate rises",
+    "Superweapons determine too many matches",
+    "Defensive games become common",
+    "One faction performs very differently by map",
+    "Beginner and expert data diverge dramatically",
+    "Players cannot explain counterplay"
+  ],
+  "skillTiers": ["new", "bronze-silver", "gold-platinum", "diamond", "top5pct", "tournament"]
+}

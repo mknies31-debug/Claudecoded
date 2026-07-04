@@ -1,0 +1,71 @@
+{
+  "_source": "Balance Bible §6-8 (unit math), §18 (Upgrades), §25 (Armor facing), §26 (Infantry terrain), §27 (Air), §31 (Repair), §32 (Veterancy), §34 (Epic)",
+  "unitValueFormula": {
+    "unitValue": "durabilityValue + damageValue + mobilityValue + utilityValue + rangeValue",
+    "adjustedBy": ["technology requirement", "build time", "production restrictions", "population use", "micro difficulty", "counter vulnerability"],
+    "effectiveHealth": "baseHealth / (1 - damageReduction)",
+    "effectiveHealthExample": { "baseHealth": 1200, "cannonResistance": 0.20, "effectiveHpVsCannon": 1500 },
+    "computeSeparatelyVs": ["smallArms", "explosive", "antiArmor", "energy", "airAttacks", "siege"],
+    "sustainedDPS": "damagePerShot * projectiles / reloadTime",
+    "practicalDPSAdjust": ["accuracy", "projectile travel time", "overkill", "target acquisition delay", "rotation time", "setup time", "burst reload", "damage falloff", "area of effect"]
+  },
+  "antiSpam": {
+    "rule": "Every general-purpose unit must have at least two exploitable weaknesses.",
+    "mbtExample": {
+      "strengths": ["strong vs vehicles", "strong vs structures", "durable"],
+      "requiredWeaknesses": ["vulnerable to anti-tank infantry", "vulnerable to aircraft", "limited vision", "slow turning", "poor vs dispersed light infantry"]
+    },
+    "mechanisms": ["armor-specific counters", "area damage", "minimum range", "mobility differences", "terrain restrictions", "formation vulnerability", "production limits only when thematically justified"],
+    "avoid": "arbitrary unit caps as the main solution"
+  },
+  "armorFacing": {
+    "_applyTo": ["tanks", "heavy vehicles", "epic units"],
+    "front": 0.90, "side": 1.10, "rear": 1.30
+  },
+  "infantryTerrain": {
+    "garrison": ["increased protection", "increased vision", "fixed firing positions", "vulnerable to fire/explosives/clearing units"],
+    "coverRangedReduction": [0.15, 0.25],
+    "coverNote": "No protection against area weapons",
+    "forestConcealment": "reduced detection range, no full invisibility while firing"
+  },
+  "upgrades": {
+    "minorPct": [0.05, 0.10],
+    "standardPct": [0.10, 0.15],
+    "majorSpecializedPct": [0.15, 0.25],
+    "avoid": "universal upgrades that improve every unit",
+    "cost": ["credits", "time", "technology-building capacity"]
+  },
+  "veterancy": {
+    "veteran": { "damagePct": 0.08, "maxHealthPct": 0.08, "accuracy": "slight increase" },
+    "elite": { "damagePct": 0.10, "maxHealthPct": 0.10, "regen": "slow outside combat", "ability": "minor improvement" },
+    "totalCombatValueGainMax": 0.35,
+    "rule": "Veterancy should not eliminate counter relationships."
+  },
+  "repair": {
+    "field": ["moderate rate", "reduced by enemy fire", "limited resource or cooldown", "support unit is vulnerable"],
+    "base": ["faster than field", "costs credits", "requires repair facility or nearby structure"],
+    "combatRestriction": "Units damaged within last 3 seconds receive reduced repair effectiveness."
+  },
+  "air": {
+    "limitations": ["ammunition", "refueling", "airfield capacity", "vulnerability to anti-air", "expensive replacement", "predictable return path"],
+    "airfieldCapacityExample": 4,
+    "antiAirRule": "Equal-cost dedicated AA strongly defeats unsupported aircraft but should not annihilate them before a retreat attempt."
+  },
+  "epicUnit": {
+    "costEquivalent": "~7-10 standard tanks + substantial tech investment",
+    "requiredWeaknessesPickAtLeast3": ["slow movement", "no air defense", "vulnerable rear", "EMP susceptibility", "limited turning", "high repair cost", "visible construction", "specialized counters"],
+    "rule": "An equal-cost mixed army using correct counters should defeat an unsupported epic unit."
+  },
+  "hero": {
+    "rules": ["one at a time", "high cost", "long rebuild delay", "strong specialized role", "vulnerable to vehicles/focused fire", "cannot destroy a base alone", "abilities require skill and timing"]
+  },
+  "supportPower": {
+    "standardValueUnits": [1, 3],
+    "highTierValueUnits": [4, 6],
+    "telegraphing": ["audio warning", "ground marker", "delay", "visible incoming effect"]
+  },
+  "randomness": {
+    "acceptable": ["small accuracy variation at extreme range", "minor projectile spread", "predictable resource regeneration range", "cosmetic destruction variation"],
+    "avoid": ["random critical hits", "random unit stuns", "random instant kills", "random resource bonuses", "random support-power failures"]
+  }
+}
