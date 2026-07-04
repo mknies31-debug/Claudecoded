@@ -9,10 +9,10 @@
       "tier": 1,
       "class": "Basic infantry",
       "role": "anti-infantry / garrison",
-      "cost": 200,
+      "cost": 300,
       "build": 8,
       "pop": 1,
-      "hp": 260,
+      "hp": 220,
       "resist": {
         "smallArms": 0,
         "explosive": -25,
@@ -21,7 +21,7 @@
         "air": 0,
         "siege": -25
       },
-      "dmg": 14,
+      "dmg": 6,
       "proj": 4,
       "reload": 1,
       "acc": 70,
@@ -212,7 +212,7 @@
       "dmgType": "antiArmor",
       "armor": "heavy",
       "range": 5,
-      "aoe": 4,
+      "aoe": 2,
       "mobile": true
     },
     {

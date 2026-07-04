@@ -9,10 +9,10 @@
       "tier": 1,
       "class": "Basic infantry",
       "role": "anti-infantry / harass",
-      "cost": 160,
+      "cost": 260,
       "build": 7,
       "pop": 1,
-      "hp": 180,
+      "hp": 150,
       "resist": {
         "smallArms": 0,
         "explosive": -25,
@@ -21,7 +21,7 @@
         "air": 0,
         "siege": -25
       },
-      "dmg": 12,
+      "dmg": 6,
       "proj": 3,
       "reload": 1,
       "acc": 68,
@@ -230,7 +230,7 @@
         "air": 0,
         "siege": -10
       },
-      "dmg": 55,
+      "dmg": 65,
       "proj": 1,
       "reload": 2.2,
       "acc": 76,
@@ -338,7 +338,7 @@
       "dmgType": "antiArmor",
       "armor": "heavy",
       "range": 5,
-      "aoe": 4,
+      "aoe": 2,
       "mobile": true
     },
     {
