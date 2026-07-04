@@ -18,6 +18,8 @@ A structured, buildable version of the **Competitive Balance Bible** for a moder
 | [design/07-maps.md](design/07-maps.md) | per-map tests, pool diversity | 37–38 |
 | [design/08-quality.md](design/08-quality.md) | RNG, AI, campaign, teams, testing, simulation, telemetry, skill tiers | 39–46 |
 | [design/09-process.md](design/09-process.md) | patch process, patch size, warning signs | 47–49 |
+| [design/10-art-direction.md](design/10-art-direction.md) · [style/](style/index.html) | "slightly cartoon, but detailed" — palettes, cel-shading, damage states, + a visual style guide | — |
+| [design/11-budget-options.md](design/11-budget-options.md) | faction-budget fix (Option B canonical) | 4 |
 | [CHECKLIST.md](CHECKLIST.md) | launch certification gate | 50 |
 
 ## Data files (the numbers)
@@ -41,7 +43,7 @@ Everything quantitative is JSON so a balance tool, simulator, or prototype can r
 ## Open questions
 _Things that need a design decision — flagged, not silently resolved._
 
-1. **Faction budget doesn't total 100, and its "≤3 leads" rule is impossible.** §4 values sum to 143 / 150 / 149 (unequal, not 100), and "no faction #1 in >3 categories" can't hold with 10 categories × 3 factions. → **Three fix options laid out in [design/11-budget-options.md](design/11-budget-options.md)** (equal-100 / 8-category / difficulty-weighted); awaiting a pick. Recommended: Option B.
+1. ~~Faction budget doesn't total 100, and its "≤3 leads" rule is impossible.~~ **RESOLVED** — adopted **Option B** (8 categories, equal 150; ease-of-use moved to a complexity tag) as canonical in [`factions.json`](data/factions.json). Rationale + the two rejected alternatives (equal-100, difficulty-weighted) kept in [design/11-budget-options.md](design/11-budget-options.md).
 2. **Faction names** — Directorate / Covenant / Array: final or placeholders?
 3. **Superweapon vs comeback tension** — §35 says superweapons must "force action"; confirm the discounted-collector emergency recovery (§14) and superweapon cadence don't combine into stalemate-y turtle metas.
 4. **Command capacity vs "no strict pop cap"** (§21) — confirm the soft-cap slowdown curve so it discourages extreme counts without dictating normal army size.
