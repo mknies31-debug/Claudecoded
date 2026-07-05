@@ -68,9 +68,13 @@ function fight(aName, bName, budget=3000){
   }
   if (!winner) winner = poolA>=poolB ? aName : bName;
   const winPool = winner===aName?poolA:poolB, winInit = winner===aName?nA0*ehpA:nB0*ehpB;
+  // A fully-resistant winner (effHP=Infinity) leaves winPool/winInit = Inf/Inf = NaN;
+  // it took no losses, so that's 100% remaining. Guard so we never print NaN%/>100%.
+  let frac = winInit>0 ? winPool/winInit : 1;
+  if (!isFinite(frac)) frac = 1;
   const retreated = !!loserRetreatEHP && loserRetreatEHP.side===(winner===aName?bName:aName);
   return { A:aName,B:bName,budget,nA:nA0,nB:nB0,winner,loser:winner===aName?bName:aName,
-           remainPct:Math.max(0,winPool/winInit)*100, retreated,
+           remainPct:Math.max(0,Math.min(1,frac))*100, retreated,
            dmgTypeA:A.dmgType,dmgTypeB:B.dmgType,
            resistOfBvsA:(B.resist?.[A.dmgType]??0), resistOfAvsB:(A.resist?.[B.dmgType]??0),
            rangeA:A.range,rangeB:B.range,aoeA:A.aoe,aoeB:B.aoe };
