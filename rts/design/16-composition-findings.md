@@ -29,12 +29,30 @@ After adding it, **Covenant mix now beats Raider spam 42%** (was a 36% loss) —
 - **Clean ✓:** mixed beats Missile/Rifleman/Lancer spam (Directorate); Rocket **and now Raider** spam (Covenant); Aegis/Nullifier/Sentinel spam (Array).
 - **⚠ 2 remaining flags — both mono-*tank* spam, and neither is a new §49 unit:**
   1. **Directorate mix vs Vanguard (tank) spam — 28%.** A weighted anti-armor response (Missile Trooper + Lancer TD) *still* loses ~19% to pure Vanguards, so this is **not just even-split mis-weighting** — it points at **heavy-tank cost-efficiency**. Backlog item: re-examine the Vanguard's value/cost (a small cost-up or HP-down), since a §8 pass, not the composition sim, is the right tool.
-  2. **Covenant mix vs Marauder (tank) spam — 55%.** **Model limitation, not a confirmed balance bug.** Covenant's anti-armor is *utility*: Hijacker (`dmg 0` — steals the tank), Mine Layer (`dmg 0` — area denial), Ambush Tank (`dmg 160`, rear-armor + stealth). A DPS-only composition sim **cannot represent hijack/mines/rear-armor/ambush**, so it necessarily under-rates Covenant vs armor. Verifying this needs a mechanic-aware sim (or playtesting), not a tuning nudge.
+  2. **Covenant mix vs Marauder (tank) spam — 55% (DPS-only) → 46% (mechanics on).** Covenant's anti-armor is *utility*: Hijacker (`dmg 0` — steals the tank), Mine Layer (`dmg 0` — area denial), Ambush Tank (`dmg 160`, rear-armor + stealth). A DPS-only sim scores all of that at ~zero. The **mechanic-aware mode now models it** (see below), which reclassifies this from an invisible blind spot to a **calibration/playtest question**.
+
+## Mechanic-aware mode — closing the Covenant blind spot (§16)
+
+`composition.mjs --mechanics` wraps the DPS loop with the four utility mechanics a first-order sim otherwise can't see. It is **opt-in and default-off**, so the plain report stays byte-identical and every other baseline (duels, certify, the prototype's "matches the sim" claim) is untouched. Units carry the mechanics as optional data fields; a unit without them behaves exactly as before.
+
+| Field | Models | Resolution | Real-world counter kept |
+|---|---|---|---|
+| `stealth` | ambush / first strike from concealment | a free opening volley before the main loop | **nullified if the enemy fields a `detector`** |
+| `flank` | rear-armor hit | applies `armorFacing.rear` = **1.30** (already in `combat-rules.json`, previously never applied) vs armored targets | frontal armor if you don't get behind it |
+| `mine` | pre-placed area damage | one-time alpha vs the best armored target | **halved if the enemy has detection** |
+| `convert` | hijack | deletes the highest-value enemy vehicle per second | hijacker is `dmg 0`, fragile, and focus-fired — escort-punishable |
+
+**What it showed (no constants were tuned to force an outcome):**
+- Directorate and Array reports are **unchanged** with mechanics on (they carry no mechanic fields) — the hooks touch only the units that have them.
+- The curated Covenant mix (one Ambush Tank) improves modestly: **Marauder-spam 55% → 46%, Raider-spam 42% → 48% mixed**.
+- A *proper* Covenant anti-tank response that leans on the utility units — `Ambush Tank + Hijacker + Mine Layer + Rocket Technical` vs Marauder spam — swings from **74% loss (DPS-only) to 40% (mechanics on)**: a **34-point** swing from valuing hijack/mines/ambush instead of scoring them at zero.
+
+**Honest read:** modelling the mechanics is worth a lot, but in this first-order aggregate it still doesn't *flip* massed Marauders. That residual is now a **calibration/playtest question** (are the opening-volley length, hijack rate, and mine alpha tuned right? do real players micro these better than an aggregate?) — deliberately **not** resolved by inflating the constants, which would be fitting the sim to a wanted answer.
 
 ## Backlog & methodology
 
-1. **Heavy-tank cost-efficiency (flag #1)** — run a §8 cost-efficiency pass on the Vanguard/Marauder MBTs; the composition sim only flagged it, the fix belongs in the duel/cost tool.
-2. **Mechanic-aware composition sim (flag #2)** — the current engine is DPS + effective-HP + splash only. To score Covenant fairly it needs to model *hijack* (convert an enemy unit), *mines* (pre-placed area damage), *stealth/ambush* (first-strike from concealment), and *rear-armor*. Until then, treat Covenant-vs-armor sim numbers as a **known blind spot**, flagged not silently trusted.
+1. **Heavy-tank cost-efficiency (flag #1)** — run a §8 cost-efficiency pass on the Vanguard/Marauder MBTs; the composition sim only flagged it, the fix belongs in the duel/cost tool. (The architecture review, [design/17](17-architecture-review.md) P0.1, argues this flag is largely an artifact of the composition sim lacking the duel sim's range/first-strike/kiting — **unifying the two combat cores** is the cleaner next step and may resolve it outright.)
+2. ~~**Mechanic-aware composition sim (flag #2)**~~ **DONE (v1)** — see the mode above. Follow-up is *calibration*, not capability.
 3. **Best-response mix mode** — the even-split "naive mix" is a fair but pessimistic baseline; a scouted, weighted mix beats these spams. A "best-response" mode would separate "spam is broken" from "the naive split was wrong."
 
-Nothing here blocks progress. The central §10 claim holds for every properly-countered case; the one real roster gap (Covenant anti-swarm) is now closed; and the two residual flags are a scoped §8 backlog item and a documented sim blind spot — both visible, neither silently tuned away. Duels remain 0-broken and all three rosters validate 0/0.
+Nothing here blocks progress. The central §10 claim holds for every properly-countered case; the Covenant anti-swarm gap is closed; flag (b) is now modeled rather than blind; and the remaining items — a §8 cost pass and a combat-core unification — are visible and scoped, none silently tuned away. Duels remain 0-broken and all three rosters validate 0/0.

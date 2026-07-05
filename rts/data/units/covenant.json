@@ -86,7 +86,8 @@
       "armor": "infantry",
       "range": 5,
       "aoe": 2,
-      "mobile": true
+      "mobile": true,
+      "stealth": true
     },
     {
       "name": "Hijacker",
@@ -128,7 +129,8 @@
       "armor": "infantry",
       "range": 4,
       "aoe": 0,
-      "mobile": true
+      "mobile": true,
+      "convert": 0.15
     },
     {
       "name": "Recon Hound",
@@ -169,7 +171,8 @@
       "armor": "light",
       "range": 5,
       "aoe": 1,
-      "mobile": true
+      "mobile": true,
+      "detector": true
     },
     {
       "name": "Raider Buggy",
@@ -338,7 +341,8 @@
       "armor": "medium",
       "range": 5,
       "aoe": 0,
-      "mobile": true
+      "mobile": true,
+      "mine": 400
     },
     {
       "name": "Marauder Scrap Tank",
@@ -425,7 +429,9 @@
       "armor": "medium",
       "range": 7,
       "aoe": 2,
-      "mobile": true
+      "mobile": true,
+      "stealth": true,
+      "flank": true
     },
     {
       "name": "Salvage Harvester",
@@ -550,7 +556,8 @@
       "armor": "structure",
       "range": 6,
       "aoe": 1,
-      "mobile": false
+      "mobile": false,
+      "detector": true
     },
     {
       "name": "Rocket Nest",
