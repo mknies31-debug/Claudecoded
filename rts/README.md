@@ -27,6 +27,7 @@ A structured, buildable version of the **Competitive Balance Bible** for a moder
 | [design/16-composition-findings.md](design/16-composition-findings.md) | army-composition sim (mixed vs spam) — infantry-spam fix + backlog | 10 |
 | [design/17-architecture-review.md](design/17-architecture-review.md) · [design/18-feature-research.md](design/18-feature-research.md) | architecture/consistency review · cited feature research | — |
 | [design/19-ai-opponent.md](design/19-ai-opponent.md) · [maps/twin-ridge.html](maps/twin-ridge.html) | CPU-opponent design for 1 v CPU (§40) · first map viewer | 40, 37 |
+| [design/20-engine.md](design/20-engine.md) · [design/21-engine-structure-review.md](design/21-engine-structure-review.md) | the playable engine (V1 scope) · code-structure review + prioritized refactor plan | — |
 | [lab/](lab/index.html) | interactive balance calculator + budget validator | 6–9 |
 | [CHECKLIST.md](CHECKLIST.md) | launch certification gate — **20/20 design gates pass** ([certify.mjs](scripts/certify.mjs)) | 50 |
 

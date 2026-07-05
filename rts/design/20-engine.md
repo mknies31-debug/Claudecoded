@@ -36,6 +36,8 @@ The V1 pass turned the previously-stubbed systems into live mechanics, each driv
 - **Micro depth:** no veterancy, abilities, retreat AI, or formations yet.
 - **Per-unit unique behaviors:** the special traits that need bespoke logic in the live game — hijack, mine-laying, and similar one-off abilities — are modelled in the sims but not yet wired as in-engine actions.
 
+**A deliberate modelling note:** the live game shares the sims' `pdps`/`effHP` math but *formulates* damage differently — per shot it removes `maxHp · (pdps·reload / effHP)` of the target with flat 50% splash inside `aoe`, and kiting/range/first-strike are **emergent from real-time positioning** rather than the sims' analytic `kiteFactor`/first-strike-window. Both derive from the same certified numbers; they are two views of one model, not two models. (Structure review: [design/21](21-engine-structure-review.md).)
+
 ## What it unlocks on the §50 checklist
 
 The engine is the vehicle the remaining runtime gates need: it demonstrates **AI using only legal resources** (§40) in a live loop, and it's the harness that can be **instrumented** for the measured-target gates (faction/matchup win rates, match length, pick rates) once it runs headless match batches. Those instrumentation passes are the natural next step.
