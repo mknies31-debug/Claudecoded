@@ -51,7 +51,7 @@ Everything provable on paper is proven by a script — run any of them from the 
 | [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
 | [`scripts/build-lab-data.mjs`](scripts/build-lab-data.mjs) · [`scripts/build-prototype-data.mjs`](scripts/build-prototype-data.mjs) | re-inject roster JSON into the lab / prototype (keep them in sync with `data/units/`) |
 
-**Interactive:** [`game/index.html`](game/index.html) — **▶ the playable skirmish** (V1: pick your faction and the CPU's from Directorate / Covenant / Array, real units/economy/combat with A\* pathfinding, energy shields, and stealth/detection on Twin Ridge) · [`lab/index.html`](lab/index.html) — balance calculator + budget validator · [`prototype/index.html`](prototype/index.html) — visual battle sandbox (composition sim) · [`maps/twin-ridge.html`](maps/twin-ridge.html) — map viewer · [`style/index.html`](style/index.html) — cel-shaded style guide. All single-file, offline.
+**Interactive:** [`game/index.html`](game/index.html) — **▶ the playable skirmish** (V1: pick your faction and the CPU's from Directorate / Covenant / Array, real units/economy/combat with A\* pathfinding, energy shields, stealth/detection, and camera zoom + follow (wheel / WASD / F) on Twin Ridge) · [`lab/index.html`](lab/index.html) — balance calculator + budget validator · [`prototype/index.html`](prototype/index.html) — visual battle sandbox (composition sim) · [`maps/twin-ridge.html`](maps/twin-ridge.html) — map viewer · [`style/index.html`](style/index.html) — cel-shaded style guide. All single-file, offline.
 
 ## Data files (the numbers)
 
