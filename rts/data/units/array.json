@@ -174,21 +174,21 @@
       "detector": true
     },
     {
-      "name": "Extractor Core",
+      "name": "Harvest Drone",
       "tier": 1,
-      "class": "Structure",
-      "role": "economy (stationary extractor)",
-      "cost": 1600,
-      "build": 25,
-      "pop": 0,
-      "hp": 1300,
+      "class": "Advanced vehicle",
+      "role": "economy / wood harvester",
+      "cost": 900,
+      "build": 35,
+      "pop": 1,
+      "hp": 560,
       "resist": {
-        "smallArms": 55,
-        "explosive": 25,
-        "antiArmor": 20,
-        "energy": 0,
-        "air": -10,
-        "siege": -25
+        "smallArms": 20,
+        "explosive": -10,
+        "antiArmor": -5,
+        "energy": 25,
+        "air": 0,
+        "siege": -10
       },
       "dmg": 0,
       "proj": 0,
@@ -197,22 +197,70 @@
       "general": false,
       "weaknesses": [
         "harassment",
-        "immobile",
-        "cannot flee"
+        "EMP (drops shield)"
+      ],
+      "answers": [
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "raiders",
+        "harassment"
+      ],
+      "notes": "Array wood gatherer (§11): ~112s payback at 8 cr/s (900/8). Shielded hover collector working the renewable near-base stands — the un-killable floor that keeps the tech faction alive when denied the map.",
+      "dmgType": "none",
+      "armor": "light",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true,
+      "resource": "wood",
+      "creditsPerSec": 8,
+      "renewable": true,
+      "nodeLocation": "near-base"
+    },
+    {
+      "name": "Extractor Walker",
+      "tier": 1,
+      "class": "Advanced vehicle",
+      "role": "economy / ore mining (relocatable extractor)",
+      "cost": 1400,
+      "build": 45,
+      "pop": 2,
+      "hp": 950,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 25,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "harassment",
+        "EMP (drops shield)",
+        "exposed at a contested node"
       ],
       "answers": [
         "economicExpansion"
       ],
       "counteredBy": [
         "sustained raids",
-        "siege"
+        "harassment"
       ],
-      "notes": "Array's economy is a stationary core rather than mobile harvesters — reliable output, but a fixed, exposed target (§11).",
+      "notes": "Array ore gatherer (§11): ~127s payback at 11 cr/s (1400/11). A relocatable deployable extractor (the mobile-infrastructure identity) that walks to and taps a contested/finite ore node — armored and shielded, but a fat raid target (§13). Ore buys the tech ceiling: tier-2/3 need an ore component (resources.json oreTechGate).",
       "dmgType": "none",
-      "armor": "structure",
-      "range": 6,
+      "armor": "medium",
+      "range": 5,
       "aoe": 0,
-      "mobile": false
+      "mobile": true,
+      "resource": "ore",
+      "creditsPerSec": 11,
+      "renewable": false,
+      "nodeLocation": "contested"
     },
     {
       "name": "Aegis Tank",

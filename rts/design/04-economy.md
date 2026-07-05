@@ -10,7 +10,7 @@ The map carries **two** harvestable resources with deliberately different risk/t
 |---|---|---|
 | Value per load | low (30) | **high (75)** |
 | Extraction speed | **fast** (short cadence, quick trips) | slow — "lower to mine" |
-| Gatherer | Lumber Harvester — cheap (900), quick | Mining Vehicle — pricier (1400), slower, armored |
+| Gatherer | wood gatherer — cheap (900), quick, ~112 s payback | ore gatherer — pricier (1400), slower, armored, ~127 s payback |
 | Effective cr/s | ~8 | ~11 (at a secured node) |
 | Node total | modest, **renewable — regrows fast** | large but **finite — depletes, never returns** |
 | Location | near base — **safe** | central + expansions — **contested** |
@@ -21,7 +21,27 @@ The map carries **two** harvestable resources with deliberately different risk/t
 - **Ore only** → high-ceiling but brittle; deny the mine (§13) or outlast its depletion and the economy collapses.
 - **Both (intended)** → wood keeps you alive, ore lets you win — and the ore contest is what drives map control and the harassment/comeback loops (§12–14).
 
-This dovetails with faction identity: the harass-and-expand Covenant can fall back on the un-killable wood floor when denied the map, while the ore contest rewards the scouting and aggression the whole design is built around. *(Open question in [`resources.json`](../data/resources.json): should ore also **gate** advanced tech — a hard second currency — or stay a pure credit source? Flagged, not silently adopted.)*
+This dovetails with faction identity: the harass-and-expand Covenant can fall back on the un-killable wood floor when denied the map, while the ore contest rewards the scouting and aggression the whole design is built around.
+
+**Every faction fields both gatherers** — flavored, but sharing the canonical economics above (wood 900 @ 8 cr/s, ore 1400 @ 11 cr/s):
+
+| Faction | Wood gatherer | Ore gatherer |
+|---|---|---|
+| Directorate | Lumber Harvester | Mining Vehicle |
+| Covenant | Timber Technical *(also salvages wreckage, §14)* | Scrap Hauler |
+| Array | Harvest Drone *(shielded hover)* | Extractor Walker *(relocatable extractor)* |
+
+(This replaces each faction's old single generic harvester, which was a placeholder for the unbuilt two-resource economy. The Array economy is now a mobile pair fitting its mobile-infrastructure identity rather than a stationary core.) Payback and the wood-renewable / ore-finite invariants are script-checked by [`economy-check.mjs`](../scripts/economy-check.mjs).
+
+## Ore as a soft tech-gate (resolved)
+
+> **Open question resolved.** *Should ore also gate advanced tech (a hard second currency) or stay a pure credit source?* — Adopted per [§18 feature-research](18-feature-research.md#3--two-resource-economies--should-ore-gate-tech) after the shipped-game survey: **ore is a *soft* tech-gate, the SC2 minerals/gas split — not a hard second currency.**
+
+- **Both resources still convert to credits.** A single credit pool (per [`economy.json`](../data/economy.json)) still pays for every purchase. Ore is not a parallel currency spent on every unit.
+- **Tier-1 army and all economy cost credits only** — fully buildable on the wood floor alone, so a map-denied faction (Covenant especially) can mass basics and *survive* indefinitely. The floor stays a true floor.
+- **Tier-2/tier-3 production structures, epic-unit tech, the superweapon facility, and the key §18 upgrades additionally require an ore component** (~25% of value at tier-2, ~40% at tier-3). No ore → you cannot tech up.
+
+**Why soft, not hard:** a pure-ore unit cost would hard-lock a denied Covenant out of the game, contradicting the wood-floor identity and the §14 comeback rules; the AoE-style multi-resource bottleneck is the failure mode we avoid. A soft gate instead makes the ore contest **unskippable** — map control becomes a *tech-timing* contest (the C&C "force expansion" goal) reached through the tech curve, not just an income contest. The tier windows mirror [`timings.json`](../data/timings.json) exactly (tier-2 3.5–6 min, tier-3 7–11 min): ore-gating does not move the tech clock, it makes *reaching* it require the contested resource. Full encoding + tuning fractions live in [`resources.json`](../data/resources.json) → `oreTechGate` (and are asserted by [`economy-check.mjs`](../scripts/economy-check.mjs)); the `oreComponentFraction` values await a live-economy pass.
 
 ## Starting conditions (§11)
 

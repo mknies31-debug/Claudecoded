@@ -6,6 +6,7 @@
 //   node rts/scripts/matchup.mjs "Missile Trooper" "Vanguard MBT" [budget]
 //   node rts/scripts/matchup.mjs --report
 import fs from 'fs';
+import { pdps, effHP, kiteFactor, firstStrikeWindow } from './combat-core.mjs';
 
 const units = {};
 for (const f of ['directorate','covenant','array']) {
@@ -13,20 +14,6 @@ for (const f of ['directorate','covenant','array']) {
   for (const u of r.units) units[u.name] = { ...u, faction: r.faction };
 }
 const U = n => units[n] || (()=>{throw new Error('unknown unit: '+n)})();
-
-const pdps = u => u.reload>0 ? (u.dmg*u.proj/u.reload)*(u.acc/100) : 0;
-const effHP = (def, atkType, atk) => {
-  if (atk && atk.ignoreResist) return def.hp;            // shield-break bypasses resist (§15-B)
-  const r = (def.resist?.[atkType] ?? 0)/100;
-  return r < 1 ? def.hp/(1-r) : Infinity;
-};
-// out-ranged side returns less fire; immobile (structures) can't reposition → worse
-function kiteFactor(myRange, foeRange, mobile){
-  const gap = foeRange - myRange;                        // >0 means I'm out-ranged
-  if (gap <= 0) return 1;
-  // mobile units can partly close the gap; immobile (structures) get kited hard
-  return mobile ? Math.max(0.5, 1 - 0.10*gap) : Math.max(0.05, 1 - 0.30*gap);
-}
 
 const DT = 0.05, MAX_T = 180;                            // §8 strength is judged to-death;
 const RETREAT = 0.30;                                    // retreat is reported separately, not scored
@@ -44,8 +31,9 @@ function fight(aName, bName, budget=3000){
   const dmgA = ()=>{const nA=poolA/ehpA, nB=poolB/ehpB; return canA? nA*pdps(A)*Math.min(A.aoe||1, Math.max(1,Math.ceil(nB)))*kA : 0;};
   const dmgB = ()=>{const nA=poolA/ehpA, nB=poolB/ehpB; return canB? nB*pdps(B)*Math.min(B.aoe||1, Math.max(1,Math.ceil(nA)))*kB : 0;};
 
-  // first-strike: longer-range side fires alone for a window
-  const fs = Math.min(8, Math.abs(A.range-B.range)*1.0);
+  // first-strike: longer-range side fires alone for a window (shared helper; the
+  // max of the two directions reproduces the old min(8, |rangeA-rangeB|))
+  const fs = Math.max(firstStrikeWindow(A.range,B.range), firstStrikeWindow(B.range,A.range));
   if (fs>0 && A.range!==B.range){
     const longerA = A.range>B.range;
     for (let t=0;t<fs && poolA>0 && poolB>0;t+=DT){

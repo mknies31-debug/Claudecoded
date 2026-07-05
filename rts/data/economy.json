@@ -1,5 +1,6 @@
 {
   "_source": "Balance Bible §11 (Economy model), §12 (Lead limits), §13 (Harassment), §14 (Comebacks)",
+  "_techGating": "Single credit pool below is the cost of every purchase. Ore is a SOFT tech-gate on top of it (NOT a parallel currency): tier-2/3 structures + key upgrades additionally require an ore component; tier-1 army + all economy need only the wood floor. Full rule + tuning in resources.json → oreTechGate; verified by scripts/economy-check.mjs.",
   "startingConditions": {
     "_rule": "Economically equivalent, not identical. First two minutes of potential income within ~5% across factions.",
     "examples": ["one large harvester", "two smaller collectors", "one stationary extractor core"]
