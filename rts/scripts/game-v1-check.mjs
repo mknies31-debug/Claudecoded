@@ -73,6 +73,8 @@ const EXPOSE = `
                : (typeof BLOCKED   !== 'undefined') ? function(x,y){ return !!(BLOCKED[Math.floor(y)]&&BLOCKED[Math.floor(y)][Math.floor(x)]); }
                : null,
     loopCb: (typeof loop !== 'undefined') ? loop : null,
+    // the sim is gated behind a Start button; let tests ungate it
+    start: function(){ if (typeof started !== 'undefined') started = true; },
   };
 })();
 `;
@@ -403,6 +405,7 @@ run('6. Build queue + economy', () => {
   const deducted = creditsBefore - api.credits.me;
   const creditsAfterQueue = api.credits.me;
 
+  if (typeof api.start === 'function') api.start();   // ungate the sim (Start button)
   // Step the full sim. Build time = spec.build * BUILDMULT seconds; DT = 1/30 s.
   const seconds = (spec.build || 20) + 2;
   const ticks = Math.ceil(seconds * 30);
