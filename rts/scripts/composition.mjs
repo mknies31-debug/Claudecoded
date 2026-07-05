@@ -68,7 +68,7 @@ const SUITES = {
     spams: ['Vanguard MBT','Missile Trooper','Rifleman Squad','Lancer Tank Destroyer']
   },
   Covenant: {
-    mixed: ['Marauder Scrap Tank','Rocket Technical','Raider Squad','Ambush Tank'],
+    mixed: ['Marauder Scrap Tank','Rocket Technical','Scorch Buggy','Ambush Tank'],
     spams: ['Marauder Scrap Tank','Rocket Technical','Raider Squad']
   },
   Array: {

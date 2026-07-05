@@ -21,7 +21,7 @@ A structured, buildable version of the **Competitive Balance Bible** for a moder
 | [design/10-art-direction.md](design/10-art-direction.md) · [style/](style/index.html) | "slightly cartoon, but detailed" — palettes, cel-shading, damage states, + a visual style guide | — |
 | [design/11-budget-options.md](design/11-budget-options.md) | faction-budget fix (Option B canonical) | 4 |
 | [design/12-directorate-roster.md](design/12-directorate-roster.md) · [data/units/directorate.json](data/units/directorate.json) | Directorate roster (15 units, validated) | 5, 9, 20 |
-| [design/13-covenant-roster.md](design/13-covenant-roster.md) · [data/units/covenant.json](data/units/covenant.json) | Covenant roster (15 units, validated) | 5, 9, 20 |
+| [design/13-covenant-roster.md](design/13-covenant-roster.md) · [data/units/covenant.json](data/units/covenant.json) | Covenant roster (16 units, validated) | 5, 9, 20 |
 | [design/14-array-roster.md](design/14-array-roster.md) · [data/units/array.json](data/units/array.json) | Array roster (15 units, validated) — all 3 factions complete | 5, 9, 20 |
 | [design/15-matchup-findings.md](design/15-matchup-findings.md) | duel sim (counters) — findings + fixes | 6–8 |
 | [design/16-composition-findings.md](design/16-composition-findings.md) | army-composition sim (mixed vs spam) — infantry-spam fix + backlog | 10 |

@@ -16,19 +16,25 @@ After the fix, mixed armies with an anti-swarm element (artillery) beat infantry
 
 An earlier over-correction gave tanks `aoe 4` to beat infantry — but generic tank splash then made **tank spam beat mixed armies**. Reverted tanks to modest `aoe 2`; the real anti-swarm is **dedicated artillery** (Howitzer `aoe 6`), which must be *in the mix*. (Directorate has it; see the Covenant gap below.)
 
+## The fix applied: Scorch Buggy closes the Covenant anti-swarm gap
+
+The sim's clearest *roster* (not tuning) finding was that Covenant had **no dedicated anti-swarm unit** — its mix lost to Raider (infantry) spam because nothing in it punishes a flood. Added the **Scorch Buggy** (§13): a cheap, short-range flame buggy (`cost 520`, `hp 470`, `range 4`, `aoe 5`, fragile, folds to armor/artillery) — the on-identity Covenant answer (fire, not stand-off artillery).
+
+After adding it, **Covenant mix now beats Raider spam 42%** (was a 36% loss) — and Scorch is *not* a new spam unit itself: a Directorate mix still beats Scorch-Buggy spam, so it didn't just move the §49 problem. Covenant roster is now 16 units, still validating 0/0.
+
 ## Current state — §10 holds where the mix has the right counter
 
 `composition.mjs` grades a spam as **⚠ decisive** only when it beats the mix by ≥15% (a real problem); a sub-15% loss is `~` **even** — the naive even-split mix was simply mis-weighted for that spam (adapt it, §1; §8-neutral band).
 
-- **Clean ✓:** mixed beats Missile/Rifleman/Lancer spam (Directorate), Rocket spam (Covenant), Aegis/Nullifier/Sentinel spam (Array).
-- **⚠ decisive spam wins (3) — design backlog:**
-  1. **Directorate mix vs Vanguard (tank) spam — 28%.** The even-split under-weights anti-armor vs pure tanks; an anti-armor-weighted response wins. Question for design: is this "adapt your mix" (fine) or are heavy tanks slightly too cost-efficient?
-  2. **Covenant mix vs Marauder (tank) spam — 40%** and **vs Raider (infantry) spam — 36%.** Covenant has **no dedicated anti-swarm / artillery unit**, so its mix can't punish either mass. This is a **roster gap**, not just tuning.
+- **Clean ✓:** mixed beats Missile/Rifleman/Lancer spam (Directorate); Rocket **and now Raider** spam (Covenant); Aegis/Nullifier/Sentinel spam (Array).
+- **⚠ 2 remaining flags — both mono-*tank* spam, and neither is a new §49 unit:**
+  1. **Directorate mix vs Vanguard (tank) spam — 28%.** A weighted anti-armor response (Missile Trooper + Lancer TD) *still* loses ~19% to pure Vanguards, so this is **not just even-split mis-weighting** — it points at **heavy-tank cost-efficiency**. Backlog item: re-examine the Vanguard's value/cost (a small cost-up or HP-down), since a §8 pass, not the composition sim, is the right tool.
+  2. **Covenant mix vs Marauder (tank) spam — 55%.** **Model limitation, not a confirmed balance bug.** Covenant's anti-armor is *utility*: Hijacker (`dmg 0` — steals the tank), Mine Layer (`dmg 0` — area denial), Ambush Tank (`dmg 160`, rear-armor + stealth). A DPS-only composition sim **cannot represent hijack/mines/rear-armor/ambush**, so it necessarily under-rates Covenant vs armor. Verifying this needs a mechanic-aware sim (or playtesting), not a tuning nudge.
 
-## Recommendations (deliberate design, not blind tuning)
+## Backlog & methodology
 
-1. **Give Covenant an anti-swarm answer** in keeping with its identity — e.g. a cheap **flame/incinerator buggy** (high `aoe`, short range, fragile). Its absence is the clearest real gap the sim found.
-2. **Re-examine heavy-tank cost-efficiency** vs mixed armies (the 28% Vanguard-spam result) once #1 is in — it may resolve on its own, or want a small cost/HP nudge.
-3. **Methodology note:** the even-split "naive mix" is a fair baseline but pessimistic — a scouted, weighted mix beats these spams. Consider adding a "best-response mix" mode to the sim to separate "spam is broken" from "the naive split was wrong."
+1. **Heavy-tank cost-efficiency (flag #1)** — run a §8 cost-efficiency pass on the Vanguard/Marauder MBTs; the composition sim only flagged it, the fix belongs in the duel/cost tool.
+2. **Mechanic-aware composition sim (flag #2)** — the current engine is DPS + effective-HP + splash only. To score Covenant fairly it needs to model *hijack* (convert an enemy unit), *mines* (pre-placed area damage), *stealth/ambush* (first-strike from concealment), and *rear-armor*. Until then, treat Covenant-vs-armor sim numbers as a **known blind spot**, flagged not silently trusted.
+3. **Best-response mix mode** — the even-split "naive mix" is a fair but pessimistic baseline; a scouted, weighted mix beats these spams. A "best-response" mode would separate "spam is broken" from "the naive split was wrong."
 
-Nothing here blocks progress; the central §10 claim holds for the properly-countered cases, and the tool now makes any regression visible. Duels remain 0-broken and rosters validate 0/0 after all tuning.
+Nothing here blocks progress. The central §10 claim holds for every properly-countered case; the one real roster gap (Covenant anti-swarm) is now closed; and the two residual flags are a scoped §8 backlog item and a documented sim blind spot — both visible, neither silently tuned away. Duels remain 0-broken and all three rosters validate 0/0.

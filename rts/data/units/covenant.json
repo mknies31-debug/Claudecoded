@@ -256,6 +256,49 @@
       "mobile": true
     },
     {
+      "name": "Scorch Buggy",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "anti-infantry flame / area",
+      "cost": 520,
+      "build": 36,
+      "pop": 2,
+      "hp": 470,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 30,
+      "proj": 1,
+      "reload": 1,
+      "acc": 90,
+      "general": false,
+      "weaknesses": [
+        "heavy armor",
+        "artillery",
+        "short range (must close)"
+      ],
+      "answers": [
+        "massInfantry",
+        "harassment"
+      ],
+      "counteredBy": [
+        "tanks",
+        "artillery",
+        "kiting"
+      ],
+      "notes": "Cheap flame buggy — Covenant s dedicated anti-swarm (§16). Short range, fragile; melts infantry clusters, folds to armor.",
+      "dmgType": "explosive",
+      "armor": "medium",
+      "range": 4,
+      "aoe": 5,
+      "mobile": true
+    },
+    {
       "name": "Mine Layer",
       "tier": 2,
       "class": "Advanced vehicle",
@@ -649,7 +692,8 @@
       "Raider Buggy",
       "Marauder Scrap Tank",
       "Ravager",
-      "Locust Swarm"
+      "Locust Swarm",
+      "Scorch Buggy"
     ],
     "heavyArmor": [
       "Saboteur",
@@ -687,7 +731,8 @@
       "Recon Hound",
       "Mine Layer",
       "Sensor Spike",
-      "Rocket Nest"
+      "Rocket Nest",
+      "Scorch Buggy"
     ],
     "epicUnits": [
       "Hijacker (steal it)",
