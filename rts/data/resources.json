@@ -1,5 +1,5 @@
 {
-  "_source": "Balance Bible §11 (economy model) — two resource types with distinct risk/tempo profiles. Both convert to credits; they differ in value-per-load, extraction speed, renewability, and where they sit on the map. Payback for both stays inside the §11 harvester band (100-140 s).",
+  "_source": "Balance Bible §11 (economy model) — two resource types with distinct risk/tempo profiles. Both convert to credits; they differ in value-per-load, extraction speed, renewability, and where they sit on the map. Payback for both stays inside the §11 harvester band (100-140 s). Verified by scripts/economy-check.mjs.",
 
   "_designIntent": "Wood is the economic FLOOR — safe, near-base, renewable, low ceiling, hard to fully deny. Ore is the economic CEILING — richer but slower to extract, finite, and parked at contested/expansion points, so it rewards map control and scouting (§12/§13). You want both: wood keeps you alive, ore lets you win.",
 
@@ -50,8 +50,53 @@
     "mixed": "the intended play — wood floor + ore ceiling, with the ore contest driving map control and the harassment/comeback loops (§12-14)"
   },
 
+  "oreTechGate": {
+    "_decision": "RESOLVED (see design/18-feature-research §3, design/04-economy). Ore is a SOFT tech-gate, NOT a hard second currency. This is the SC2 minerals/gas split: both wood and ore still convert to credits, so a map-denied faction's un-killable wood floor still fields a full tier-1 army and stays alive (§14) — but the tech CEILING is behind the contested resource. Advanced tech requires an ore component; the floor never does.",
+    "_model": "The single-credit pool from economy.json is preserved for the credit COST of every purchase. Ore is an ADDITIONAL required component layered only on the gated items below — not a parallel currency you must spend on every unit. Wood + ore both refine into the same credit pool; ore additionally unlocks/pays the ore-component on advanced tech.",
+    "rule": "tier-1 army and ALL economy (gatherers, refineries, basic static defense) cost credits only and are fully buildable on the wood floor alone. tier-2 and tier-3 production structures, epic-unit tech, the superweapon facility, and the key §18 combat upgrades additionally require an ore component. No ore => you can mass tier-1 basics and survive, but you cannot tech up.",
+    "tiers": {
+      "tier1": {
+        "requiresOre": false,
+        "note": "Un-killable wood floor buys the entire tier-1 army + all economy indefinitely — keeps 'floor' a true floor (§04). techWindow: start."
+      },
+      "tier2": {
+        "requiresOre": true,
+        "oreComponentFraction": 0.25,
+        "techWindowMin": [3.5, 6.0],
+        "note": "tier-2 production structures (vehicle bays / advanced-vehicle tech) need credits + ~25% of their credit-equivalent value paid in ore."
+      },
+      "tier3": {
+        "requiresOre": true,
+        "oreComponentFraction": 0.4,
+        "techWindowMin": [7.0, 11.0],
+        "note": "tier-3 tech (aircraft/epic assembly/superweapon facility) + key upgrades need credits + ~40% ore component — the top of the tech tree is the most ore-hungry, so holding an ore node is what buys the ceiling."
+      }
+    },
+    "gatedItems": {
+      "requiresOre": ["tier-2 production structures", "tier-3 production structures", "epic-unit tech", "superweapon facility", "key §18 combat upgrades"],
+      "exempt": ["all tier-1 units", "all economy / gatherer units", "refineries", "basic static defense"]
+    },
+    "oreComponentFraction": {
+      "_note": "Share of an item's credit-equivalent cost that must be paid in refined ore. Tuning values, pending the live-economy pass (see openQuestions). Chosen so the wood floor sustains tier-1 + economy but cannot reach tier-2/3 without an ore node.",
+      "tier2": 0.25,
+      "tier3": 0.4
+    },
+    "consistencyWithTimings": "tier gates mirror timings.json techWindows exactly (tier2 3.5-6.0 min, tier3 7.0-11.0 min). Ore-gating does NOT move the windows — it makes REACHING them require the contested resource. A player can still rush a window early via economic sacrifice (timings.json _note), but doing so on wood alone is impossible past tier-1."
+  },
+
+  "rosterGatherers": {
+    "_note": "Every faction fields both a wood gatherer and an ore gatherer (in data/units/*.json), flavored per faction but sharing the canonical cost/cr-s below. Verified by scripts/economy-check.mjs (roster cross-check).",
+    "wood": { "cost": 900, "effectiveCreditsPerSec": 8 },
+    "ore":  { "cost": 1400, "effectiveCreditsPerSec": 11 },
+    "byFaction": {
+      "Directorate": { "wood": "Lumber Harvester", "ore": "Mining Vehicle" },
+      "Covenant":    { "wood": "Timber Technical", "ore": "Scrap Hauler" },
+      "Array":       { "wood": "Harvest Drone",   "ore": "Extractor Walker" }
+    }
+  },
+
   "openQuestions": [
-    "Should ore additionally GATE advanced tech (a hard second currency), or stay a pure credit source with a different risk profile? Gating makes the map contest unskippable but is a larger change to the single-credit model in economy.json — flagged, not silently adopted.",
-    "Exact regrow rate for wood and depletion rate for ore need a live-economy pass to confirm they land inside the §11 income curve (economy.json incomeCurveCreditsPerMin) across a full match."
+    "RESOLVED — ore tech-gating: ore is a SOFT tech-gate (both resources credit-convertible; tier-2/3 structures + key upgrades additionally require an ore component; tier-1 + economy need only the wood floor). See oreTechGate above and design/04-economy.md. Was flagged as an open question; adopted per design/18-feature-research §3 (SC2 minerals/gas model).",
+    "Exact regrow rate for wood and depletion rate for ore, plus the oreComponentFraction tuning values (tier2 0.25 / tier3 0.4), need a live-economy pass to confirm they land inside the §11 income curve (economy.json incomeCurveCreditsPerMin) across a full match."
   ]
 }

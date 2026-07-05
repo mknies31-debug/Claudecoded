@@ -444,11 +444,37 @@ const SAMPLES = /*ROSTER_START*/{
     ],
     "destroyed": ""
   },
-  "Directorate · Collector Truck": {
+  "Directorate · Lumber Harvester": {
+    "faction": "Directorate",
+    "cls": "Advanced vehicle",
+    "cost": 900,
+    "build": 35,
+    "pop": 1,
+    "hp": 600,
+    "resist": {
+      "smallArms": 20,
+      "explosive": -10,
+      "antiArmor": -5,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "harassment",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Directorate · Mining Vehicle": {
     "faction": "Directorate",
     "cls": "Advanced vehicle",
     "cost": 1400,
-    "build": 40,
+    "build": 45,
     "pop": 2,
     "hp": 1000,
     "resist": {
@@ -466,7 +492,8 @@ const SAMPLES = /*ROSTER_START*/{
     "general": "no",
     "weaks": [
       "harassment",
-      "focused fire"
+      "focused fire",
+      "exposed at a contested node"
     ],
     "destroyed": ""
   },
@@ -874,13 +901,39 @@ const SAMPLES = /*ROSTER_START*/{
     ],
     "destroyed": ""
   },
-  "Covenant · Salvage Harvester": {
+  "Covenant · Timber Technical": {
     "faction": "Covenant",
     "cls": "Advanced vehicle",
-    "cost": 1200,
-    "build": 36,
+    "cost": 900,
+    "build": 35,
+    "pop": 1,
+    "hp": 520,
+    "resist": {
+      "smallArms": 20,
+      "explosive": -10,
+      "antiArmor": -5,
+      "energy": 0,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "harassment",
+      "focused fire"
+    ],
+    "destroyed": ""
+  },
+  "Covenant · Scrap Hauler": {
+    "faction": "Covenant",
+    "cls": "Advanced vehicle",
+    "cost": 1400,
+    "build": 44,
     "pop": 2,
-    "hp": 850,
+    "hp": 900,
     "resist": {
       "smallArms": 40,
       "explosive": 5,
@@ -896,7 +949,8 @@ const SAMPLES = /*ROSTER_START*/{
     "general": "no",
     "weaks": [
       "harassment",
-      "focused fire"
+      "focused fire",
+      "exposed at a contested node"
     ],
     "destroyed": ""
   },
@@ -1142,20 +1196,20 @@ const SAMPLES = /*ROSTER_START*/{
     ],
     "destroyed": ""
   },
-  "Array · Extractor Core": {
+  "Array · Harvest Drone": {
     "faction": "Array",
-    "cls": "Structure",
-    "cost": 1600,
-    "build": 25,
-    "pop": 0,
-    "hp": 1300,
+    "cls": "Advanced vehicle",
+    "cost": 900,
+    "build": 35,
+    "pop": 1,
+    "hp": 560,
     "resist": {
-      "smallArms": 55,
-      "explosive": 25,
-      "antiArmor": 20,
-      "energy": 0,
-      "air": -10,
-      "siege": -25
+      "smallArms": 20,
+      "explosive": -10,
+      "antiArmor": -5,
+      "energy": 25,
+      "air": 0,
+      "siege": -10
     },
     "dmg": 0,
     "proj": 0,
@@ -1164,8 +1218,34 @@ const SAMPLES = /*ROSTER_START*/{
     "general": "no",
     "weaks": [
       "harassment",
-      "immobile",
-      "cannot flee"
+      "EMP (drops shield)"
+    ],
+    "destroyed": ""
+  },
+  "Array · Extractor Walker": {
+    "faction": "Array",
+    "cls": "Advanced vehicle",
+    "cost": 1400,
+    "build": 45,
+    "pop": 2,
+    "hp": 950,
+    "resist": {
+      "smallArms": 40,
+      "explosive": 5,
+      "antiArmor": -20,
+      "energy": 25,
+      "air": 0,
+      "siege": -10
+    },
+    "dmg": 0,
+    "proj": 0,
+    "reload": 0,
+    "acc": 0,
+    "general": "no",
+    "weaks": [
+      "harassment",
+      "EMP (drops shield)",
+      "exposed at a contested node"
     ],
     "destroyed": ""
   },

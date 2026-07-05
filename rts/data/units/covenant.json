@@ -434,18 +434,18 @@
       "flank": true
     },
     {
-      "name": "Salvage Harvester",
+      "name": "Timber Technical",
       "tier": 1,
       "class": "Advanced vehicle",
-      "role": "economy / salvage",
-      "cost": 1200,
-      "build": 36,
-      "pop": 2,
-      "hp": 850,
+      "role": "economy / wood harvester + salvage",
+      "cost": 900,
+      "build": 35,
+      "pop": 1,
+      "hp": 520,
       "resist": {
-        "smallArms": 40,
-        "explosive": 5,
-        "antiArmor": -20,
+        "smallArms": 20,
+        "explosive": -10,
+        "antiArmor": -5,
         "energy": 0,
         "air": 0,
         "siege": -10
@@ -466,12 +466,61 @@
         "raiders",
         "harassment"
       ],
-      "notes": "Cheaper/faster than a Collector Truck but frailer; also salvages wreckage for credits (§14).",
+      "notes": "Covenant wood gatherer (§11): ~112s payback at 8 cr/s (900/8). Cheap, fast, frail improvised logging technical; also salvages wreckage for credits (§14). The un-killable wood floor the harass-and-expand identity falls back on when denied the map.",
+      "dmgType": "none",
+      "armor": "light",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true,
+      "resource": "wood",
+      "creditsPerSec": 8,
+      "renewable": true,
+      "nodeLocation": "near-base"
+    },
+    {
+      "name": "Scrap Hauler",
+      "tier": 1,
+      "class": "Advanced vehicle",
+      "role": "economy / ore mining",
+      "cost": 1400,
+      "build": 44,
+      "pop": 2,
+      "hp": 900,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "harassment",
+        "focused fire",
+        "exposed at a contested node"
+      ],
+      "answers": [
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "raiders",
+        "harassment"
+      ],
+      "notes": "Covenant ore gatherer (§11): ~127s payback at 11 cr/s (1400/11). Armored ore hauler cobbled from a mining rig, parked at a contested/finite node — a fat raid target (§13). Ore buys the tech ceiling: tier-2/3 need an ore component (resources.json oreTechGate).",
       "dmgType": "none",
       "armor": "medium",
       "range": 5,
       "aoe": 0,
-      "mobile": true
+      "mobile": true,
+      "resource": "ore",
+      "creditsPerSec": 11,
+      "renewable": false,
+      "nodeLocation": "contested"
     },
     {
       "name": "Interceptor Gyro",

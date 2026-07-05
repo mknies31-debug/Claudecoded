@@ -388,18 +388,18 @@
       "mobile": true
     },
     {
-      "name": "Collector Truck",
+      "name": "Lumber Harvester",
       "tier": 1,
       "class": "Advanced vehicle",
-      "role": "economy / harvester",
-      "cost": 1400,
-      "build": 40,
-      "pop": 2,
-      "hp": 1000,
+      "role": "economy / wood harvester",
+      "cost": 900,
+      "build": 35,
+      "pop": 1,
+      "hp": 600,
       "resist": {
-        "smallArms": 40,
-        "explosive": 5,
-        "antiArmor": -20,
+        "smallArms": 20,
+        "explosive": -10,
+        "antiArmor": -5,
         "energy": 0,
         "air": 0,
         "siege": -10
@@ -420,12 +420,61 @@
         "raiders",
         "harassment"
       ],
-      "notes": "~117s payback at 12 cr/s (§11). Durable but unarmed — the harass target.",
+      "notes": "Wood gatherer (§11): ~112s payback at 8 cr/s (900/8). Cheap, quick, lightly armored — the un-killable near-base floor; renewable stands make wood income hard to permanently deny (resources.json wood).",
+      "dmgType": "none",
+      "armor": "light",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true,
+      "resource": "wood",
+      "creditsPerSec": 8,
+      "renewable": true,
+      "nodeLocation": "near-base"
+    },
+    {
+      "name": "Mining Vehicle",
+      "tier": 1,
+      "class": "Advanced vehicle",
+      "role": "economy / ore mining",
+      "cost": 1400,
+      "build": 45,
+      "pop": 2,
+      "hp": 1000,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "harassment",
+        "focused fire",
+        "exposed at a contested node"
+      ],
+      "answers": [
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "raiders",
+        "harassment"
+      ],
+      "notes": "Ore gatherer (§11): ~127s payback at 11 cr/s (1400/11). Pricier, slower, armored miner parked at a contested/finite node — a fat raid target (§13). Ore is the tech ceiling: tier-2/3 need an ore component (resources.json oreTechGate).",
       "dmgType": "none",
       "armor": "medium",
       "range": 5,
       "aoe": 0,
-      "mobile": true
+      "mobile": true,
+      "resource": "ore",
+      "creditsPerSec": 11,
+      "renewable": false,
+      "nodeLocation": "contested"
     },
     {
       "name": "Repair Rig",
