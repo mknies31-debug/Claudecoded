@@ -43,9 +43,12 @@ function freshEngine(){
   return globalThis.__api;
 }
 
-// mirror of the engine's cpuThink at 'hard' (gather 3 → ore → best-counter,
-// commit at 2600 army value) driving the 'me' side — SAME policy both sides.
-function mirrorThink(api, st){
+// mirror of the engine's cpuThink at 'hard' driving the 'me' side — SAME policy
+// both sides: gather 3 → ore → two-sided trade-ratio counter, and the P7 commit
+// rule (no attack before 240s, then only with 1.1 × enemy army value, floor 1200).
+const kiteF=(a,b)=>{ const gap=(b.range||5)-(a.range||5);
+  return gap<=0?1:(a.mobile!==false?Math.max(0.5,1-0.10*gap):Math.max(0.05,1-0.30*gap)); };
+function mirrorThink(api, st, secs){
   const {byName,BUILDABLE,GATH,pdps,effHP} = api, ME=api.ME;
   const ents=api.ents, hqMe=api.hqMe, hqCpu=api.hqCpu;
   const gath = ents.filter(e=>e.owner==='me'&&pdps(e.u)<=0&&e.cls!=='HQ').length;
@@ -59,14 +62,19 @@ function mirrorThink(api, st){
     let best=null,bs=-1;
     for(const c of BUILDABLE[ME].map(n=>byName[n]).filter(u=>pdps(u)>0&&u.mobile!==false)){
       if(c.tier>=2&&!api.oreUnlocked.me) continue;
-      let s=0; for(const en of enemy){ const eff=effHP(en.u,c.dmgType,c); s+=pdps(c)/(isFinite(eff)?eff:1e9); }
+      let s=0; for(const e of enemy){ const en=e.u||e;
+        const kill = pdps(c) * kiteF(c,en) / Math.max(1, effHP(en, c.dmgType, c));
+        const die  = pdps(en) * ((en.aoe||1)>1?1.4:1) * kiteF(en,c) / Math.max(1, effHP(c, en.dmgType, en));
+        s += kill / Math.max(0.02, die); }
       s/=Math.max(1,c.cost/400); if(s>bs){bs=s;best=c;}
     }
     if(best) api.queueBuild('me',hqMe,best.name);
   }
   const army = ents.filter(e=>e.owner==='me'&&pdps(e.u)>0&&e.cls!=='HQ');
   const val = army.reduce((a,e)=>a+e.u.cost,0);
-  if(val>2600) st.attack=true; if(army.length<3) st.attack=false;
+  const foeVal = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0&&e.cls!=='HQ').reduce((a,e)=>a+e.u.cost,0);
+  const gate = secs<240 ? Infinity : Math.max(1200, 1.1*foeVal);
+  if(val>gate) st.attack=true; if(army.length<3) st.attack=false;
   if(st.attack) for(const e of army){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=hqCpu.x; e.ty=hqCpu.y; e.tgt=null; } }
 }
 
@@ -77,7 +85,7 @@ function playMatch(facMe, facCpu, seed){
   const st={attack:false};
   for(let k=0;k<CAP_TICKS;k++){
     api.tick();
-    if(k%150===0) mirrorThink(api, st);          // same 5s cadence as DIFFS.hard.think
+    if(k%150===0) mirrorThink(api, st, k*DT);    // same 5s cadence as DIFFS.hard.think
     if(api.over) return { winner: api.over==='me'?facMe:facCpu, side: api.over, secs: k*DT };
   }
   return { winner: null, side: null, secs: CAP_S };   // timeout → draw

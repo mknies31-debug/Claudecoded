@@ -197,11 +197,14 @@ function sfx(type){ if(muted) return; try{
 }catch(e){} }
 // difficulty ties the CPU to the ai-policy easy→expert axis: worse comp, slower
 // reactions, later attacks, thinner economy at the low end — no stat cheats (§40).
+// Commit rule = policy P7 from the 198-match experiment (design/21): never
+// attack before commitT, then only with `margin` × the enemy army value
+// (floor 1200). Time-gate + enemy-relative beat every fixed value threshold.
 const DIFFS = {
-  easy:   { think:8, attackVal:3800, gather:2, ore:false, comp:'naive'  },
-  normal: { think:6, attackVal:3000, gather:3, ore:true,  comp:'top'    },
-  hard:   { think:5, attackVal:2600, gather:3, ore:true,  comp:'best'   },
-  expert: { think:4, attackVal:2100, gather:4, ore:true,  comp:'best'   },
+  easy:   { think:8, commitT:330, margin:1.35, gather:2, ore:false, comp:'naive'  },
+  normal: { think:6, commitT:270, margin:1.2,  gather:3, ore:true,  comp:'top'    },
+  hard:   { think:5, commitT:240, margin:1.1,  gather:3, ore:true,  comp:'best'   },
+  expert: { think:4, commitT:210, margin:1.0,  gather:4, ore:true,  comp:'best'   },
 };
 let DIFF='normal';
 const SPEEDS = { normal:1, fast:0.4, instant:0.02 };  // build-time multiplier
@@ -417,6 +420,22 @@ function updateEnt(e){
 }
 
 // ---- CPU brain: build counters (ai-policy heuristic) + attack ----
+// Two-sided trade-ratio scoring (fixes the picker blindness found by the
+// 198-match policy experiment): a candidate is judged by how fast it kills the
+// enemy DIVIDED by how fast the enemy kills it, with kiting (out-ranged units
+// deliver less) and splash (aoe threats kill clumps faster) terms — so the old
+// failure mode (walking range-5 squishies into range-8 splash aircraft while
+// never buying AA) can no longer win the tiebreak.
+const kiteF=(a,b)=>{ const gap=(b.range||5)-(a.range||5);
+  return gap<=0?1:(a.mobile!==false?Math.max(0.5,1-0.10*gap):Math.max(0.05,1-0.30*gap)); };
+function counterScore(c, enemy){ let s=0;
+  for(const e of enemy){ const en=e.u||e;
+    const kill = pdps(c) * kiteF(c,en) / Math.max(1, effHP(en, c.dmgType, c));
+    const die  = pdps(en) * ((en.aoe||1)>1?1.4:1) * kiteF(en,c) / Math.max(1, effHP(c, en.dmgType, en));
+    s += kill / Math.max(0.02, die);
+  }
+  return s / Math.max(1, c.cost/400);
+}
 let cpuTimer=0, cpuAttack=false;
 function cpuThink(){
   const d = DIFFS[DIFF];
@@ -440,14 +459,15 @@ function cpuThink(){
     const enemy = myArmy.length?myArmy:[{u:byName[tier1(ME)]}];
     const cand = BUILDABLE[CPU].map(n=>byName[n]).filter(u=>pdps(u)>0 && u.mobile!==false);
     let best=null,bs=-1; for(const c of cand){ if(c.tier>=2&&!oreUnlocked.cpu) continue;
-      let s=0; for(const en of enemy){ const eff=effHP(en.u,c.dmgType,c); s+=pdps(c)/(isFinite(eff)?eff:1e9); }
-      s/=Math.max(1,c.cost/400); if(s>bs){bs=s;best=c;} }
+      const s=counterScore(c, enemy); if(s>bs){bs=s;best=c;} }
     if(best) tryCpuBuild(best.name);
   }
-  // attack once the army is worth committing (threshold scales with difficulty)
+  // commit rule (P7): never before commitT; then only with margin × enemy value
   const cpuArmy = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0);
   const val = cpuArmy.reduce((a,e)=>a+e.u.cost,0);
-  if(val>d.attackVal) cpuAttack=true; if(cpuArmy.length<3) cpuAttack=false;
+  const foeVal = myArmy.reduce((a,e)=>a+e.u.cost,0);
+  const gate = simSecs < d.commitT ? Infinity : Math.max(1200, d.margin*foeVal);
+  if(val>gate) cpuAttack=true; if(cpuArmy.length<3) cpuAttack=false;
   if(cpuAttack){ for(const e of cpuArmy){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=hqMe.x; e.ty=hqMe.y; } } }
 }
 function tryCpuBuild(name){ const u=byName[name]; if(!u||credits.cpu<u.cost) return false;
