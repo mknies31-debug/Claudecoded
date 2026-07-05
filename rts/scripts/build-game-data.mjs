@@ -3,7 +3,7 @@
 //   node rts/scripts/build-game-data.mjs
 import fs from 'fs';
 
-const FIELDS = ['name','tier','class','role','cost','build','hp','dmg','proj','reload','acc','dmgType','range','aoe','mobile','general','resist','ignoreResist','stealth','flank','mine','convert','detector'];
+const FIELDS = ['name','tier','class','role','cost','build','hp','dmg','proj','reload','acc','dmgType','range','aoe','mobile','general','resist','ignoreResist','stealth','flank','mine','convert','detector','answers','counteredBy','weaknesses'];
 const roster = {};
 for (const f of ['directorate','covenant','array']) {
   const r = JSON.parse(fs.readFileSync(`rts/data/units/${f}.json`,'utf8'));
