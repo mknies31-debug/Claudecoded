@@ -49,6 +49,7 @@ Everything provable on paper is proven by a script — run any of them from the 
 | [`scripts/drift-check.mjs`](scripts/drift-check.mjs) | **combat-math drift guard** — proves the inline copies in game/prototype behave identically to `combat-core.mjs` (1,274 checks) |
 | [`scripts/camera-check.mjs`](scripts/camera-check.mjs) | **camera regression** — baseline letterbox equivalence, exact world↔screen inverses, cursor-anchored zoom, clamping, follow lerp, sim isolation (6 tests) |
 | [`scripts/match-batch.mjs`](scripts/match-batch.mjs) | **live-engine telemetry** — seeded headless CPU-vs-CPU batches across all faction pairs → win rates, side bias, match lengths vs the target bands |
+| [`scripts/playtest-check.mjs`](scripts/playtest-check.mjs) | **playtest gate** — named adversarial-playtest regression scenarios (rush defense, turret lock, stealth answer, node economics, order sanity, relay loop, cross-map match sweep); run all or one by name |
 | [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
 | [`scripts/build-lab-data.mjs`](scripts/build-lab-data.mjs) · [`scripts/build-prototype-data.mjs`](scripts/build-prototype-data.mjs) | re-inject roster JSON into the lab / prototype (keep them in sync with `data/units/`) |
 
