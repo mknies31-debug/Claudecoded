@@ -1,0 +1,50 @@
+# Netlify deploy config for the RTS suite.
+#
+# Every app in this folder is a self-contained, offline HTML file — there is no
+# build step, no dependencies, and no serverless functions.
+#
+# Deploy either way:
+#   • Drag the rts/ folder onto https://app.netlify.com/drop  (this file is read
+#     automatically), OR
+#   • Connect the repo in Netlify and set  Site settings → Build & deploy →
+#     Base directory = rts   (publish "." below then resolves to rts/).
+
+[build]
+  publish = "."     # this folder; all apps are static HTML
+  command = ""      # nothing to build
+
+# Serve the playable skirmish at the site root ("/").
+[[redirects]]
+  from = "/"
+  to = "/game/index.html"
+  status = 200
+
+# Friendly aliases for the other single-file tools.
+[[redirects]]
+  from = "/play"
+  to = "/game/index.html"
+  status = 200
+[[redirects]]
+  from = "/lab"
+  to = "/lab/index.html"
+  status = 200
+[[redirects]]
+  from = "/sandbox"
+  to = "/prototype/index.html"
+  status = 200
+[[redirects]]
+  from = "/map"
+  to = "/maps/twin-ridge.html"
+  status = 200
+[[redirects]]
+  from = "/style"
+  to = "/style/index.html"
+  status = 200
+
+# The apps are fully self-contained; these headers just harden the static host.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    X-Frame-Options = "SAMEORIGIN"
