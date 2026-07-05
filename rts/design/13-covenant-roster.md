@@ -8,7 +8,7 @@ The **fast, cheap, stealthy** faction. It solves the same ten threats as the Dir
 
 | Unit | Tier | Class | Role | Cost | Build | Pop | HP |
 |---|:--:|---|---|--:|--:|--:|--:|
-| Raider Squad | 1 | Basic infantry | anti-inf / harass | 160 | 7 | 1 | 180 |
+| Raider Squad | 1 | Basic infantry | anti-inf / harass | 260 | 7 | 1 | 150 |
 | Saboteur | 1 | Specialist infantry | **stealth** demo / anti-armor | 400 | 15 | 1 | 140 |
 | Hijacker | 1 | Specialist infantry | **vehicle theft** | 500 | 16 | 1 | 130 |
 | Recon Hound | 1 | Scout vehicle | recon + **detector** | 300 | 12 | 1 | 220 |

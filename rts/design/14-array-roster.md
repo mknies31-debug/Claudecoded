@@ -42,4 +42,4 @@ Same problem, three genuinely different playstyles — the design goal from [00-
 
 ## Roster program complete (v1)
 
-All three factions now solve the full §5 threat list, each in its own way, and each passes the validator (anti-spam, build bands, coverage). Totals: **45 units across 3 factions, 0 failures.** Next candidates: wire the rosters into the Lab, run cross-faction cost-efficiency matchups (§8), or draft the first map per §37.
+All three factions now solve the full §5 threat list, each in its own way, and each passes the validator (anti-spam, build bands, coverage). Totals: **46 units across 3 factions (15 / 16 / 15), 0 failures.** Next candidates: wire the rosters into the Lab, run cross-faction cost-efficiency matchups (§8), or draft the first map per §37.

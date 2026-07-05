@@ -4,25 +4,23 @@
 
 ## Power budget
 
-Each faction receives the same ~**100-point** internal budget, distributed differently. Values are **not shown to players**; they verify a faction isn't stacking too many major advantages.
+Each faction receives the same **150-point** internal budget across **8 categories**, distributed differently. Values are **not shown to players**; they verify a faction isn't stacking too many major advantages. This is the **canonical Option B** (see [`factions.json`](../data/factions.json) · rationale in [11-budget-options.md](11-budget-options.md)).
 
-**Rule: no faction ranks first in more than three major categories.**
+**Rule: no faction ranks first in more than three categories.** With 8 categories this is now satisfiable (8 ≤ 9) — and it holds: Directorate leads 3, Covenant leads 3, Array leads 2.
 
 | Category | Directorate | Covenant | Array |
 |---|---:|---:|---:|
-| Economy reliability | 18 | 15 | 13 |
-| Expansion speed | 11 | 19 | 14 |
-| Early pressure | 13 | 19 | 10 |
-| Direct combat | 19 | 12 | 17 |
-| Mobility | 11 | 19 | 16 |
-| Durability | 20 | 9 | 16 |
-| Stealth & deception | 5 | 20 | 12 |
-| Battlefield control | 11 | 14 | 20 |
-| Technology scaling | 17 | 13 | 20 |
-| Ease of use | 18 | 10 | 11 |
-| **Total** | **143**\* | **150**\* | **149**\* |
+| Economy | **24** | 22 | 18 |
+| Early pressure | 16 | **24** | 12 |
+| Direct combat | **26** | 14 | 20 |
+| Durability | **30** | 10 | 20 |
+| Mobility | 13 | **25** | 20 |
+| Stealth & deception | 6 | **26** | 14 |
+| Battlefield control | 17 | 18 | **26** |
+| Technology scaling | 18 | 11 | **20** |
+| **Total** | **150** | **150** | **150** |
 
-> \* **Resolved in [11-budget-options.md](11-budget-options.md).** The Bible calls this a "100-point budget," but the listed values actually sum to **143 / 150 / 149** — not 100, and unequal. Worse, the "no faction #1 in more than 3 categories" rule is impossible with 10 categories × 3 factions (`3×3 = 9 < 10`) and the original already breaks it (Directorate and Covenant each lead 4). Three fixes — equal-100, 8-category, and difficulty-weighted — are laid out in [11-budget-options.md](11-budget-options.md); pick one to make canonical.
+> **Bold = category leader.** Ease-of-use is no longer a budget line (it can't be "spent" — an easy faction isn't weaker); it's carried as a **complexity tag** instead: Directorate `easy`, Covenant `hard`, Array `hard`. The original Bible "100-point / 10-category" budget summed to 143/150/149 (unequal) and its ≤3-leads rule was impossible with 10 categories (`3×3 = 9 < 10`). Option B fixes both; the two rejected alternatives (equal-100, difficulty-weighted) live in [11-budget-options.md](11-budget-options.md) and [`budget-options.json`](../data/budget-options.json).
 
 ## Faction profiles
 

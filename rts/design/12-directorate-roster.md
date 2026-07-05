@@ -8,7 +8,7 @@ The **easy, durable, combined-arms** baseline faction. Reliable economy, strong 
 
 | Unit | Tier | Class | Role | Cost | Build | Pop | HP |
 |---|:--:|---|---|--:|--:|--:|--:|
-| Rifleman Squad | 1 | Basic infantry | anti-infantry / garrison | 200 | 8 | 1 | 260 |
+| Rifleman Squad | 1 | Basic infantry | anti-infantry / garrison | 300 | 8 | 1 | 220 |
 | Missile Trooper | 1 | Specialist infantry | anti-armor / anti-air | 350 | 13 | 1 | 180 |
 | Field Engineer | 1 | Specialist infantry | capture / repair | 300 | 14 | 1 | 150 |
 | Recon Spotter | 1 | Scout vehicle | recon + **detector** | 350 | 14 | 1 | 300 |
