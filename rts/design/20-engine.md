@@ -1,14 +1,14 @@
-# 20 · Playable Engine (v0.1)
+# 20 · Playable Engine (v1)
 
-> The first **playable** build — a single-file, offline browser skirmish. Play it: [`../game/index.html`](../game/index.html). Data injected by [`../scripts/build-game-data.mjs`](../scripts/build-game-data.mjs).
+> The first **playable** build — a single-file, offline browser skirmish, now at **V1** (three selectable factions, true collision + A\* pathfinding, and the special-trait mechanics — shields, stealth/detection, static defenses — live). Play it: [`../game/index.html`](../game/index.html). Data injected by [`../scripts/build-game-data.mjs`](../scripts/build-game-data.mjs).
 
 This is the runtime every §50 "requires a live build" gate was blocked on. It deliberately reuses the balance work rather than re-inventing it: the **same unit data** (`data/units/*.json`), the **same map** (`data/maps/twin-ridge.json`), the **same combat math** (`pdps` / `effHP`, effective-HP-by-damage-type with `ignoreResist`), and a CPU driven by the **same counter-scoring** as [`ai-policy.mjs`](../scripts/ai-policy.mjs).
 
 ## What it is
 
-**Directorate (you) vs Covenant (CPU)** on Twin Ridge. Destroy the enemy HQ.
+**Your faction vs the CPU's faction** on Twin Ridge — both chosen from top-bar dropdowns (**Directorate / Covenant / Array**), no longer hardcoded. Destroy the enemy HQ.
 
-- **Control:** left-drag to select, right-click to move / attack, right-click a resource with a gatherer to harvest.
+- **Control:** left-drag to select, right-click to move / attack, right-click a resource with a gatherer to harvest. Two top-bar dropdowns pick the player and CPU faction before/at match start.
 - **Economy:** wood gatherers give the safe floor income; a **Mining Vehicle unlocks tier-2+** (the ore soft-tech-gate from `resources.json`, enforced live — tier-2/3 build buttons are locked until you have ore).
 - **Combat:** units auto-acquire in range and fire; damage is the sim's model (fraction removed = `pdps / effHP`), so armor types, splash (`aoe`), and **high-ground +15%** all matter. Range/first-strike/kiting emerge from real-time positioning.
 - **CPU:** an economy→tech→composition→attack policy — keeps gatherers, saves for the ore gatherer to reach tier-2, builds the units that best counter your army (same effHP scoring as the reference brain), and attacks when its army is big enough. **No stat cheats** (§40) — it plays the same units you do.
@@ -18,12 +18,23 @@ This is the runtime every §50 "requires a live build" gate was blocked on. It d
 
 Verified headlessly (DOM/canvas shim): a full match runs to a **decisive result** — a passive player loses to the CPU in ~4 min — with the real economy, tech-gate, build queues, combat, and AI all live.
 
-## What's stubbed (honest scope of v0.1)
+## V1 features (what shipped)
 
-- **Pathfinding:** units steer straight-line with separation; no obstacle avoidance around cliffs/water yet (they're visual + the high-ground damage zone is live).
-- **Fog of war / scouting:** the CPU reads your army directly; real perception is the next AI layer ([design/19](19-ai-opponent.md)).
-- **Base building / full tech tree:** one HQ produces everything; the tech gate is modelled as the ore unlock, not separate structures.
+The V1 pass turned the previously-stubbed systems into live mechanics, each driven by the **same unit/map data** rather than bespoke engine tables:
+
+- **A\* pathfinding / true collision.** Units now route *around* the map's impassable barriers instead of sliding straight through them. A navigation grid is built from `MAP.barriers` (the cliffs and deep-water pools that were previously visual-only), and ground units A\*-path around it while keeping their separation steering. **Aircraft fly over terrain** — air units ignore the barrier grid. This replaces the old "straight-line, no obstacle avoidance" stub; the high-ground damage zone stays live alongside it.
+- **Faction selection.** The third faction **Array** is unlocked, and **both** the player and CPU factions are chosen live from top-bar dropdowns (Directorate / Covenant / Array) — no hardcoded matchup. Array brings energy weapons, **shields**, and shield-piercing (`ignoreResist`) units, so faction choice now changes the mechanics on the field, not just the roster.
+- **Immobile structures.** Units flagged `mobile:false` (Sentry Turret, Flak Battery, Rocket Nest, Sensor Spike, Pylon Turret) are **pinned to their build position** and act as static defense / detection instead of gliding toward targets. Movement orders skip them; they acquire and fire in place.
+- **Energy shields (Array).** Any unit with an energy resistance (`resist.energy`) gets a **regenerating shield pool sized to its base HP**. Incoming damage depletes the shield before it touches HP, and the shield regenerates over time when not under fire — *unless* the attacker carries `ignoreResist` (a **shield-break** weapon, e.g. Disruptor / Nullifier), which bypasses the shield straight to HP. Shield vs shield-break is the intended rock-paper-scissors: Array's durability is real against most attackers but folds to the units built to pierce it.
+- **Stealth & detection.** Stealth units (Saboteur, Ambush Tank — data flag `stealth`) are **untargetable by an enemy unless that side fields a detector** (Recon Spotter / Hound, Probe Skimmer, Sensor Spike, Flak Battery, Pylon Turret — flag `detector`) within scanning range. `acquire()` now checks a unit's **reveal state**, not just range and ownership, so cloak actually hides you and detection is what buys the counter-play.
+- **Visual feedback UI.** The HUD surfaces the **HQ build queue** (what's producing, its progress, and the queued count), the **live harvesting / income rate**, and **selection counts** — so economy and production are readable in-engine instead of inferred.
+
+## What's still stubbed (honest scope of v1)
+
+- **Base building / placement:** one HQ produces everything, including the immobile structures — you can't yet *place* a building at a chosen spot; the tech gate is still modelled as the ore unlock, not separate constructable structures.
+- **Fog of war for the human player:** the map is fully visible to you (stealth/detection gates *targeting*, not vision), and the CPU still reads your army directly; real per-side perception is the next AI layer ([design/19](19-ai-opponent.md)).
 - **Micro depth:** no veterancy, abilities, retreat AI, or formations yet.
+- **Per-unit unique behaviors:** the special traits that need bespoke logic in the live game — hijack, mine-laying, and similar one-off abilities — are modelled in the sims but not yet wired as in-engine actions.
 
 ## What it unlocks on the §50 checklist
 
