@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTS Balance — Battle Sandbox</title>
+<style>
+  :root{
+    --bg:#11151b; --panel:#1a2029; --panel2:#222a35; --line:#2c3644;
+    --ink:#e7edf5; --dim:#93a1b3; --accent:#63a6e6;
+    --dir:#2E6FB0; --cov:#5F8A3A; --arr:#7A4FC0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{margin:0;font-size:18px;letter-spacing:.3px}
+  header p{margin:4px 0 0;color:var(--dim);font-size:12.5px}
+  .wrap{max-width:1060px;margin:0 auto;padding:18px 20px 40px}
+  .controls{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;margin-bottom:14px}
+  @media(max-width:760px){.controls{grid-template-columns:1fr}}
+  .side{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 13px}
+  .side.A{border-top:3px solid var(--accent)}
+  .side.B{border-top:3px solid #e0623a}
+  .side h2{margin:0 0 9px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);
+    display:flex;justify-content:space-between;align-items:center}
+  .side .tag{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--panel2);color:var(--ink)}
+  label{display:block;font-size:11.5px;color:var(--dim);margin:8px 0 3px}
+  select{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:7px 8px;font-size:13px}
+  .mid{display:flex;flex-direction:column;justify-content:center;gap:9px;min-width:120px}
+  .budget{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 13px;text-align:center}
+  .budget b{font-size:22px;display:block}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:600;color:#fff}
+  #fight{background:var(--accent)} #fight:hover{filter:brightness(1.08)}
+  #reset{background:var(--panel2);border:1px solid var(--line)}
+  .speeds{display:flex;gap:5px;justify-content:center}
+  .speeds button{flex:1;background:var(--panel2);border:1px solid var(--line);padding:6px 0;font-weight:500;font-size:12px}
+  .speeds button.on{background:var(--accent);border-color:var(--accent)}
+  .stage{position:relative;background:linear-gradient(#0d1219,#141b25);border:1px solid var(--line);
+    border-radius:10px;overflow:hidden;margin-top:2px}
+  canvas{display:block;width:100%;height:auto}
+  .bars{display:flex;gap:2px;margin-top:10px;height:26px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .bar{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:#fff;
+    transition:width .12s linear;white-space:nowrap;min-width:0;overflow:hidden}
+  .bar.A{background:var(--accent)} .bar.B{background:#e0623a}
+  .banner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:26px;font-weight:800;letter-spacing:.5px;background:rgba(8,11,16,.62);opacity:0;
+    transition:opacity .35s;pointer-events:none;text-align:center;padding:20px}
+  .banner.show{opacity:1}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;color:var(--dim);font-size:12px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .note{margin-top:16px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;color:var(--dim);font-size:12.5px}
+  .note b{color:var(--ink)}
+  .rosterline{margin-top:6px;font-size:12px;color:var(--dim);min-height:18px}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px;color:#cfe0f2}
+</style>
+</head>
+<body>
+<header>
+  <h1>RTS Balance — Battle Sandbox</h1>
+  <p>Watch the certified composition model (§10) resolve a battle. Same math as <code>scripts/composition.mjs</code> — combined arms vs mono-spam, focus-fire, effective-HP, splash. This is a <b>visualizer of the balance sim</b>, not a playable game.</p>
+</header>
+<div class="wrap">
+
+  <div class="controls">
+    <div class="side A">
+      <h2>Side A <span class="tag" id="tagA">—</span></h2>
+      <label>Faction</label>
+      <select id="facA"></select>
+      <label>Army</label>
+      <select id="armyA"></select>
+      <div class="rosterline" id="rlA"></div>
+    </div>
+
+    <div class="mid">
+      <div class="budget">
+        <label style="margin:0">Budget / side</label>
+        <b id="budVal">4000</b>
+        <input type="range" id="bud" min="2000" max="8000" step="500" value="4000">
+      </div>
+      <button id="fight">▶ Fight</button>
+      <button id="reset">↺ Reset</button>
+      <div class="speeds">
+        <button data-sp="1" class="on">1×</button>
+        <button data-sp="2">2×</button>
+        <button data-sp="4">4×</button>
+      </div>
+    </div>
+
+    <div class="side B">
+      <h2>Side B <span class="tag" id="tagB">—</span></h2>
+      <label>Faction</label>
+      <select id="facB"></select>
+      <label>Army</label>
+      <select id="armyB"></select>
+      <div class="rosterline" id="rlB"></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <canvas id="cv" width="1020" height="430"></canvas>
+    <div class="banner" id="banner"></div>
+  </div>
+  <div class="bars" id="bars"><div class="bar A" style="width:50%">A</div><div class="bar B" style="width:50%">B</div></div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="note">
+    <b>How to read it:</b> each dot is a unit — infantry small, tanks/vehicles mid, artillery ringed, epics large, structures square. Tracers are colored by damage type. Every type <b>focus-fires the enemy it counters</b> (lowest effective-HP), which is exactly why a mixed army beats a spam: it has an efficient answer to each threat while the spam pours all fire into one resisted target. The result and % value remaining match the headless sim exactly.
+  </div>
+</div>
+
+<script>
+const ROSTER = /*ROSTER_START*/{"Directorate":[{"name":"Rifleman Squad","class":"Basic infantry","cost":300,"hp":220,"dmg":6,"proj":4,"reload":1,"acc":70,"dmgType":"smallArms","range":4,"aoe":1,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"anti-infantry / garrison"},{"name":"Missile Trooper","class":"Specialist infantry","cost":350,"hp":180,"dmg":68,"proj":1,"reload":2,"acc":80,"dmgType":"antiArmor","range":8,"aoe":2,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"anti-armor / anti-air"},{"name":"Field Engineer","class":"Specialist infantry","cost":300,"hp":150,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":4,"aoe":0,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"capture / field repair"},{"name":"Recon Spotter","class":"Scout vehicle","cost":350,"hp":300,"dmg":10,"proj":1,"reload":1.2,"acc":70,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"recon + mobile detector"},{"name":"Vanguard MBT","class":"Main battle tank","cost":900,"hp":1600,"dmg":120,"proj":1,"reload":1.8,"acc":85,"dmgType":"antiArmor","range":5,"aoe":2,"mobile":true,"resist":{"smallArms":55,"explosive":20,"antiArmor":-30,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":true,"role":"general-purpose armor"},{"name":"Warden AA Halftrack","class":"Advanced vehicle","cost":700,"hp":620,"dmg":30,"proj":2,"reload":0.8,"acc":75,"dmgType":"explosive","range":8,"aoe":3,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"anti-air / anti-infantry"},{"name":"Lancer Tank Destroyer","class":"Advanced vehicle","cost":1000,"hp":900,"dmg":300,"proj":1,"reload":3.5,"acc":88,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"dedicated anti-armor"},{"name":"Howitzer","class":"Artillery","cost":1100,"hp":500,"dmg":180,"proj":1,"reload":5,"acc":60,"dmgType":"siege","range":9,"aoe":6,"mobile":true,"resist":{"smallArms":10,"explosive":-10,"antiArmor":-15,"energy":0,"air":0,"siege":0},"ignoreResist":null,"general":false,"role":"siege artillery"},{"name":"Falcon Gunship","class":"Aircraft","cost":1200,"hp":700,"dmg":150,"proj":1,"reload":2.5,"acc":90,"dmgType":"air","range":8,"aoe":3,"mobile":true,"resist":{"smallArms":55,"explosive":0,"antiArmor":0,"energy":10,"air":0,"siege":45},"ignoreResist":null,"general":false,"role":"precision strike"},{"name":"Collector Truck","class":"Advanced vehicle","cost":1400,"hp":1000,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"economy / harvester"},{"name":"Repair Rig","class":"Advanced vehicle","cost":600,"hp":600,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"field repair support"},{"name":"Bastion Land Battleship","class":"Epic unit","cost":7500,"hp":9000,"dmg":300,"proj":1,"reload":3,"acc":82,"dmgType":"siege","range":6,"aoe":6,"mobile":true,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"general":false,"role":"epic assault + army support"},{"name":"Sentry Turret","class":"Structure","cost":700,"hp":1200,"dmg":90,"proj":1,"reload":2,"acc":90,"dmgType":"antiArmor","range":6,"aoe":2,"mobile":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"general":false,"role":"static anti-vehicle defense"},{"name":"Flak Battery","class":"Structure","cost":800,"hp":900,"dmg":45,"proj":2,"reload":0.9,"acc":80,"dmgType":"explosive","range":7,"aoe":3,"mobile":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"general":false,"role":"static anti-air + detector"},{"name":"Judgment Cannon","class":"Epic unit","cost":5000,"hp":2500,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":6,"aoe":0,"mobile":true,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"general":false,"role":"superweapon"}],"Covenant":[{"name":"Raider Squad","class":"Basic infantry","cost":260,"hp":150,"dmg":6,"proj":3,"reload":1,"acc":68,"dmgType":"smallArms","range":4,"aoe":1,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"anti-infantry / harass"},{"name":"Saboteur","class":"Specialist infantry","cost":400,"hp":140,"dmg":90,"proj":1,"reload":4,"acc":85,"dmgType":"antiArmor","range":5,"aoe":2,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"stealth demolition / anti-armor"},{"name":"Hijacker","class":"Specialist infantry","cost":500,"hp":130,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":4,"aoe":0,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"vehicle theft"},{"name":"Recon Hound","class":"Scout vehicle","cost":300,"hp":220,"dmg":8,"proj":1,"reload":1.2,"acc":66,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"recon + mobile detector"},{"name":"Raider Buggy","class":"Scout vehicle","cost":420,"hp":480,"dmg":44,"proj":2,"reload":1.2,"acc":78,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"fast economy raider"},{"name":"Rocket Technical","class":"Advanced vehicle","cost":650,"hp":500,"dmg":65,"proj":1,"reload":2.2,"acc":76,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"anti-air / anti-armor"},{"name":"Scorch Buggy","class":"Advanced vehicle","cost":520,"hp":470,"dmg":30,"proj":1,"reload":1,"acc":90,"dmgType":"explosive","range":4,"aoe":5,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"anti-infantry flame / area"},{"name":"Mine Layer","class":"Advanced vehicle","cost":550,"hp":520,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"area denial"},{"name":"Marauder Scrap Tank","class":"Main battle tank","cost":700,"hp":1050,"dmg":95,"proj":1,"reload":1.9,"acc":80,"dmgType":"antiArmor","range":5,"aoe":2,"mobile":true,"resist":{"smallArms":55,"explosive":20,"antiArmor":-30,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":true,"role":"general-purpose light armor"},{"name":"Ambush Tank","class":"Advanced vehicle","cost":900,"hp":700,"dmg":160,"proj":1,"reload":3.2,"acc":85,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"stealth flanker"},{"name":"Salvage Harvester","class":"Advanced vehicle","cost":1200,"hp":850,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"economy / salvage"},{"name":"Interceptor Gyro","class":"Aircraft","cost":850,"hp":520,"dmg":70,"proj":2,"reload":1.6,"acc":82,"dmgType":"air","range":8,"aoe":3,"mobile":true,"resist":{"smallArms":55,"explosive":0,"antiArmor":0,"energy":10,"air":0,"siege":45},"ignoreResist":null,"general":false,"role":"fast anti-air / harass"},{"name":"Sensor Spike","class":"Structure","cost":500,"hp":700,"dmg":20,"proj":1,"reload":1.5,"acc":85,"dmgType":"smallArms","range":6,"aoe":1,"mobile":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"general":false,"role":"static detector"},{"name":"Rocket Nest","class":"Structure","cost":650,"hp":900,"dmg":60,"proj":1,"reload":1.8,"acc":85,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"general":false,"role":"static anti-vehicle / air"},{"name":"Ravager","class":"Epic unit","cost":6500,"hp":6500,"dmg":220,"proj":1,"reload":2.6,"acc":80,"dmgType":"siege","range":6,"aoe":6,"mobile":true,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"general":false,"role":"fast epic raider + salvage"},{"name":"Locust Swarm","class":"Epic unit","cost":4500,"hp":2000,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":6,"aoe":0,"mobile":true,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"general":false,"role":"superweapon (drone swarm)"}],"Array":[{"name":"Sentinel Trooper","class":"Basic infantry","cost":260,"hp":240,"dmg":16,"proj":2,"reload":1.1,"acc":74,"dmgType":"energy","range":4,"aoe":1,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":25,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"shielded anti-infantry"},{"name":"Disruptor","class":"Specialist infantry","cost":450,"hp":200,"dmg":95,"proj":1,"reload":1.7,"acc":82,"dmgType":"energy","range":5,"aoe":1,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":25,"air":0,"siege":-25},"ignoreResist":true,"general":false,"role":"shield-break anti-armor"},{"name":"Architect","class":"Specialist infantry","cost":320,"hp":170,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":4,"aoe":0,"mobile":true,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"general":false,"role":"infrastructure / capture / repair"},{"name":"Probe Skimmer","class":"Scout vehicle","cost":380,"hp":280,"dmg":10,"proj":1,"reload":1.2,"acc":72,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"recon + mobile detector"},{"name":"Extractor Core","class":"Structure","cost":1600,"hp":1300,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":6,"aoe":0,"mobile":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"general":false,"role":"economy (stationary extractor)"},{"name":"Aegis Tank","class":"Main battle tank","cost":1050,"hp":1500,"dmg":115,"proj":1,"reload":1.9,"acc":84,"dmgType":"energy","range":5,"aoe":1,"mobile":true,"resist":{"smallArms":55,"explosive":20,"antiArmor":-30,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"general":true,"role":"general-purpose shielded armor"},{"name":"Arc Walker","class":"Advanced vehicle","cost":780,"hp":640,"dmg":34,"proj":2,"reload":0.9,"acc":78,"dmgType":"energy","range":7,"aoe":3,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"anti-air / anti-infantry"},{"name":"Warp Snare","class":"Advanced vehicle","cost":850,"hp":560,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"immobilization control"},{"name":"Nullifier","class":"Advanced vehicle","cost":1300,"hp":850,"dmg":300,"proj":1,"reload":2.8,"acc":88,"dmgType":"energy","range":7,"aoe":1,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":25,"air":0,"siege":-10},"ignoreResist":true,"general":false,"role":"anti-armor specialist"},{"name":"Prism Artillery","class":"Artillery","cost":1200,"hp":520,"dmg":190,"proj":1,"reload":5,"acc":62,"dmgType":"siege","range":9,"aoe":6,"mobile":true,"resist":{"smallArms":10,"explosive":-10,"antiArmor":-15,"energy":25,"air":0,"siege":0},"ignoreResist":null,"general":false,"role":"energy siege"},{"name":"Restorer Drone","class":"Advanced vehicle","cost":650,"hp":520,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"general":false,"role":"shield / repair support"},{"name":"Phase Interceptor","class":"Aircraft","cost":1250,"hp":680,"dmg":145,"proj":1,"reload":2.4,"acc":90,"dmgType":"air","range":8,"aoe":3,"mobile":true,"resist":{"smallArms":55,"explosive":0,"antiArmor":0,"energy":35,"air":0,"siege":45},"ignoreResist":null,"general":false,"role":"energy anti-air / precision"},{"name":"Pylon Turret","class":"Structure","cost":750,"hp":1150,"dmg":85,"proj":1,"reload":1.9,"acc":90,"dmgType":"energy","range":6,"aoe":1,"mobile":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":25,"air":-10,"siege":-25},"ignoreResist":null,"general":false,"role":"static energy defense + detector"},{"name":"Arbiter","class":"Epic unit","cost":8000,"hp":8000,"dmg":280,"proj":1,"reload":2.9,"acc":82,"dmgType":"energy","range":6,"aoe":1,"mobile":true,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":25,"air":-10,"siege":20},"ignoreResist":null,"general":false,"role":"epic + shield-aura support"},{"name":"Stasis Lance","class":"Epic unit","cost":5200,"hp":2600,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":6,"aoe":0,"mobile":true,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"general":false,"role":"superweapon (area stasis + energy)"}]}/*ROSTER_END*/;
+
+// curated combined-arms mixes — identical to composition.mjs SUITES
+const MIX = {
+  Directorate: ['Vanguard MBT','Missile Trooper','Warden AA Halftrack','Howitzer'],
+  Covenant:    ['Marauder Scrap Tank','Rocket Technical','Scorch Buggy','Ambush Tank'],
+  Array:       ['Aegis Tank','Nullifier','Arc Walker','Sentinel Trooper'],
+};
+const FAC_COLOR = { Directorate:'#63a6e6', Covenant:'#8bbf5a', Array:'#a97fe0' };
+const DMG_COLOR = { smallArms:'#d8dee6', antiArmor:'#ff7a45', explosive:'#ffca3a',
+                    energy:'#5fd0e0', siege:'#ef5350', air:'#90caf9', none:'#666' };
+
+const byName = {};
+for (const f in ROSTER) for (const u of ROSTER[f]) byName[u.name] = {...u, faction:f};
+const factions = Object.keys(ROSTER);
+
+// ---- combat model: identical to composition.mjs ----
+const pdps = u => u.reload>0 ? (u.dmg*u.proj/u.reload)*(u.acc/100) : 0;
+const effHP = (def, atkType, atk) => {
+  if (atk && atk.ignoreResist) return def.hp;
+  const r=(def.resist?.[atkType]??0)/100; return r<1?def.hp/(1-r):Infinity;
+};
+function army(budget, names){
+  const per = budget/names.length;
+  return names.map(n=>{const u=byName[n]; return {u, n0:Math.max(1,Math.floor(per/u.cost)), n:0};})
+              .map(s=>({...s, n:s.n0}));
+}
+const value = side => side.reduce((a,s)=>a+s.n*s.u.cost,0);
+const initValue = side => side.reduce((a,s)=>a+s.n0*s.u.cost,0);
+const alive = side => side.some(s=>s.n>0.02);
+// returns kills/sec per defender type AND the (attacker→target) firing pairs for visuals
+function step(att, def){
+  const kills = new Map(def.map(s=>[s.u.name,0]));
+  const fires = [];
+  for (const a of att){
+    if (a.n<=0 || pdps(a.u)<=0) continue;
+    let best=null, bestE=Infinity;
+    for (const d of def){ if (d.n<=0) continue; const e=effHP(d.u,a.u.dmgType,a.u); if(e<bestE){bestE=e;best=d;} }
+    if (!best) continue;
+    const shots = a.n*pdps(a.u)*Math.min(a.u.aoe||1, Math.max(1,Math.ceil(best.n)));
+    kills.set(best.u.name, kills.get(best.u.name)+shots/bestE);
+    fires.push({from:a.u.name, to:best.u.name, type:a.u.dmgType});
+  }
+  return {kills, fires};
+}
+
+// ---- visual layout ----
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height, MID = W/2;
+function radius(cls){
+  if(cls==='Epic unit') return 11;
+  if(cls==='Main battle tank'||cls==='Artillery') return 6.5;
+  if(cls==='Advanced vehicle') return 6;
+  if(cls==='Aircraft') return 5.5;
+  if(cls==='Scout vehicle') return 4.5;
+  if(cls==='Structure') return 7;
+  return 3.2; // infantry
+}
+// build render entities: a grid of dots per type, placed in depth lanes by range
+function layout(side, leftSide){
+  const ents = [];
+  // sort types by range so long-range sits further back
+  const types = side.map((s,i)=>({s,i})).sort((a,b)=>(a.s.u.range||5)-(b.s.u.range||5));
+  const laneW = (MID-40)/Math.max(types.length,1);
+  types.forEach((t,li)=>{
+    const s=t.s, r=radius(s.u.class);
+    // lane center x: front (near MID) = short range; back (near edge) = long range
+    const depth = li; // 0 = frontmost
+    const laneCenter = leftSide
+      ? MID - 30 - depth*laneW - laneW/2
+      : MID + 30 + depth*laneW + laneW/2;
+    const cols = Math.max(1, Math.round(Math.sqrt(s.n0)));
+    const spotsY = H-30, top=24;
+    s._ents = [];
+    for(let k=0;k<Math.ceil(s.n0);k++){
+      const cx = laneCenter + (leftSide?-1:1)*((k%cols)-(cols-1)/2)*(r*2.4);
+      const row = Math.floor(k/cols);
+      const cy = top + 14 + row*(r*2.4);
+      const e = {x:cx, y:Math.min(cy, H-20), r, faction:s.u.faction, cls:s.u.class, alive:true, hit:0};
+      s._ents.push(e); ents.push(e);
+    }
+  });
+  return ents;
+}
+
+function drawUnit(e){
+  const col = FAC_COLOR[e.faction];
+  ctx.save();
+  ctx.translate(e.x, e.y);
+  // contact shadow
+  ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath();
+  ctx.ellipse(0, e.r*0.7, e.r*0.95, e.r*0.42, 0,0,7); ctx.fill();
+  ctx.lineWidth=1.5; ctx.strokeStyle='#0E1116';
+  ctx.fillStyle = e.hit>0 ? '#fff' : col;
+  if(e.cls==='Structure'){
+    ctx.beginPath(); ctx.rect(-e.r,-e.r,e.r*2,e.r*2); ctx.fill(); ctx.stroke();
+  } else if(e.cls==='Aircraft'){
+    ctx.beginPath(); ctx.moveTo(0,-e.r); ctx.lineTo(e.r,e.r); ctx.lineTo(-e.r,e.r); ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(0,0,e.r,0,7); ctx.fill(); ctx.stroke();
+    if(e.cls==='Artillery'){ ctx.strokeStyle=col; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(0,0,e.r+2.5,0,7); ctx.stroke(); }
+    if(e.cls==='Epic unit'){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(0,0,e.r*0.4,0,7); ctx.fill(); }
+  }
+  ctx.restore();
+  if(e.hit>0) e.hit -= 1;
+}
+
+let tracers=[];
+function drawTracers(){
+  for(const t of tracers){
+    ctx.strokeStyle=t.col; ctx.globalAlpha=t.life/6; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(t.x1,t.y1); ctx.lineTo(t.x2,t.y2); ctx.stroke();
+    ctx.globalAlpha=1; t.life--;
+  }
+  tracers = tracers.filter(t=>t.life>0);
+}
+
+// ---- sim state ----
+let A=[], B=[], entsA=[], entsB=[], running=false, finished=false, acc=0, elapsed=0, speed=1, raf=0;
+const DT=0.1, MAX_T=240;
+
+function syncEntities(side){
+  // keep ceil(n) entities alive, mark the rest dead (with a flash)
+  for(const s of side){
+    const want=Math.ceil(s.n), have=(s._ents||[]).filter(e=>e.alive).length;
+    if(want<have){
+      let kill=have-want;
+      for(let k=s._ents.length-1;k>=0 && kill>0;k--){
+        if(s._ents[k].alive){ s._ents[k].alive=false; s._ents[k].hit=4; kill--; }
+      }
+    }
+  }
+}
+function randEnt(side, name){
+  const s=side.find(x=>x.u.name===name); if(!s) return null;
+  const live=s._ents.filter(e=>e.alive); return live.length?live[(live.length*Math.random())|0]:null;
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+  // battlefield centerline
+  ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(MID,0); ctx.lineTo(MID,H); ctx.stroke();
+  drawTracers();
+  for(const e of entsA) if(e.alive||e.hit>0) drawUnit(e);
+  for(const e of entsB) if(e.alive||e.hit>0) drawUnit(e);
+  // value bars
+  const vA=value(A), vB=value(B), tot=Math.max(1,vA+vB);
+  const bars=document.getElementById('bars').children;
+  bars[0].style.width=(vA/tot*100)+'%'; bars[0].textContent=Math.round(vA/tot*100)+'%';
+  bars[1].style.width=(vB/tot*100)+'%'; bars[1].textContent=Math.round(vB/tot*100)+'%';
+}
+
+function tickSim(){
+  const {kills:dA, fires:fA}=step(A,B);
+  const {kills:dB, fires:fB}=step(B,A);
+  for(const s of B) s.n=Math.max(0,s.n-(dA.get(s.u.name)||0)*DT);
+  for(const s of A) s.n=Math.max(0,s.n-(dB.get(s.u.name)||0)*DT);
+  syncEntities(A); syncEntities(B);
+  // spawn a few tracers from the fire pairs
+  for(const f of fA.slice(0,6)){ const a=randEnt(A,f.from), b=randEnt(B,f.to);
+    if(a&&b) tracers.push({x1:a.x,y1:a.y,x2:b.x,y2:b.y,col:DMG_COLOR[f.type]||'#ccc',life:6}); if(b)b.hit=4; }
+  for(const f of fB.slice(0,6)){ const a=randEnt(B,f.from), b=randEnt(A,f.to);
+    if(a&&b) tracers.push({x1:a.x,y1:a.y,x2:b.x,y2:b.y,col:DMG_COLOR[f.type]||'#ccc',life:6}); if(b)b.hit=4; }
+  elapsed+=DT;
+}
+
+function finish(){
+  finished=true; running=false;
+  const vA=value(A), vB=value(B);
+  const aliveA=alive(A), aliveB=alive(B);
+  const winA = aliveA&&!aliveB ? true : aliveB&&!aliveA ? false : vA>=vB;
+  const vwin = winA ? vA/initValue(A) : vB/initValue(B);
+  const b=document.getElementById('banner');
+  const wf = winA ? A[0].u.faction : B[0].u.faction;
+  b.innerHTML = `Side ${winA?'A':'B'} wins · ${(vwin*100).toFixed(0)}% value left`;
+  b.style.color = FAC_COLOR[wf]||'#fff';
+  b.classList.add('show');
+}
+
+function frame(){
+  if(running){
+    acc += (1/60)*speed;
+    let guard=0;
+    while(acc>=DT && running && guard++<20){
+      acc-=DT; tickSim();
+      if(elapsed>=MAX_T || !alive(A) || !alive(B)){ render(); finish(); break; }
+    }
+  }
+  render();
+  raf=requestAnimationFrame(frame);
+}
+
+// ---- setup / controls ----
+function armedUnits(fac){ return ROSTER[fac].filter(u=>pdps(u)>0); }
+function fillFactionSelect(sel){ sel.innerHTML=factions.map(f=>`<option>${f}</option>`).join(''); }
+function fillArmySelect(sel, fac){
+  const opts=['<option value="__mix">★ Combined arms (curated)</option>'];
+  for(const u of armedUnits(fac)) opts.push(`<option value="${u.name}">Mono-spam · ${u.name}</option>`);
+  sel.innerHTML=opts.join('');
+}
+function chosenNames(facSel, armySel){
+  const fac=facSel.value, v=armySel.value;
+  return v==='__mix' ? MIX[fac] : [v];
+}
+function rosterText(names, budget){
+  const per=budget/names.length;
+  return names.map(n=>`${Math.max(1,Math.floor(per/byName[n].cost))}× ${n}`).join('  ·  ');
+}
+
+const facA=document.getElementById('facA'), facB=document.getElementById('facB');
+const armyA=document.getElementById('armyA'), armyB=document.getElementById('armyB');
+const bud=document.getElementById('bud');
+
+function prep(){
+  cancelAnimationFrame(raf);
+  const budget=+bud.value;
+  document.getElementById('budVal').textContent=budget;
+  const nA=chosenNames(facA,armyA), nB=chosenNames(facB,armyB);
+  A=army(budget,nA); B=army(budget,nB);
+  entsA=layout(A,true); entsB=layout(B,false);
+  document.getElementById('tagA').textContent=facA.value;
+  document.getElementById('tagA').style.color=FAC_COLOR[facA.value];
+  document.getElementById('tagB').textContent=facB.value;
+  document.getElementById('tagB').style.color=FAC_COLOR[facB.value];
+  document.getElementById('rlA').textContent=rosterText(nA,budget);
+  document.getElementById('rlB').textContent=rosterText(nB,budget);
+  running=false; finished=false; acc=0; elapsed=0; tracers=[];
+  document.getElementById('banner').classList.remove('show');
+  render();
+  raf=requestAnimationFrame(frame);
+}
+
+fillFactionSelect(facA); fillFactionSelect(facB);
+facA.value='Directorate'; facB.value='Directorate';
+fillArmySelect(armyA,facA.value); fillArmySelect(armyB,facB.value);
+armyA.value='__mix'; armyB.value='Vanguard MBT'; // classic mix-vs-tank-spam demo
+
+facA.onchange=()=>{ fillArmySelect(armyA,facA.value); prep(); };
+facB.onchange=()=>{ fillArmySelect(armyB,facB.value); prep(); };
+armyA.onchange=prep; armyB.onchange=prep;
+bud.oninput=()=>{ document.getElementById('budVal').textContent=bud.value; };
+bud.onchange=prep;
+document.getElementById('fight').onclick=()=>{ if(finished) prep(); running=true; };
+document.getElementById('reset').onclick=prep;
+document.querySelectorAll('.speeds button').forEach(b=>b.onclick=()=>{
+  speed=+b.dataset.sp; document.querySelectorAll('.speeds button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+});
+
+// legend
+const legend=document.getElementById('legend');
+legend.innerHTML =
+  factions.map(f=>`<span><i class="dot" style="background:${FAC_COLOR[f]}"></i>${f}</span>`).join('') +
+  '&nbsp;&nbsp;' +
+  Object.entries(DMG_COLOR).filter(([k])=>k!=='none').map(([k,c])=>`<span><i class="dot" style="background:${c}"></i>${k}</span>`).join('');
+
+prep();
+</script>
+</body>
+</html>

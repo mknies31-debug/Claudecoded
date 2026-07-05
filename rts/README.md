@@ -38,6 +38,9 @@ Everything provable on paper is proven by a script — run any of them from the 
 | [`scripts/matchup.mjs`](scripts/matchup.mjs) | duel simulator (§6–8) — do counters actually counter? |
 | [`scripts/composition.mjs`](scripts/composition.mjs) | army-composition simulator (§10) — combined arms vs mono-spam |
 | [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
+| [`scripts/build-lab-data.mjs`](scripts/build-lab-data.mjs) · [`scripts/build-prototype-data.mjs`](scripts/build-prototype-data.mjs) | re-inject roster JSON into the lab / prototype (keep them in sync with `data/units/`) |
+
+**Interactive:** [`lab/index.html`](lab/index.html) — balance calculator + budget validator · [`prototype/index.html`](prototype/index.html) — **visual battle sandbox** that animates the composition sim (mixed vs spam) with the faction art · [`style/index.html`](style/index.html) — cel-shaded style guide. All single-file, offline.
 
 ## Data files (the numbers)
 
@@ -81,4 +84,4 @@ Everything left is, by nature, **runtime**: it can only be proven by a playable 
 - **Heavy-tank cost-efficiency** — the composition sim flags Directorate Vanguard / Covenant Marauder tank-spam; a §8 cost pass (duel tool) is the right instrument, not the composition sim. [design/16](design/16-composition-findings.md)
 - **Mechanic-aware composition sim** — the current engine is DPS + effective-HP + splash; it can't model Covenant's *utility* anti-armor (hijack / mines / rear-armor / ambush), so Covenant-vs-armor numbers are a known blind spot. [design/16](design/16-composition-findings.md)
 - **Competitive maps** — [`terrain.json`](data/terrain.json) defines the high-ground / barrier / choke rules and the §37 tests; actual map files remain to be authored.
-- **Browser prototype** (`rts/prototype/`) — a minimal skirmish tuned to these numbers would let the runtime gates start closing.
+- ~~**Browser prototype**~~ **DONE** — [`prototype/index.html`](prototype/index.html) animates the composition sim (mixed vs spam, any faction, any budget) using the exact certified combat model. A full *playable* real-time skirmish (the thing that closes the runtime win-rate gates) is the natural next engineering step.
