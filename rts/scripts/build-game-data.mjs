@@ -9,7 +9,12 @@ for (const f of ['directorate','covenant','array']) {
   const r = JSON.parse(fs.readFileSync(`rts/data/units/${f}.json`,'utf8'));
   roster[r.faction] = r.units.map(u => Object.fromEntries(FIELDS.map(k => [k, u[k] ?? null])));
 }
-const map = JSON.parse(fs.readFileSync('rts/data/maps/twin-ridge.json','utf8'));
+// ALL maps in data/maps/ are injected as a name-keyed object (map selector in-game)
+const maps = {};
+for (const f of fs.readdirSync('rts/data/maps').filter(f=>f.endsWith('.json')).sort()){
+  const m = JSON.parse(fs.readFileSync(`rts/data/maps/${f}`,'utf8'));
+  maps[m.name] = m;
+}
 
 const path = 'rts/game/index.html';
 let html = fs.readFileSync(path,'utf8');
@@ -20,6 +25,6 @@ const inject = (tag, obj) => {
   html = html.slice(0, i+S.length) + JSON.stringify(obj) + html.slice(j);
 };
 inject('ROSTER', roster);
-inject('MAP', map);
+inject('MAP', maps);
 fs.writeFileSync(path, html);
-console.log(`Injected ${Object.values(roster).reduce((a,v)=>a+v.length,0)} units + map "${map.name}" into ${path}.`);
+console.log(`Injected ${Object.values(roster).reduce((a,v)=>a+v.length,0)} units + ${Object.keys(maps).length} map(s) [${Object.keys(maps).join(', ')}] into ${path}.`);

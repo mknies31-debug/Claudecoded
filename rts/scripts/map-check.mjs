@@ -95,5 +95,44 @@ ok(minRidgeToBase > maxArtRange * 1.5, 'Elevated artillery cannot bombard a base
 ok(m.spawns.every(s => (s.buildRadius || 0) >= 8), 'Each main has buildable area', `buildRadius ≥ 8`);
 ok((m.neutralObjectives || []).some(n => /detect|vision/i.test(n.grants || '')), 'Detection objective present (§28)', 'relay tower grants detection');
 
+// 10. reachability: rasterize barriers onto the game's nav grid and BFS.
+// This mirrors game/index.html buildNavGrid EXACTLY (cell size NC=2; cliffs
+// mark radius-0 cells along the segment, water marks radius 1), so a map that
+// passes here cannot seal a path in the actual game.
+const NC = 2, NGW = Math.ceil(w / NC), NGH = Math.ceil(h / NC);
+const blocked = new Uint8Array(NGW * NGH);
+const ngi = (gx, gy) => gy * NGW + gx;
+{
+  const mark = (a, b, rad) => { const L = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.ceil(L));
+    for (let i = 0; i <= n; i++) { const t = i / n, cx = Math.floor((a.x + (b.x - a.x) * t) / NC), cy = Math.floor((a.y + (b.y - a.y) * t) / NC);
+      for (let ox = -rad; ox <= rad; ox++) for (let oy = -rad; oy <= rad; oy++) { const gx = cx + ox, gy = cy + oy;
+        if (gx >= 0 && gy >= 0 && gx < NGW && gy < NGH) blocked[ngi(gx, gy)] = 1; } } };
+  for (const b of m.barriers || []) { if (b.type === 'cliff') mark(b.from, b.to, 0); else if (b.type === 'water') mark(b.from, b.to, 1); }
+}
+const cellOf = p => ({ gx: Math.min(NGW - 1, Math.max(0, Math.floor(p.x / NC))), gy: Math.min(NGH - 1, Math.max(0, Math.floor(p.y / NC))) });
+function bfs(start) { // 4-neighbour flood fill over unblocked cells (ground units)
+  const seen = new Uint8Array(NGW * NGH), { gx, gy } = cellOf(start);
+  if (blocked[ngi(gx, gy)]) return seen; // start itself is sealed
+  seen[ngi(gx, gy)] = 1; const q = [[gx, gy]];
+  while (q.length) { const [cx, cy] = q.shift();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = cx + dx, ny = cy + dy;
+      if (nx >= 0 && ny >= 0 && nx < NGW && ny < NGH && !blocked[ngi(nx, ny)] && !seen[ngi(nx, ny)]) { seen[ngi(nx, ny)] = 1; q.push([nx, ny]); } } }
+  return seen;
+}
+const reach = m.spawns.map(s => bfs(s));
+const canReach = (seen, p) => { const { gx, gy } = cellOf(p); return !!seen[ngi(gx, gy)]; };
+ok(m.spawns.every((s, i) => reach.map((r, j) => j === i || canReach(r, s)).every(Boolean)) && !reach.some(r => r.every(v => !v)),
+  'Reachability: spawn → spawn (nav grid, NC=2)', `barriers rasterized like buildNavGrid; ${blocked.reduce((a, v) => a + v, 0)} blocked cell(s)`);
+{
+  const targets = [
+    ...m.resources.map(r => ({ ...r, _what: `${r.richness || ''} ${r.type} (${r.owner})`.trim() })),
+    ...(m.neutralObjectives || []).map(n => ({ ...n, _what: `${n.type} ${n.id}` }))
+  ];
+  let bad = null;
+  for (const t of targets) for (let i = 0; i < reach.length; i++)
+    if (!canReach(reach[i], t)) { bad = `${t._what} at (${t.x},${t.y}) unreachable from spawn ${m.spawns[i].id}`; break; }
+  ok(!bad, 'Reachability: every resource + objective from both spawns', bad || `${targets.length} node(s) reachable from all ${m.spawns.length} spawns`);
+}
+
 console.log(`\n${fail === 0 ? `✓ ${m.name} passes all ${pass} §37 map tests.` : `✗ ${fail} test(s) failed.`}`);
 process.exit(fail ? 1 : 0);

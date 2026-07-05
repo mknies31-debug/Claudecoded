@@ -1,0 +1,97 @@
+{
+  "_source": "Third competitive map — the 'urban/tight infantry map' §38 pool slot (design/07-maps.md). Built against the §37 per-map tests and terrain rules in data/terrain.json. Verified by scripts/map-check.mjs (incl. nav-grid reachability).",
+  "name": "Scrapline",
+  "players": 2,
+  "size": { "w": 128, "h": 128 },
+  "center": { "x": 64, "y": 64 },
+  "symmetry": "180-rotational",
+  "_symmetryNote": "Every element has a counterpart at rot(x,y) = (128-x, 128-y); central elements are self-symmetric. Travel-time and resource tests are exact by construction (§37).",
+  "tileScale": "1 tile ≈ 4 m; ranges in data/units are in these tiles.",
+
+  "style": "tight choke / infantry map (design/07 §38 pool slot). An industrial canyon: one long central scrap-cliff wall splits the map, pierced by two narrow gaps. Forests crowd the gap mouths and a shelf overlooks each gap, so fights are decided by infantry positioning, cover, stealth, and who spots first — not by open-field vehicle sweeps.",
+
+  "spawns": [
+    { "id": "p1", "x": 24,  "y": 24,  "elevation": 0, "buildRadius": 14 },
+    { "id": "p2", "x": 104, "y": 104, "elevation": 0, "buildRadius": 14 }
+  ],
+
+  "resources": [
+    { "type": "wood", "x": 18,  "y": 32,  "owner": "p1", "richness": "standard", "nearBase": true,  "note": "p1 wood floor — safe, renewable, near-base (§04)" },
+    { "type": "wood", "x": 110, "y": 96,  "owner": "p2", "richness": "standard", "nearBase": true,  "note": "p2 wood floor (rot of p1)" },
+    { "type": "ore",  "x": 36,  "y": 16,  "owner": "p1", "richness": "standard", "nearBase": false, "note": "p1 natural-expansion ore — the affordable ceiling, semi-exposed" },
+    { "type": "ore",  "x": 92,  "y": 112, "owner": "p2", "richness": "standard", "nearBase": false, "note": "p2 natural-expansion ore (rot of p1)" },
+    { "type": "ore",  "x": 60,  "y": 52,  "owner": "contested", "richness": "rich", "nearBase": false, "note": "rich ore in the canyon, west face of the wall between the gaps — mine it under the enemy shelf's gaze" },
+    { "type": "ore",  "x": 68,  "y": 76,  "owner": "contested", "richness": "rich", "nearBase": false, "note": "rich ore in the canyon, east face of the wall (rot pair)" }
+  ],
+
+  "highGround": [
+    { "id": "west-shelf", "x": 52, "y": 40, "elevation": 1, "radius": 7,
+      "ramps": [ { "x": 44, "y": 36, "toward": "p1-approach (safe side)" } ],
+      "overlooks": "lower-gap", "note": "scrap-heap shelf over the lower gap; its only ramp faces p1's half, so p2 must fight up it or come around" },
+    { "id": "east-shelf", "x": 76, "y": 88, "elevation": 1, "radius": 7,
+      "ramps": [ { "x": 84, "y": 92, "toward": "p2-approach (safe side)" } ],
+      "overlooks": "upper-gap", "note": "rot of west-shelf" }
+  ],
+
+  "chokes": [
+    { "id": "lower-gap", "x": 64, "y": 44, "width": "narrow", "lanes": 2,
+      "connects": ["p1", "p2"], "flankedBy": ["upper-gap", "south-rim"],
+      "note": "southern breach in the wall — forest at both mouths, west-shelf overhead; splash/first-strike terrain (§37)" },
+    { "id": "upper-gap", "x": 64, "y": 84, "width": "narrow", "lanes": 2,
+      "connects": ["p1", "p2"], "flankedBy": ["lower-gap", "north-rim"],
+      "note": "northern breach (rot of lower-gap) — each narrow gap is flanked by the other gap plus its outer rim route" },
+    { "id": "south-rim", "x": 64, "y": 4, "width": "wide", "lanes": 5,
+      "connects": ["p1", "p2"], "flankedBy": [],
+      "note": "wide route around the wall's southern end — long, exposed, but never contested by the shelves" },
+    { "id": "north-rim", "x": 64, "y": 124, "width": "wide", "lanes": 5,
+      "connects": ["p1", "p2"], "flankedBy": [],
+      "note": "wide northern rim route (rot of south-rim)" }
+  ],
+
+  "barriers": [
+    { "type": "cliff", "from": { "x": 64, "y": 10 },  "to": { "x": 64, "y": 40 },  "note": "southern span of the scrap wall — ends short of the map edge, leaving the south rim route" },
+    { "type": "cliff", "from": { "x": 64, "y": 48 },  "to": { "x": 64, "y": 80 },  "note": "central span between the two gaps; the contested rich ores press against its faces" },
+    { "type": "cliff", "from": { "x": 64, "y": 88 },  "to": { "x": 64, "y": 118 }, "note": "northern span (rot of southern) — leaves the north rim route" }
+  ],
+
+  "forests": [
+    { "id": "lower-west-scrub", "x": 54, "y": 48, "radius": 6, "note": "dense cover at the west mouth of the lower gap — infantry stage here unseen (combat-rules forestConcealment)" },
+    { "id": "upper-east-scrub", "x": 74, "y": 80, "radius": 6, "note": "rot of lower-west-scrub" },
+    { "id": "lower-east-scrub", "x": 74, "y": 40, "radius": 6, "note": "cover on the far (east) mouth of the lower gap — ambush ground for whoever pushes through" },
+    { "id": "upper-west-scrub", "x": 54, "y": 88, "radius": 6, "note": "rot of lower-east-scrub" }
+  ],
+
+  "neutralObjectives": [
+    { "id": "relay-lower", "type": "relay-tower", "x": 64, "y": 44, "grants": "vision + detection over the lower gap", "capturable": true,
+      "note": "stands in the breach itself — capturing it strips stealth from the gap fight (§28)" },
+    { "id": "relay-upper", "type": "relay-tower", "x": 64, "y": 84, "grants": "vision + detection over the upper gap", "capturable": true,
+      "note": "rot of relay-lower" }
+  ],
+
+  "expansions": [
+    { "id": "p1-natural",  "x": 36, "y": 16,  "owner": "p1", "resources": ["ore"], "safety": "semi-exposed" },
+    { "id": "p2-natural",  "x": 92, "y": 112, "owner": "p2", "resources": ["ore"], "safety": "semi-exposed" },
+    { "id": "canyon-west", "x": 60, "y": 52,  "owner": "contested", "resources": ["ore"], "safety": "contested" },
+    { "id": "canyon-east", "x": 68, "y": 76,  "owner": "contested", "resources": ["ore"], "safety": "contested" }
+  ],
+
+  "lanes": [
+    { "id": "lower",     "from": "p1", "to": "p2", "via": "lower-gap", "relativeLength": 1.00, "kind": "narrow-direct" },
+    { "id": "upper",     "from": "p1", "to": "p2", "via": "upper-gap", "relativeLength": 1.00, "kind": "narrow-direct" },
+    { "id": "south-rim", "from": "p1", "to": "p2", "via": "south-rim", "relativeLength": 1.30, "kind": "wide-outer" },
+    { "id": "north-rim", "from": "p1", "to": "p2", "via": "north-rim", "relativeLength": 1.30, "kind": "wide-outer" }
+  ],
+
+  "airspace": "open — aircraft and climb/jump units cross the wall freely; on a map this tight, air and jump infantry are the premium flanking tools (terrain.json highGround.access)",
+
+  "designTests": {
+    "_note": "Mirrors terrain.json perMapTestHooks + design/07 §37; asserted by map-check.mjs.",
+    "resourceEquality": "each player: 1 wood + 1 natural ore; the canyon rich ore is a symmetric contested pair",
+    "travelTimeEquality": "exact by 180° symmetry (§37 tolerance 0 s); both gaps are equidistant from both spawns",
+    "flankAroundEveryNarrowChoke": "lower-gap ⇄ upper-gap flank each other, and each also has a wide rim route around the wall's end",
+    "everyPlateauHasARamp": "west-shelf and east-shelf each have a ground ramp (on their owner-side approach)",
+    "elevatedArtilleryCannotHitBaseFromSafety": "min shelf→base distance ≈ 32 tiles > artillery range 9 ×1.5",
+    "spawnsEqualElevation": "both mains at elevation 0",
+    "reachability": "the wall never touches the map edge and both gaps stay open on the nav grid; BFS proves spawns, resources, and relays are mutually reachable"
+  }
+}
