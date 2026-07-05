@@ -339,8 +339,11 @@ cv.addEventListener('contextmenu',e=>{ e.preventDefault(); if(!sel.length) retur
     if(s.u.mobile===false) continue;                          // static structures can't be ordered to move
     acted=true;
     if(enemy){ s.order='attack'; s.tgt=enemy; s.tx=enemy.x; s.ty=enemy.y; }
-    else if(node && isGath(s.name)){ s.order='harvest'; s.node=node; }
-    else { s.order='move'; s.tx=t.x; s.ty=t.y; s.tgt=null; s.path=null; } }
+    else if(node && isGath(s.name) && isOreGath(s.name)===(node.type==='ore')){ s.order='harvest'; s.node=node; }   // wood rigs cut wood, miners mine ore
+    else { let gx=Math.max(1,Math.min(W-1,t.x)), gy=Math.max(1,Math.min(H-1,t.y));   // never off-map
+      if(s.cls!=='Aircraft' && !passable(gx,gy)){                                     // water/cliff click → nearest shore
+        const [fx,fy]=nearestFree(Math.floor(gx/NC),Math.floor(gy/NC)); gx=cc(fx); gy=cc(fy); }
+      s.order='move'; s.tx=gx; s.ty=gy; s.tgt=null; s.path=null; s.stall=0; } }
   if(acted){ sfx('order');                                   // one blip + one marker per command
     markers.push({x:enemy?enemy.x:(node?node.x:t.x), y:enemy?enemy.y:(node?node.y:t.y),
       life:18, max:18, kind:enemy?'attack':(node?'harvest':'move')}); }
@@ -363,7 +366,8 @@ function separate(e){ for(const o of ents){ if(o===e||o.cls==='HQ') continue;
 function revealed(o, byOwner){ if(!o.u.stealth) return true;
   return ents.some(d=>d.owner===byOwner && d.u.detector && Math.hypot(d.x-o.x,d.y-o.y)<=DET_R)
       || relays.some(r=>r.owner===byOwner && Math.hypot(r.x-o.x,r.y-o.y)<=DET_R); }
-function acquire(e){ let best=null,bd=1e9; const rng=(e.u.range||5)+3;
+function acquire(e){ let best=null,bd=1e9;
+  const rng=(e.u.range||5)+(e.u.mobile===false?0.5:3);        // immobile units only lock what they can actually shoot
   for(const o of ents){ if(o.owner===e.owner) continue;
     if(!revealed(o, e.owner)) continue;                       // cloaked & undetected → cannot be targeted
     const d=Math.hypot(o.x-e.x,o.y-e.y);
@@ -371,11 +375,13 @@ function acquire(e){ let best=null,bd=1e9; const rng=(e.u.range||5)+3;
 
 function combat(e){ if(pdps(e.u)<=0) return; // unarmed (gatherers)
   let t=e.tgt;
+  if(t && t.u.stealth && !revealed(t, e.owner)){ t=null; e.tgt=null; }  // reveal lapsed → lose the track (no cloak wallhack)
   if(!t||t.hp<=0||t.owner===e.owner){ t=acquire(e); e.tgt=t; }   // reacquire; DON'T cancel an attack-move if none found
   if(!t){ return; }               // no enemy in reach → updateEnt keeps the attack-move rolling toward tx/ty
-  e.tx=t.x; e.ty=t.y;             // track the target as the fallback destination
   const d=Math.hypot(t.x-e.x,t.y-e.y), rng=e.u.range||5;
-  if(d>rng){ if(e.u.mobile!==false && (e.cls!=='Artillery'||d>rng+3)) navMove(e,t.x,t.y,SPEED(e.cls)); return; }
+  if(d>rng && e.u.mobile===false){ e.tgt=null; return; }      // a turret can't chase — drop the lock, re-scan next tick
+  e.tx=t.x; e.ty=t.y;             // track the target as the fallback destination
+  if(d>rng){ if(e.cls!=='Artillery'||d>rng+3) navMove(e,t.x,t.y,SPEED(e.cls)); return; }
   e.cd-=DT; if(e.cd>0) return; e.cd=e.u.reload;
   // damage = fraction of target removed per shot, from the sim's effHP model
   const mult = (onHigh(e.x,e.y)&&!onHigh(t.x,t.y))?1.15:1;
@@ -395,11 +401,16 @@ function applyDamage(t,dmg,src){
     if(t.cls==='HQ') endGame(t.owner==='me'?'cpu':'me');
     ents=ents.filter(x=>x!==t); sel=sel.filter(x=>x!==t); } }
 
-function harvest(e){ if(!e.node){ e.node=nearestNode(e, isOreGath(e.name)?'ore':'wood'); }
+function harvest(e){
+  const wantType = isOreGath(e.name)?'ore':'wood';
+  if(!e.node || e.node.type!==wantType){ e.node=nearestNode(e, wantType); }   // gatherers only work their own resource
   const n=e.node; if(!n) return; const d=Math.hypot(n.x-e.x,n.y-e.y);
   if(d>1.4){ navMove(e,n.x,n.y,SPEED(e.cls)); }
-  else { const take=Math.min(n.rate*DT, n.cap); credits[e.owner]+=take;
-    if(n.type==='ore') oreUnlocked[e.owner]=true;
+  else { // a node supports 4 workers at full rate; beyond that, yield is shared (no infinite stacking)
+    let workers=0; for(const g of ents) if(g.order==='harvest'&&g.node===n&&Math.hypot(g.x-n.x,g.y-n.y)<1.6) workers++;
+    const take=Math.min(n.rate*DT*Math.min(1, 4/Math.max(1,workers)), n.cap);
+    credits[e.owner]+=take;
+    if(n.type==='ore' && isOreGath(e.name)) oreUnlocked[e.owner]=true;   // tier-2 tech takes a REAL mining unit
     n.cap-=take;
     if(n.cap<=0){ nodes=nodes.filter(x=>x!==n); terrDirty=true;   // mined out — gone from map + minimap
       for(const g of ents) if(g.node===n) g.node=null; } } }
@@ -415,7 +426,11 @@ function updateEnt(e){
   if(e.u.mobile===false){ if(pdps(e.u)>0) combat(e); return; }
   if(e.order==='harvest'){ harvest(e); return; }
   if(pdps(e.u)>0){ combat(e); if(e.tgt){ return; } }
-  if(e.order==='move'||e.order==='attack'){ const rem=navMove(e,e.tx,e.ty,SPEED(e.cls)); if(rem<0.4) e.order='idle'; }
+  if(e.order==='move'||e.order==='attack'){ const rem=navMove(e,e.tx,e.ty,SPEED(e.cls));
+    // arrived when at the goal OR when stuck near it (group congestion counts as arrival)
+    if(Math.abs((e.lastRem??1e9)-rem)<0.005 && rem<8) e.stall=(e.stall||0)+1; else e.stall=0;
+    e.lastRem=rem;
+    if(rem<0.4 || e.stall>45) e.order='idle'; }
   separate(e);
 }
 
@@ -446,22 +461,28 @@ function cpuThink(){
     || ents.some(e=>e.owner==='cpu'&&e.name===oreG);
   // economy: reach the tier's gatherer target, then (if this tier techs) save for
   // the ore gatherer before spending on army — tryCpuBuild only fires when affordable.
-  // counter-intel: if the enemy fields stealth and we can't see it, buy a detector first
+  // counter-intel scales with the threat: one detector per ~3 enemy stealth units,
+  // minimum 2 once any stealth is seen (single detectors were snipe-then-repeat food)
   const DET_UNIT={Directorate:'Recon Spotter',Covenant:'Recon Hound',Array:'Probe Skimmer'};
-  const foeStealth=ents.some(e=>e.owner==='me'&&e.u.stealth);
-  const haveDet=ents.some(e=>e.owner==='cpu'&&e.u.detector)||hqCpu.queue.some(q=>byName[q.name].detector);
-  if(cpuGath<d.gather){ tryCpuBuild(GATH[CPU].wood); }
-  else if(foeStealth && !haveDet){ tryCpuBuild(DET_UNIT[CPU]); }
-  else if(d.ore && !oreComing){ tryCpuBuild(oreG); }
-  else if(d.comp==='naive'){ tryCpuBuild(tier1(CPU)); }   // easy: tier-1 spam only
-  else {
-    // composition: score buildable+unlocked MOBILE combat units as counters (no turrets)
-    const enemy = myArmy.length?myArmy:[{u:byName[tier1(ME)]}];
+  const stealthN=ents.filter(e=>e.owner==='me'&&e.u.stealth).length;
+  const detN=ents.filter(e=>e.owner==='cpu'&&e.u.detector).length
+           + hqCpu.queue.filter(q=>byName[q.name].detector).length;
+  const wantDet = stealthN>0 ? Math.max(2, Math.ceil(stealthN/3)) : 0;
+  // DEFEND TRIGGER: enemy combat units near our HQ → army NOW; eco/tech waits.
+  // (Without this, commitT only gated attacking and an early rush walked in free.)
+  const threat = ents.some(e=>e.owner==='me'&&pdps(e.u)>0&&e.cls!=='HQ'&&Math.hypot(e.x-hqCpu.x,e.y-hqCpu.y)<26);
+  const pickCounter = ()=>{ const enemy = myArmy.length?myArmy:[{u:byName[tier1(ME)]}];
     const cand = BUILDABLE[CPU].map(n=>byName[n]).filter(u=>pdps(u)>0 && u.mobile!==false);
     let best=null,bs=-1; for(const c of cand){ if(c.tier>=2&&!oreUnlocked.cpu) continue;
       const s=counterScore(c, enemy); if(s>bs){bs=s;best=c;} }
-    if(best) tryCpuBuild(best.name);
-  }
+    if(best) tryCpuBuild(best.name); };
+  if(threat){ if(d.comp==='naive') tryCpuBuild(tier1(CPU)); else pickCounter();
+    if(detN<wantDet) tryCpuBuild(DET_UNIT[CPU]); }
+  else if(cpuGath<d.gather){ tryCpuBuild(GATH[CPU].wood); }
+  else if(detN<wantDet){ tryCpuBuild(DET_UNIT[CPU]); }
+  else if(d.ore && !oreComing){ tryCpuBuild(oreG); }
+  else if(d.comp==='naive'){ tryCpuBuild(tier1(CPU)); }   // easy: tier-1 spam only
+  else pickCounter();
   // commit rule (P7): never before commitT; then only with margin × enemy value
   const cpuArmy = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0);
   const val = cpuArmy.reduce((a,e)=>a+e.u.cost,0);
@@ -472,7 +493,14 @@ function cpuThink(){
              : simSecs > d.commitT*2 ? 1200
              : Math.max(1200, d.margin*foeVal);
   if(val>gate) cpuAttack=true; if(cpuArmy.length<3) cpuAttack=false;
-  if(cpuAttack){ for(const e of cpuArmy){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=hqMe.x; e.ty=hqMe.y; } } }
+  if(cpuAttack){
+    // early waves push THROUGH an uncaptured relay (contest the objective, capture
+    // incidentally while fighting there); late game goes straight for the HQ
+    const rly = simSecs<d.commitT*2 ? relays.find(r=>r.owner!=='cpu') : null;
+    const obj = rly || hqMe;
+    for(const e of cpuArmy){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=obj.x; e.ty=obj.y; } } }
+  else if(threat){ // defenders rally home and auto-acquire the intruders
+    for(const e of cpuArmy){ if(e.order==='idle'&&!e.tgt){ e.order='attack'; e.tx=hqCpu.x; e.ty=hqCpu.y; } } }
 }
 function tryCpuBuild(name){ const u=byName[name]; if(!u||credits.cpu<u.cost) return false;
   if(u.tier>=2&&!oreUnlocked.cpu) return false; credits.cpu-=u.cost; hqCpu.queue.push({name,left:bt(u)}); return true; }
@@ -493,6 +521,7 @@ function tick(){ if(over||!started) return;
   for(const r of relays){
     let me=false, cpu=false;
     for(const e of ents){ if(e.cls==='HQ'||e.u.mobile===false) continue;
+      if(e.u.stealth && !revealed(e, e.owner==='me'?'cpu':'me')) continue;   // capturing means showing yourself
       if(Math.hypot(e.x-r.x,e.y-r.y)<=3.5){ if(e.owner==='me') me=true; else cpu=true; } }
     const s = me&&!cpu?'me' : cpu&&!me?'cpu' : null;
     if(s && s!==r.owner){ if(r.side!==s){ r.side=s; r.prog=0; } r.prog+=DT;
