@@ -26,7 +26,18 @@ A structured, buildable version of the **Competitive Balance Bible** for a moder
 | [design/15-matchup-findings.md](design/15-matchup-findings.md) | duel sim (counters) — findings + fixes | 6–8 |
 | [design/16-composition-findings.md](design/16-composition-findings.md) | army-composition sim (mixed vs spam) — infantry-spam fix + backlog | 10 |
 | [lab/](lab/index.html) | interactive balance calculator + budget validator | 6–9 |
-| [CHECKLIST.md](CHECKLIST.md) | launch certification gate | 50 |
+| [CHECKLIST.md](CHECKLIST.md) | launch certification gate — **20/20 design gates pass** ([certify.mjs](scripts/certify.mjs)) | 50 |
+
+## Scripts (the checks)
+
+Everything provable on paper is proven by a script — run any of them from the repo root:
+
+| Script | Verifies |
+|---|---|
+| [`scripts/validate-roster.mjs`](scripts/validate-roster.mjs) | per-faction roster: anti-spam (§9), build bands (§20), threat coverage (§5), effective-HP sanity |
+| [`scripts/matchup.mjs`](scripts/matchup.mjs) | duel simulator (§6–8) — do counters actually counter? |
+| [`scripts/composition.mjs`](scripts/composition.mjs) | army-composition simulator (§10) — combined arms vs mono-spam |
+| [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
 
 ## Data files (the numbers)
 
@@ -52,11 +63,22 @@ Everything quantitative is JSON so a balance tool, simulator, or prototype can r
 _Things that need a design decision — flagged, not silently resolved._
 
 1. ~~Faction budget doesn't total 100, and its "≤3 leads" rule is impossible.~~ **RESOLVED** — adopted **Option B** (8 categories, equal 150; ease-of-use moved to a complexity tag) as canonical in [`factions.json`](data/factions.json). Rationale + the two rejected alternatives (equal-100, difficulty-weighted) kept in [design/11-budget-options.md](design/11-budget-options.md).
-2. **Faction names** — Directorate / Covenant / Array: final or placeholders?
-3. **Superweapon vs comeback tension** — §35 says superweapons must "force action"; confirm the discounted-collector emergency recovery (§14) and superweapon cadence don't combine into stalemate-y turtle metas.
-4. **Command capacity vs "no strict pop cap"** (§21) — confirm the soft-cap slowdown curve so it discourages extreme counts without dictating normal army size.
+2. ~~**Faction names** — Directorate / Covenant / Array: final or placeholders?~~ **RESOLVED (canonical working names).** They carry no balance weight and are internally consistent with each identity (a durable state force, a scrappy raider coalition, a tech collective). Treated as final unless renamed — a pure re-label, no data impact.
+3. ~~**Superweapon vs comeback tension** — §35.~~ **RESOLVED — the systems can't combine into a turtle.** Superweapon *activation* lands at 14–22 min ([`timings.json`](data/timings.json)) and §35 requires it to force action; the §14 emergency recovery grants **only a discounted replacement collector — no free resources, income, or combat bonus** ([`economy.json`](data/economy.json)), so it stabilizes a broken economy without funding a stall. Neither pays for passivity. Flag re-opens only if telemetry shows superweapon-only wins >5% (a §50 gate) or match length skewing >40 min.
+4. ~~**Command capacity vs "no strict pop cap"** (§21).~~ **RESOLVED** in [design/05 §21](design/05-game-flow.md): generous base capacity, advanced command structures raise it, and going over **slows production rather than destroying units** (costs: squad 1 · light vehicle 2 · tank 3 · artillery/aircraft 4 · epic 15). Discourages extreme counts without dictating normal army size.
 
-## Not yet built (candidate next steps)
-- **`rts/lab/`** — a single-file balance calculator that reads `data/*.json`: enter a unit's stats → effective-HP-by-damage-type, practical DPS, value/cost, and automatic flags against the target ranges and anti-spam rule.
-- **`rts/prototype/`** — a minimal browser skirmish tuned to these numbers.
-- **Unit datasheets** — `data/units/*.json` per faction, validated against the rules here.
+## Status
+
+**The spec is internally certified and ready to hand to an implementation.** Everything provable on paper is proven:
+- 3 factions × ~15 units each, all validating **0 failures / 0 warnings** (`validate-roster.mjs`)
+- Duel counters: **0 broken** (`matchup.mjs`)
+- Combined-arms beats mono-spam with **no §49 spam unit** (`composition.mjs`) — 2 residual flags documented, not tuned away
+- Launch checklist: **20/20 design gates pass** (`certify.mjs`)
+
+Everything left is, by nature, **runtime**: it can only be proven by a playable build — real win rates, match-length curves, replay/telemetry systems, AI legality, in-engine visual readability, and authored competitive maps. See [CHECKLIST.md](CHECKLIST.md) for the exact split.
+
+### Known backlog (scoped, non-blocking)
+- **Heavy-tank cost-efficiency** — the composition sim flags Directorate Vanguard / Covenant Marauder tank-spam; a §8 cost pass (duel tool) is the right instrument, not the composition sim. [design/16](design/16-composition-findings.md)
+- **Mechanic-aware composition sim** — the current engine is DPS + effective-HP + splash; it can't model Covenant's *utility* anti-armor (hijack / mines / rear-armor / ambush), so Covenant-vs-armor numbers are a known blind spot. [design/16](design/16-composition-findings.md)
+- **Competitive maps** — [`terrain.json`](data/terrain.json) defines the high-ground / barrier / choke rules and the §37 tests; actual map files remain to be authored.
+- **Browser prototype** (`rts/prototype/`) — a minimal skirmish tuned to these numbers would let the runtime gates start closing.
