@@ -170,7 +170,8 @@
       "armor": "light",
       "range": 5,
       "aoe": 1,
-      "mobile": true
+      "mobile": true,
+      "detector": true
     },
     {
       "name": "Extractor Core",
@@ -556,7 +557,8 @@
       "armor": "structure",
       "range": 6,
       "aoe": 1,
-      "mobile": false
+      "mobile": false,
+      "detector": true
     },
     {
       "name": "Arbiter",
