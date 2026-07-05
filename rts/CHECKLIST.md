@@ -23,7 +23,7 @@
 ## Tech / tooling
 - [ ] **Replays function reliably** — *engine feature (runtime)*
 - [ ] **Telemetry functions correctly** — §45 · *engine feature (runtime)*
-- [~] **AI uses legal resources** (no hidden HP/damage/armor) — §40 · *reference brain ([`ai-policy.mjs`](scripts/ai-policy.mjs)) + **live CPU in the playable engine** ([design/20](design/20-engine.md)) both play the same units with no stat cheats; difficulty = decisions (easy 1/12 → expert 12/12). Fog-of-war perception still to add.*
+- [~] **AI uses legal resources** (no hidden HP/damage/armor) — §40 · *reference brain ([`ai-policy.mjs`](scripts/ai-policy.mjs)) + **live CPU in the V1 playable engine** ([design/20](design/20-engine.md)) both play the same units with no stat cheats; difficulty = decisions (easy 1/12 → expert 12/12). The engine is now V1 — three selectable factions (Directorate / Covenant / Array), true collision / A\* pathfinding around barriers, and the special-trait mechanics (energy shields vs shield-break, stealth vs detection, immobile defenses) all live. Fog-of-war perception still to add.*
 - [ ] **All critical counters are visually readable** — §46, §47(step 2) · *art/UX pass — style guide exists ([style/](style/index.html)); needs in-engine verification (runtime)*
 
 ## Meta health

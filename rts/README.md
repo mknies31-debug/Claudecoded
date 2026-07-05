@@ -48,7 +48,7 @@ Everything provable on paper is proven by a script — run any of them from the 
 | [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
 | [`scripts/build-lab-data.mjs`](scripts/build-lab-data.mjs) · [`scripts/build-prototype-data.mjs`](scripts/build-prototype-data.mjs) | re-inject roster JSON into the lab / prototype (keep them in sync with `data/units/`) |
 
-**Interactive:** [`game/index.html`](game/index.html) — **▶ the playable skirmish** (you vs CPU on Twin Ridge, real units/economy/combat) · [`lab/index.html`](lab/index.html) — balance calculator + budget validator · [`prototype/index.html`](prototype/index.html) — visual battle sandbox (composition sim) · [`maps/twin-ridge.html`](maps/twin-ridge.html) — map viewer · [`style/index.html`](style/index.html) — cel-shaded style guide. All single-file, offline.
+**Interactive:** [`game/index.html`](game/index.html) — **▶ the playable skirmish** (V1: pick your faction and the CPU's from Directorate / Covenant / Array, real units/economy/combat with A\* pathfinding, energy shields, and stealth/detection on Twin Ridge) · [`lab/index.html`](lab/index.html) — balance calculator + budget validator · [`prototype/index.html`](prototype/index.html) — visual battle sandbox (composition sim) · [`maps/twin-ridge.html`](maps/twin-ridge.html) — map viewer · [`style/index.html`](style/index.html) — cel-shaded style guide. All single-file, offline.
 
 ## Data files (the numbers)
 
@@ -87,7 +87,7 @@ _Things that need a design decision — flagged, not silently resolved._
 - Two-resource economy **wired and verified** — `economy-check.mjs` (58/58): payback bands, wood-floor/ore-ceiling invariants, ore soft-tech-gate, roster gatherers
 - Launch checklist: **20/20 design gates pass** (`certify.mjs`)
 
-**The playable engine now exists** ([`game/index.html`](game/index.html), [design/20](design/20-engine.md)) — a single-file skirmish reusing the real data, map, combat math, and CPU brain; a full match runs to a decisive result. The remaining gates are **instrumentation** of that engine (win-rate/match-length/pick-rate telemetry over headless match batches) plus depth (pathfinding, fog-of-war, more maps). See [CHECKLIST.md](CHECKLIST.md) for the split.
+**The playable engine now exists at V1** ([`game/index.html`](game/index.html), [design/20](design/20-engine.md)) — a single-file skirmish reusing the real data, map, combat math, and CPU brain, with **all three factions selectable** (Directorate / Covenant / Array), **A\* pathfinding / true collision** around the map barriers, **energy shields vs shield-break**, **stealth vs detection**, and **immobile defensive structures** all live; a full match runs to a decisive result. The remaining gates are **instrumentation** of that engine (win-rate/match-length/pick-rate telemetry over headless match batches) plus depth (base-building placement, fog-of-war, more maps). See [CHECKLIST.md](CHECKLIST.md) for the split.
 
 ### Known backlog (scoped, non-blocking)
 - ~~**Unify the two combat cores**~~ **DONE** — both sims now share [`combat-core.mjs`](scripts/combat-core.mjs) (effective-HP, DPS, kiting, first-strike). This **resolved the original heavy-tank flag** (Directorate mix vs Vanguard spam: 28% loss → 54% win) and duels stay 0-broken. [design/16](design/16-composition-findings.md), [design/17](design/17-architecture-review.md) P0.1
