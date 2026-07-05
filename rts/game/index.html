@@ -34,6 +34,10 @@
   #banner{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;
     background:rgba(8,11,16,.78);font-size:34px;font-weight:800}
   #banner button{margin-top:16px;font-size:15px;padding:10px 20px;border:0;border-radius:8px;background:var(--me);color:#fff;font-weight:700;cursor:pointer}
+  #bansub{margin-top:6px;font-size:14px;font-weight:500;color:var(--dim)}
+  #mm{position:absolute;right:10px;bottom:10px;width:148px;height:148px;border:1px solid var(--line);border-radius:8px;
+    background:#0c1017;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+  #mute{background:#222a35;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px}
   #hint{position:absolute;left:10px;bottom:8px;color:#93a1b3aa;font-size:11.5px;pointer-events:none}
   #q{position:absolute;left:10px;top:8px;color:#cfe0f2;font-size:12px;pointer-events:none}
   /* pre-game start screen */
@@ -86,6 +90,7 @@
       <option value="instant">Instant</option>
     </select>
   </label>
+  <button id="mute" title="Toggle sound">🔊</button>
   <span class="stat" style="margin-left:auto;color:var(--cpu)">CPU credits <span id="cpucr">0</span> · army <span id="cpuarmy">0</span></span>
 </div>
 <div id="wrap">
@@ -93,7 +98,8 @@
     <canvas id="cv"></canvas>
     <div id="q"></div>
     <div id="hint">Left-drag: select · Right-click: move / attack · Right-click a resource: harvest · Wheel: zoom · WASD: pan · F: follow selection</div>
-    <div id="banner"><div id="bantext"></div><button onclick="location.reload()">Play again</button></div>
+    <canvas id="mm" width="296" height="296"></canvas>
+    <div id="banner"><div id="bantext"></div><div id="bansub"></div><button id="againbtn">Play again</button></div>
     <div id="start">
       <div class="startcard">
         <h1>Twin Ridge</h1>
@@ -149,7 +155,10 @@ function clampCam(){ CAM.z=Math.max(1,Math.min(5,CAM.z));
 function zoomAt(px,py,f){ const ax=wx(px), ay=wy(py);        // world point under the cursor…
   CAM.z=Math.max(1,Math.min(5,CAM.z*f)); applyCam();
   CAM.x+=ax-wx(px); CAM.y+=ay-wy(py); clampCam(); }          // …stays under the cursor
-function resize(){ const r=cv.parentElement.getBoundingClientRect(); cv.width=r.width; cv.height=r.height;
+let DPR=1;   // hi-DPI: backing store in device pixels (all mouse input is scaled by DPR)
+function resize(){ const r=cv.parentElement.getBoundingClientRect();
+  DPR=(typeof devicePixelRatio!=='undefined'&&devicePixelRatio)||1;
+  cv.width=r.width*DPR; cv.height=r.height*DPR;
   FIT=Math.min(cv.width/W, cv.height/H); clampCam(); vignette=null; }
 addEventListener('resize',resize);
 const sx=x=>OX+x*SCALE, sy=y=>OY+y*SCALE;
@@ -163,6 +172,21 @@ const WOODCR=8, ORECR=11;
 
 let ents=[], credits={me:1200,cpu:1200}, oreUnlocked={me:false,cpu:false}, over=null;
 let uid=1, started=false;   // the sim is paused until the player clicks Start
+let markers=[], fxDeaths=[], simSecs=0, lastLostSfx=-9;   // order markers, death bursts, match clock
+// tiny synth SFX (WebAudio) — created lazily on a user gesture, silent when
+// unsupported (headless) or muted. Deliberately quiet and short.
+let AC=null, muted=false;
+function sfx(type){ if(muted) return; try{
+  if(!AC){ const C=(typeof window!=='undefined')&&(window.AudioContext||window.webkitAudioContext); if(!C) return; AC=new C(); }
+  if(AC.state==='suspended') AC.resume();
+  const P={order:[520,0.06,'square',0.025,1.4], build:[740,0.1,'triangle',0.04,1.5],
+           lost:[150,0.22,'sawtooth',0.05,0.5], win:[520,0.5,'triangle',0.06,1.9], lose:[240,0.6,'sawtooth',0.05,0.4]}[type]||[440,0.08,'sine',0.02,1];
+  const o=AC.createOscillator(), g=AC.createGain(); o.connect(g); g.connect(AC.destination);
+  const t=AC.currentTime; o.type=P[2]; o.frequency.setValueAtTime(P[0],t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(50,P[0]*P[4]), t+P[1]);
+  g.gain.setValueAtTime(P[3],t); g.gain.exponentialRampToValueAtTime(0.0001,t+P[1]);
+  o.start(t); o.stop(t+P[1]+0.02);
+}catch(e){} }
 // difficulty ties the CPU to the ai-policy easy→expert axis: worse comp, slower
 // reactions, later attacks, thinner economy at the low end — no stat cheats (§40).
 const DIFFS = {
@@ -249,7 +273,7 @@ function startGatherers(owner, hq, woodName){ const wn=nearestNode(hq,'wood');
   for(let i=0;i<2;i++){ const g=spawn(owner, woodName, hq.x+(i-0.5)*2, hq.y+3); g.order='harvest'; g.node=wn; } }
 function newGame(){
   ents=[]; credits={me:1200,cpu:1200}; oreUnlocked={me:false,cpu:false}; over=null; uid=1;
-  sel=[]; cpuTimer=0; cpuAttack=false;
+  sel=[]; cpuTimer=0; cpuAttack=false; markers=[]; fxDeaths=[]; simSecs=0; lastLostSfx=-9;
   nodes = MAP.resources.map(r=>({type:r.type, x:r.x, y:r.y, owner:r.owner}));
   hqMe  = spawnHQ('me',  MAP.spawns[0].x, MAP.spawns[0].y);
   hqCpu = spawnHQ('cpu', MAP.spawns[1].x, MAP.spawns[1].y);
@@ -281,8 +305,8 @@ function queueBuild(owner,hq,name){ const u=byName[name]; if(credits[owner]<u.co
 
 // ---- selection & orders ----
 let sel=[], drag=null;
-cv.addEventListener('mousedown',e=>{ if(e.button!==0) return; drag={x0:e.offsetX,y0:e.offsetY,x1:e.offsetX,y1:e.offsetY}; });
-cv.addEventListener('mousemove',e=>{ over={x:wx(e.offsetX),y:wy(e.offsetY)}; if(drag){drag.x1=e.offsetX;drag.y1=e.offsetY;} });
+cv.addEventListener('mousedown',e=>{ if(e.button!==0) return; drag={x0:e.offsetX*DPR,y0:e.offsetY*DPR,x1:e.offsetX*DPR,y1:e.offsetY*DPR}; });
+cv.addEventListener('mousemove',e=>{ over={x:wx(e.offsetX*DPR),y:wy(e.offsetY*DPR)}; if(drag){drag.x1=e.offsetX*DPR;drag.y1=e.offsetY*DPR;} });
 addEventListener('mouseup',e=>{ if(e.button!==0||!drag) return;
   const a={x0:Math.min(drag.x0,drag.x1),y0:Math.min(drag.y0,drag.y1),x1:Math.max(drag.x0,drag.x1),y1:Math.max(drag.y0,drag.y1)};
   const box=(a.x1-a.x0)>4||(a.y1-a.y0)>4;
@@ -291,14 +315,19 @@ addEventListener('mouseup',e=>{ if(e.button!==0||!drag) return;
       : Math.hypot(sx(en.x)-drag.x1,sy(en.y)-drag.y1)<Math.max(10,RAD(en.cls)*SCALE)));
   drag=null; updateSel(); });
 cv.addEventListener('contextmenu',e=>{ e.preventDefault(); if(!sel.length) return;
-  const t={x:wx(e.offsetX),y:wy(e.offsetY)};
+  const t={x:wx(e.offsetX*DPR),y:wy(e.offsetY*DPR)};
   const enemy=ents.find(en=>en.owner==='cpu'&&Math.hypot(en.x-t.x,en.y-t.y)<Math.max(2,RAD(en.cls)));
   const node=nodes.find(n=>Math.hypot(n.x-t.x,n.y-t.y)<3);
+  let acted=false;
   for(const s of sel){
     if(s.u.mobile===false) continue;                          // static structures can't be ordered to move
+    acted=true;
     if(enemy){ s.order='attack'; s.tgt=enemy; s.tx=enemy.x; s.ty=enemy.y; }
     else if(node && isGath(s.name)){ s.order='harvest'; s.node=node; }
     else { s.order='move'; s.tx=t.x; s.ty=t.y; s.tgt=null; s.path=null; } }
+  if(acted){ sfx('order');                                   // one blip + one marker per command
+    markers.push({x:enemy?enemy.x:(node?node.x:t.x), y:enemy?enemy.y:(node?node.y:t.y),
+      life:18, max:18, kind:enemy?'attack':(node?'harvest':'move')}); }
 });
 function updateSel(){ const d=document.getElementById('sel');
   if(!sel.length){ d.textContent='No selection.'; return; }
@@ -342,7 +371,10 @@ function applyDamage(t,dmg,src){
   // energy shield soaks damage first — unless the attacker is shield-piercing
   if(t.shield>0 && !(src&&src.u&&src.u.ignoreResist)){ const ab=Math.min(t.shield,dmg); t.shield-=ab; dmg-=ab; t.shieldHit=3; }
   if(dmg>0){ t.hp-=dmg; if(t.shieldMax) t.shieldHit=3; }
-  if(t.hp<=0){ if(t.cls==='HQ') endGame(t.owner==='me'?'cpu':'me');
+  if(t.hp<=0){
+    fxDeaths.push({x:t.x,y:t.y,r:RAD(t.cls),life:14,max:14,col:t.owner==='me'?'99,166,230':'139,191,90'});
+    if(t.owner==='me'&&pdps(t.u)>0&&simSecs-lastLostSfx>0.6){ lastLostSfx=simSecs; sfx('lost'); }
+    if(t.cls==='HQ') endGame(t.owner==='me'?'cpu':'me');
     ents=ents.filter(x=>x!==t); sel=sel.filter(x=>x!==t); } }
 
 function harvest(e){ if(!e.node){ e.node=nearestNode(e, /mining|scrap/i.test(e.name)?'ore':'wood'); }
@@ -356,6 +388,7 @@ function updateEnt(e){
   if(e.shieldMax){ if(e.shieldHit>0) e.shieldHit-=DT; else if(e.shield<e.shieldMax) e.shield=Math.min(e.shieldMax, e.shield+e.shieldMax*0.06*DT); }
   if(e.cls==='HQ'){ if(e.queue.length){ e.queue[0].left-=DT;
     if(e.queue[0].left<=0){ const b=e.queue.shift(); const g=spawn(e.owner,b.name,e.rally.x+(Math.random()-0.5)*3,e.rally.y+(Math.random()-0.5)*3);
+      if(e.owner==='me') sfx('build');
       if(isGath(b.name)){ g.order='harvest'; g.node=nearestNode(g, isOreGath(b.name)?'ore':'wood'); } } } return; }
   // static structures (mobile:false): pinned to their build spot; only defend/detect
   if(e.u.mobile===false){ if(pdps(e.u)>0) combat(e); return; }
@@ -399,11 +432,15 @@ function tryCpuBuild(name){ const u=byName[name]; if(!u||credits.cpu<u.cost) ret
 
 // ---- loop ----
 function endGame(winner){ if(over) return; over=winner;
+  sfx(winner==='me'?'win':'lose');
+  const m=Math.floor(simSecs/60), s=Math.floor(simSecs%60);
   document.getElementById('banner').style.display='flex';
   document.getElementById('bantext').textContent = winner==='me'?'Victory':'Defeat';
+  document.getElementById('bansub').textContent = `${ME} vs ${CPU} · ${m}:${String(s).padStart(2,'0')}`;
   document.getElementById('bantext').style.color = winner==='me'?'var(--me)':'var(--cpu)'; }
 
 function tick(){ if(over||!started) return;
+  simSecs+=DT;
   for(const e of [...ents]) updateEnt(e);
   cpuTimer-=DT; if(cpuTimer<=0){ cpuThink(); cpuTimer=DIFFS[DIFF].think; }
 }
@@ -492,10 +529,22 @@ function render(){ resizeIfNeeded(); FRAME++;
     ctx.beginPath(); ctx.arc(sx(n.x),sy(n.y),S*3,0,7); ctx.fill(); }
   for(const o of (MAP.neutralObjectives||[])){ ctx.strokeStyle='rgba(200,212,224,'+(0.12+0.1*Math.sin(tt))+')';
     ctx.lineWidth=1; ctx.beginPath(); ctx.arc(sx(o.x),sy(o.y),S*6,0,7); ctx.stroke(); }
+  // order markers — collapsing ring where the command landed
+  for(const mk of markers){ const f=mk.life/mk.max, col=mk.kind==='attack'?'224,98,58':mk.kind==='harvest'?'255,210,77':'95,208,106';
+    ctx.strokeStyle='rgba('+col+','+(0.9*f)+')'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(sx(mk.x),sy(mk.y),(2+6*f)*SCALE*0.4,0,7); ctx.stroke(); mk.life--; }
+  markers=markers.filter(m=>m.life>0);
   // entities — an enemy stealth unit stays hidden until a 'me' detector reveals it
   for(const e of ents){ if(e.owner==='cpu' && e.u.stealth && !revealed(e,'me')) continue; drawEnt(e); }
-  // selection — animated corner brackets
+  // death bursts — expanding flash + fading ring
+  for(const d of fxDeaths){ const f=d.life/d.max, R=d.r*SCALE*(1+(1-f)*2.2);
+    ctx.fillStyle='rgba(255,214,140,'+(0.55*f)+')'; ctx.beginPath(); ctx.arc(sx(d.x),sy(d.y),R*0.55,0,7); ctx.fill();
+    ctx.strokeStyle='rgba('+d.col+','+(0.7*f)+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx(d.x),sy(d.y),R,0,7); ctx.stroke(); d.life--; }
+  fxDeaths=fxDeaths.filter(d=>d.life>0);
+  // selection — animated corner brackets + weapon-range ring
   for(const s of sel){ const cx=sx(s.x), cy=sy(s.y), rr=RAD(s.cls)*SCALE+4+Math.sin(tt*2)*0.8;
+    if(pdps(s.u)>0){ ctx.strokeStyle='rgba(143,208,255,.13)'; ctx.setLineDash([5,6]); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(cx,cy,(s.u.range||5)*SCALE,0,7); ctx.stroke(); ctx.setLineDash([]); }
     ctx.strokeStyle='#8fd0ff'; ctx.lineWidth=2; const a=rr*0.6;
     for(const [dx,dy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ ctx.beginPath();
       ctx.moveTo(cx+dx*rr, cy+dy*rr-dy*a); ctx.lineTo(cx+dx*rr, cy+dy*rr); ctx.lineTo(cx+dx*rr-dx*a, cy+dy*rr); ctx.stroke(); } }
@@ -506,6 +555,17 @@ function render(){ resizeIfNeeded(); FRAME++;
   if(!vignette){ vignette=ctx.createRadialGradient(cv.width/2,cv.height/2,Math.min(cv.width,cv.height)*0.35,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*0.72);
     vignette.addColorStop(0,'rgba(0,0,0,0)'); vignette.addColorStop(1,'rgba(0,0,0,.35)'); }
   ctx.fillStyle=vignette; ctx.fillRect(0,0,cv.width,cv.height);
+  // minimap — cached terrain thumbnail + unit dots + camera viewport; click to jump
+  if(!mmEl){ mmEl=document.getElementById('mm'); mmCtx=mmEl&&mmEl.getContext&&mmEl.getContext('2d'); }
+  if(mmCtx&&terrCv){ const MW=mmEl.width, MS=MW/W;
+    mmCtx.drawImage(terrCv,0,0,MW,MW);
+    for(const e of ents){ if(e.owner==='cpu'&&e.u.stealth&&!revealed(e,'me')) continue;
+      mmCtx.fillStyle=e.owner==='me'?'#8fd0ff':'#a8e07a';
+      const d=e.cls==='HQ'?7:3.5; mmCtx.fillRect(e.x*MS-d/2,e.y*MS-d/2,d,d); }
+    const vx0=Math.max(0,wx(0))*MS, vy0=Math.max(0,wy(0))*MS,
+          vx1=Math.min(W,wx(cv.width))*MS, vy1=Math.min(H,wy(cv.height))*MS;
+    mmCtx.strokeStyle='rgba(231,237,245,.75)'; mmCtx.lineWidth=2;
+    mmCtx.strokeRect(vx0,vy0,vx1-vx0,vy1-vy0); }
   // HUD
   document.getElementById('cr').textContent=Math.floor(credits.me);
   document.getElementById('cpucr').textContent=Math.floor(credits.cpu);
@@ -523,7 +583,7 @@ function render(){ resizeIfNeeded(); FRAME++;
   else qEl.textContent='Idle — pick a unit above.';
   renderBuild();
 }
-let lastW=0,lastH=0,FRAME=0;
+let lastW=0,lastH=0,FRAME=0,mmEl=null,mmCtx=null;
 function resizeIfNeeded(){ if(cv.clientWidth!==lastW||cv.clientHeight!==lastH){ resize(); lastW=cv.clientWidth; lastH=cv.clientHeight; } }
 // darken/lighten a hex color for cel shading
 function shade(hex,f){ const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
@@ -588,7 +648,7 @@ function drawEnt(e){ const base=e.owner==='me'?'#63a6e6':'#8bbf5a', dark=shade(b
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 // camera controls: wheel = zoom at cursor · WASD/arrows = pan · F = follow selection
-cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.offsetX, e.offsetY, e.deltaY<0?1.15:1/1.15); }, {passive:false});
+cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.offsetX*DPR, e.offsetY*DPR, e.deltaY<0?1.15:1/1.15); }, {passive:false});
 const PAN_KEYS={KeyW:[0,-1],KeyS:[0,1],KeyA:[-1,0],KeyD:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
 const held=new Set();
 function panFromKeys(){ panX=0; panY=0; for(const k of held){ const d=PAN_KEYS[k]; if(d){ panX+=d[0]; panY+=d[1]; } } }
@@ -599,9 +659,20 @@ addEventListener('keyup', e=>{ if(held.delete(e.code)) panFromKeys(); });
 function setHint(){ document.getElementById('q').textContent = `You: ${ME} (blue)   vs   CPU: ${CPU} (green) — destroy the enemy HQ`; }
 document.getElementById('diff').onchange = e => DIFF = e.target.value;
 document.getElementById('speed').onchange = e => BUILDMULT = SPEEDS[e.target.value];
-document.getElementById('pfac').onchange = e => { ME=e.target.value; newGame(); setHint(); };
-document.getElementById('cfac').onchange = e => { CPU=e.target.value; newGame(); setHint(); };
-document.getElementById('startbtn').onclick = () => { started=true; document.getElementById('start').style.display='none'; };
+function toStart(){ started=false; const s=document.getElementById('start'); if(s) s.style.display='flex'; }
+document.getElementById('pfac').onchange = e => { ME=e.target.value; newGame(); setHint(); toStart(); };
+document.getElementById('cfac').onchange = e => { CPU=e.target.value; newGame(); setHint(); toStart(); };
+document.getElementById('startbtn').onclick = () => { started=true; document.getElementById('start').style.display='none'; sfx('order'); };
+document.getElementById('againbtn').onclick = () => { newGame(); setHint(); toStart(); };   // options preserved — no reload
+document.getElementById('mute').onclick = e => { muted=!muted; e.target.textContent=muted?'🔇':'🔊'; };
+// minimap: click / drag moves the camera there (breaks follow)
+(function(){ const m=document.getElementById('mm'); if(!m||!m.addEventListener) return;
+  const nav=e=>{ const r=m.getBoundingClientRect(); if(!r.width) return;
+    CAM.x=(e.clientX-r.left)/r.width*W; CAM.y=(e.clientY-r.top)/r.height*H; followSel=false; clampCam(); };
+  m.addEventListener('mousedown',e=>{ e.preventDefault(); nav(e);
+    const mv=ev=>{ if(ev.buttons&1) nav(ev); }, up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); };
+    addEventListener('mousemove',mv); addEventListener('mouseup',up); });
+  m.addEventListener('contextmenu',e=>e.preventDefault()); })();
 newGame(); setHint(); resize(); requestAnimationFrame(loop);
 </script>
 </body>
