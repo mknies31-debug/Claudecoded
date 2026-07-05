@@ -32,7 +32,7 @@
 ---
 
 ## Measured-target gates (from [data/balance-targets.json](data/balance-targets.json))
-> Bands are **defined and script-checkable**; the measurement itself needs ranked telemetry (§45). All `[ ]` pending a live build.
+> Bands are **defined and script-checkable**; the measurement itself needs ranked telemetry (§45). All `[ ]` pending the shipped game — but **first pre-alpha instrumentation exists**: [`match-batch.mjs`](scripts/match-batch.mjs) runs seeded headless CPU-vs-CPU batches of the v1 engine against these bands (first run surfaced a Covenant tempo dominance — [design/21](design/21-engine-structure-review.md)).
 - [ ] Faction win rates within **48–52%**
 - [ ] Matchup win rates within **46–54%**
 - [ ] Spawn win rates within **49–51%**

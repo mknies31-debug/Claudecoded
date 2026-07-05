@@ -41,8 +41,27 @@ The single file reads top-to-bottom as ten layers, each a coherent system:
 
 ## Prioritized recommendations
 
-- **P0 — protect correctness, unlock the next gate:** (a) combat-math drift check across the three copies; (b) offscreen terrain cache; (c) match-batch telemetry harness (starts closing the §50 measured gates with real numbers).
+- **P0 — protect correctness, unlock the next gate: ✅ ALL DONE.**
+  (a) ~~combat-math drift check~~ → [`drift-check.mjs`](../scripts/drift-check.mjs), **1,274 checks, no drift** (49 units × 6 damage types × shield-break on/off × both apps vs `combat-core.mjs`);
+  (b) ~~offscreen terrain cache~~ → static terrain paints once into an offscreen layer (rebuilt on resize/`newGame`), per-frame render is a blit + animated accents (water shimmer, rich-ore pulse, relay ring) + entities; vignette gradient cached;
+  (c) ~~match-batch telemetry harness~~ → [`match-batch.mjs`](../scripts/match-batch.mjs), first results below.
 - **P1 — structure for growth:** split the source into `game/src/` parts (css / shell / engine) assembled by a `build-game.mjs` into the same single-file artifact; atomic session-state object; Play-again via `newGame()` preserving options; `HQ_STATS` into data.
 - **P2 — scale & polish:** spatial partitioning for `acquire`/`separate`; shared CPU scorer injection; control groups + explicit attack-move affordance.
 
-**Verdict:** the single-file constraint is doing its job (offline, zero-dep, testable) and the layering inside it is clean enough to survive growth — but the project's core discipline is "one source of truth, script-verified," and the engine currently violates it in exactly two places: duplicated combat math and duplicated CPU scoring. Closing those (P0a, P2b) makes the game as drift-proof as the rest of the system.
+**Verdict:** the single-file constraint is doing its job (offline, zero-dep, testable) and the layering inside it is clean enough to survive growth — but the project's core discipline is "one source of truth, script-verified," and the engine violated it in exactly two places: duplicated combat math (now guarded by the drift check) and duplicated CPU scoring (P2, still open).
+
+## First live-engine telemetry (match-batch, 36 matches, seeded)
+
+`node rts/scripts/match-batch.mjs 4` — 9 ordered faction pairs × 4, both sides driven by the identical `hard` policy, 15-min cap:
+
+| Measure | Result | Band |
+|---|---|---|
+| **Directorate** win rate | 44% (7/16) | ◻ 48–52 |
+| **Covenant** win rate | **100% (16/16)** | ◻ 48–52 |
+| **Array** win rate | **6% (1/16)** | ◻ 48–52 |
+| p1-side wins | 45% (mirror matchups 44%) | ~ 49–51, low N |
+| Match length | avg 8.5 min (4.0–14.3), 3 draws | 18–25 min band is full-game scope |
+
+**The finding — a tempo dimension the sims never measured.** Every certified sim compares **equal-cost armies**; the live game adds **time**: cheaper units mass sooner, and the `hard` policy commits at a fixed army *value* (2600), so the faction that reaches it first attacks first. Covenant's line is the cheapest in the game (Marauder 700 vs Vanguard 900 vs Aegis 1050; Raider 260) — it hits the commit threshold fastest and snowballs. Array is the mirror image: the most expensive roster, slowest to mass, 6% win rate. This is a **cost-curve → tempo** effect, invisible to equal-budget analysis and exactly what the harness exists to surface.
+
+**Honest caveats before anyone tunes:** N=4 per pair; both brains are the same simple value-threshold policy (a smarter defender punishes an early Covenant commit); shields/stealth micro is crude; and the §8 audit already cleared these costs *at equal budget* — so the defect may be in the **commit policy** (value-threshold favors cheap rosters) as much as in the prices. Recommended next step: rerun the batch with a time-based or income-relative commit rule before touching any unit cost. Flagged for design, not silently tuned (§49 discipline).
