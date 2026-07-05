@@ -11,6 +11,8 @@
     font:13px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
   #top{display:flex;align-items:center;gap:16px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
   #top b{font-size:15px} .stat{color:var(--dim)} .stat span{color:var(--ink);font-weight:700}
+  .ctl{color:var(--dim);font-size:12px;display:flex;align-items:center;gap:5px}
+  .ctl select{background:#222a35;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px;cursor:pointer}
   .credit{color:var(--gold);font-weight:800;font-size:15px}
   #wrap{display:flex;height:calc(100vh - 45px)}
   #stage{flex:1;position:relative;background:#0c1017}
@@ -36,6 +38,21 @@
   <span class="stat">Credits <span class="credit" id="cr">0</span></span>
   <span class="stat">Army <span id="army">0</span></span>
   <span class="stat">Ore <span id="ore">locked</span></span>
+  <label class="ctl">CPU
+    <select id="diff">
+      <option value="easy">Easy</option>
+      <option value="normal" selected>Normal</option>
+      <option value="hard">Hard</option>
+      <option value="expert">Expert</option>
+    </select>
+  </label>
+  <label class="ctl">Build
+    <select id="speed">
+      <option value="normal" selected>Normal</option>
+      <option value="fast">Fast</option>
+      <option value="instant">Instant</option>
+    </select>
+  </label>
   <span class="stat" style="margin-left:auto;color:var(--cpu)">CPU credits <span id="cpucr">0</span> · army <span id="cpuarmy">0</span></span>
 </div>
 <div id="wrap">
@@ -81,6 +98,18 @@ const WOODCR=8, ORECR=11;
 
 let ents=[], credits={me:1200,cpu:1200}, oreUnlocked={me:false,cpu:false}, over=null;
 let uid=1;
+// difficulty ties the CPU to the ai-policy easy→expert axis: worse comp, slower
+// reactions, later attacks, thinner economy at the low end — no stat cheats (§40).
+const DIFFS = {
+  easy:   { think:8, attackVal:3800, gather:2, ore:false, comp:'naive'  },
+  normal: { think:6, attackVal:3000, gather:3, ore:true,  comp:'top'    },
+  hard:   { think:5, attackVal:2600, gather:3, ore:true,  comp:'best'   },
+  expert: { think:4, attackVal:2100, gather:4, ore:true,  comp:'best'   },
+};
+let DIFF='normal';
+const SPEEDS = { normal:1, fast:0.4, instant:0.02 };  // build-time multiplier
+let BUILDMULT=1;
+const bt = u => Math.max(0.1,(u.build||20)*BUILDMULT);
 function spawn(owner, name, x, y){ const u=byName[name];
   const e={id:uid++, owner, u, name, x, y, hp:u.hp, maxHp:u.hp, cd:Math.random()*u.reload,
     order:'idle', tx:x, ty:y, tgt:null, node:null, cls:u.class}; ents.push(e); return e; }
@@ -119,7 +148,7 @@ function renderBuild(){ buildDiv.innerHTML='';
     b.onclick=()=>queueBuild('me',hqMe,name); buildDiv.appendChild(b); } }
 function queueBuild(owner,hq,name){ const u=byName[name]; if(credits[owner]<u.cost) return;
   if(u.tier>=2 && !oreUnlocked[owner]) return;
-  credits[owner]-=u.cost; hq.queue.push({name, left:(u.build||20)}); }
+  credits[owner]-=u.cost; hq.queue.push({name, left:bt(u)}); }
 
 // ---- selection & orders ----
 let sel=[], drag=null;
@@ -196,16 +225,18 @@ function updateEnt(e){
 // ---- CPU brain: build counters (ai-policy heuristic) + attack ----
 let cpuTimer=0, cpuAttack=false;
 function cpuThink(){
+  const d = DIFFS[DIFF];
   const myArmy = ents.filter(e=>e.owner==='me'&&pdps(e.u)>0);
   const cpuGath = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)<=0&&e.cls!=='HQ').length;
   const oreComing = oreUnlocked.cpu || hqCpu.queue.some(q=>q.name==='Scrap Hauler')
     || ents.some(e=>e.owner==='cpu'&&/scrap hauler/i.test(e.name));
-  // economy: reach 3 gatherers, then SAVE for the ore gatherer (tech gate) before
-  // spending on army — tryCpuBuild only fires when affordable, so this accumulates.
-  if(cpuGath<3){ tryCpuBuild('Timber Technical'); }
-  else if(!oreComing){ tryCpuBuild('Scrap Hauler'); }
+  // economy: reach the tier's gatherer target, then (if this tier techs) save for
+  // the ore gatherer before spending on army — tryCpuBuild only fires when affordable.
+  if(cpuGath<d.gather){ tryCpuBuild('Timber Technical'); }
+  else if(d.ore && !oreComing){ tryCpuBuild('Scrap Hauler'); }
+  else if(d.comp==='naive'){ tryCpuBuild('Raider Squad'); }   // easy: tier-1 spam only
   else {
-    // composition: score buildable combat units as counters to the player's army
+    // composition: score buildable+unlocked combat units as counters to the player's army
     const enemy = myArmy.length?myArmy:[{u:byName['Rifleman Squad']}];
     const cand = BUILDABLE[CPU].map(n=>byName[n]).filter(u=>pdps(u)>0);
     let best=null,bs=-1; for(const c of cand){ if(c.tier>=2&&!oreUnlocked.cpu) continue;
@@ -213,14 +244,14 @@ function cpuThink(){
       s/=Math.max(1,c.cost/400); if(s>bs){bs=s;best=c;} }
     if(best) tryCpuBuild(best.name);
   }
-  // attack when army value is enough
+  // attack once the army is worth committing (threshold scales with difficulty)
   const cpuArmy = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0);
   const val = cpuArmy.reduce((a,e)=>a+e.u.cost,0);
-  if(val>2600) cpuAttack=true; if(cpuArmy.length<3) cpuAttack=false;
+  if(val>d.attackVal) cpuAttack=true; if(cpuArmy.length<3) cpuAttack=false;
   if(cpuAttack){ for(const e of cpuArmy){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=hqMe.x; e.ty=hqMe.y; } } }
 }
 function tryCpuBuild(name){ const u=byName[name]; if(!u||credits.cpu<u.cost) return false;
-  if(u.tier>=2&&!oreUnlocked.cpu) return false; credits.cpu-=u.cost; hqCpu.queue.push({name,left:(u.build||20)}); return true; }
+  if(u.tier>=2&&!oreUnlocked.cpu) return false; credits.cpu-=u.cost; hqCpu.queue.push({name,left:bt(u)}); return true; }
 
 // ---- loop ----
 function endGame(winner){ if(over) return; over=winner;
@@ -230,7 +261,7 @@ function endGame(winner){ if(over) return; over=winner;
 
 function tick(){ if(over) return;
   for(const e of [...ents]) updateEnt(e);
-  cpuTimer-=DT; if(cpuTimer<=0){ cpuThink(); cpuTimer=5; }
+  cpuTimer-=DT; if(cpuTimer<=0){ cpuThink(); cpuTimer=DIFFS[DIFF].think; }
 }
 function loop(now){ acc+=Math.min(0.1,(now-last)/1000); last=now;
   while(acc>=DT){ tick(); acc-=DT; }
@@ -282,6 +313,8 @@ function drawEnt(e){ const col=e.owner==='me'?'#63a6e6':'#8bbf5a'; const r=RAD(e
     ctx.lineWidth=1.5; ctx.globalAlpha=e.fx.life/4; ctx.beginPath(); ctx.moveTo(sx(e.x),sy(e.y)); ctx.lineTo(sx(e.fx.x),sy(e.fx.y)); ctx.stroke(); ctx.globalAlpha=1; e.fx.life--; }
 }
 document.getElementById('q').textContent = `You: Directorate (blue)   vs   CPU: Covenant (green) — destroy the enemy HQ`;
+document.getElementById('diff').onchange = e => DIFF = e.target.value;
+document.getElementById('speed').onchange = e => BUILDMULT = SPEEDS[e.target.value];
 resize(); requestAnimationFrame(loop);
 </script>
 </body>

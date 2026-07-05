@@ -12,6 +12,8 @@ This is the runtime every §50 "requires a live build" gate was blocked on. It d
 - **Economy:** wood gatherers give the safe floor income; a **Mining Vehicle unlocks tier-2+** (the ore soft-tech-gate from `resources.json`, enforced live — tier-2/3 build buttons are locked until you have ore).
 - **Combat:** units auto-acquire in range and fire; damage is the sim's model (fraction removed = `pdps / effHP`), so armor types, splash (`aoe`), and **high-ground +15%** all matter. Range/first-strike/kiting emerge from real-time positioning.
 - **CPU:** an economy→tech→composition→attack policy — keeps gatherers, saves for the ore gatherer to reach tier-2, builds the units that best counter your army (same effHP scoring as the reference brain), and attacks when its army is big enough. **No stat cheats** (§40) — it plays the same units you do.
+- **Difficulty (Easy→Expert)** ties the CPU to the [`ai-policy`](../scripts/ai-policy.mjs) axis — it degrades *decisions*, never stats: Easy stays on tier-1 spam with a thin economy and attacks late; Expert runs a bigger economy, techs on time, builds best-response counters, and commits sooner. (Verified: at 150 s Easy is stuck on ~12 Raiders / no ore, Expert has teched and is building counters.)
+- **Build speed (Normal / Fast / Instant)** scales production time for quicker games (a full match resolves ~254 s → ~169 s at Instant).
 - **Win/lose** on HQ destruction.
 
 Verified headlessly (DOM/canvas shim): a full match runs to a **decisive result** — a passive player loses to the CPU in ~4 min — with the real economy, tech-gate, build queues, combat, and AI all live.
