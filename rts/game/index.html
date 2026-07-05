@@ -92,13 +92,13 @@
   <div id="stage">
     <canvas id="cv"></canvas>
     <div id="q"></div>
-    <div id="hint">Left-drag: select · Right-click: move / attack · Right-click a resource with a gatherer: harvest</div>
+    <div id="hint">Left-drag: select · Right-click: move / attack · Right-click a resource: harvest · Wheel: zoom · WASD: pan · F: follow selection</div>
     <div id="banner"><div id="bantext"></div><button onclick="location.reload()">Play again</button></div>
     <div id="start">
       <div class="startcard">
         <h1>Twin Ridge</h1>
         <p>Set your faction, the enemy faction, difficulty and speed in the bar above — then start. You command the <b style="color:var(--me)">blue</b> base; destroy the <b style="color:var(--cpu)">green</b> HQ to win.</p>
-        <p class="hintline">Left-drag to select · right-click to move / attack · right-click a resource with a gatherer to harvest.</p>
+        <p class="hintline">Left-drag to select · right-click to move / attack · right-click a resource with a gatherer to harvest.<br>Wheel to zoom · WASD to pan · <b>F</b> to make the camera follow your selection.</p>
         <button id="startbtn">▶ Start Game</button>
       </div>
     </div>
@@ -134,10 +134,23 @@ const effHP = (def, atkType, atk) => { if(atk&&atk.ignoreResist) return def.hp;
 // ---- world ----
 const W=MAP.size.w, H=MAP.size.h;
 const cv=document.getElementById('cv'); let ctx=cv.getContext('2d');
-let SCALE=6, OX=0, OY=0, terrDirty=true, vignette=null;
+let FIT=6, SCALE=6, OX=0, OY=0, terrDirty=true, vignette=null;
+// dynamic camera: world-space center + zoom over the base fit. z=1 is the
+// classic whole-map view; every system reads sx/sy/wx/wy, so the camera never
+// touches simulation code (and can never affect sim outcomes).
+const CAM={x:W/2, y:H/2, z:1};
+let followSel=false, panX=0, panY=0;
+function applyCam(){ SCALE=FIT*CAM.z; OX=cv.width/2-CAM.x*SCALE; OY=cv.height/2-CAM.y*SCALE; }
+function clampCam(){ CAM.z=Math.max(1,Math.min(5,CAM.z));
+  const vw=cv.width/(FIT*CAM.z), vh=cv.height/(FIT*CAM.z);   // view size in world units
+  CAM.x = vw>=W ? W/2 : Math.max(vw/2, Math.min(W-vw/2, CAM.x));
+  CAM.y = vh>=H ? H/2 : Math.max(vh/2, Math.min(H-vh/2, CAM.y));
+  applyCam(); }
+function zoomAt(px,py,f){ const ax=wx(px), ay=wy(py);        // world point under the cursor…
+  CAM.z=Math.max(1,Math.min(5,CAM.z*f)); applyCam();
+  CAM.x+=ax-wx(px); CAM.y+=ay-wy(py); clampCam(); }          // …stays under the cursor
 function resize(){ const r=cv.parentElement.getBoundingClientRect(); cv.width=r.width; cv.height=r.height;
-  SCALE=Math.min(cv.width/W, cv.height/H); OX=(cv.width-W*SCALE)/2; OY=(cv.height-H*SCALE)/2;
-  terrDirty=true; vignette=null; }
+  FIT=Math.min(cv.width/W, cv.height/H); clampCam(); vignette=null; }
 addEventListener('resize',resize);
 const sx=x=>OX+x*SCALE, sy=y=>OY+y*SCALE;
 const wx=px=>(px-OX)/SCALE, wy=py=>(py-OY)/SCALE;
@@ -404,10 +417,12 @@ const hash=n=>{ n=(n<<13)^n; return 1-((n*(n*n*15731+789221)+1376312589)&0x7ffff
 // resize / newGame (design/21 P0b) — per-frame render is a blit plus the
 // animated accents (water shimmer, rich-ore pulse, relay ring) and entities.
 let terrCv=null;
+const TERR_PX=20;   // cache resolution (px per world tile) — camera-independent
 function paintTerrain(){
   if(!terrCv) terrCv=document.createElement('canvas');
-  terrCv.width=cv.width; terrCv.height=cv.height;
-  const main=ctx; ctx=terrCv.getContext('2d');   // swap so every helper draws into the cache
+  terrCv.width=W*TERR_PX; terrCv.height=H*TERR_PX;
+  const main=ctx, oS=SCALE, oOX=OX, oOY=OY;
+  ctx=terrCv.getContext('2d'); SCALE=TERR_PX; OX=0; OY=0;   // paint in WORLD space through the same helpers
   const S=SCALE, gx0=OX, gy0=OY, gw=W*S, gh=H*S;
   // ground: soft vertical gradient + a faint tile weave
   let bg=ctx.createLinearGradient(0,gy0,0,gy0+gh); bg.addColorStop(0,'#243626'); bg.addColorStop(0.5,'#1c2b1f'); bg.addColorStop(1,'#16221a');
@@ -456,12 +471,18 @@ function paintTerrain(){
   for(const o of (MAP.neutralObjectives||[])){ const cx=sx(o.x), cy=sy(o.y);
     ctx.fillStyle='#0009'; ctx.fillRect(cx-S*0.9,cy-S*0.5,S*1.8,S*2.2);
     ctx.fillStyle='#aeb9c6'; ctx.fillRect(cx-S*0.7,cy-S*2.2,S*1.4,S*2); ctx.fillStyle='#5fd0e0'; ctx.beginPath(); ctx.arc(cx,cy-S*2.2,S*0.5,0,7); ctx.fill(); }
-  ctx=main;
+  ctx=main; SCALE=oS; OX=oOX; OY=oOY;
 }
-function render(){ resizeIfNeeded(); FRAME++; const S=SCALE, tt=FRAME*0.05;
+function render(){ resizeIfNeeded(); FRAME++;
+  // camera: keyboard pan (breaks follow) + smooth follow of the selection centroid
+  if(panX||panY){ followSel=false; const spd=1.6/CAM.z; CAM.x+=panX*spd; CAM.y+=panY*spd; clampCam(); }
+  if(followSel){ if(sel.length){ let mx=0,my=0; for(const s of sel){mx+=s.x;my+=s.y;}
+      CAM.x+=(mx/sel.length-CAM.x)*0.08; CAM.y+=(my/sel.length-CAM.y)*0.08; clampCam(); }
+    else followSel=false; }
+  const S=SCALE, tt=FRAME*0.05;
   if(terrDirty||!terrCv){ paintTerrain(); terrDirty=false; }
   ctx.clearRect(0,0,cv.width,cv.height);
-  ctx.drawImage(terrCv,0,0);
+  ctx.drawImage(terrCv, sx(0), sy(0), W*SCALE, H*SCALE);   // one scaled blit under any camera
   // animated terrain accents over the cached layer
   ctx.strokeStyle='rgba(200,230,255,.25)'; ctx.lineWidth=1.2;
   for(const b of MAP.barriers.filter(b=>b.type==='water')){ const x0=sx(b.from.x),y0=sy(b.from.y),x1=sx(b.to.x);
@@ -566,6 +587,15 @@ function drawEnt(e){ const base=e.owner==='me'?'#63a6e6':'#8bbf5a', dark=shade(b
     ctx.fillStyle=c; ctx.beginPath(); ctx.arc(sx(e.fx.x),sy(e.fx.y),2.5,0,7); ctx.fill(); ctx.globalAlpha=1; e.fx.life--; }
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+// camera controls: wheel = zoom at cursor · WASD/arrows = pan · F = follow selection
+cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.offsetX, e.offsetY, e.deltaY<0?1.15:1/1.15); }, {passive:false});
+const PAN_KEYS={KeyW:[0,-1],KeyS:[0,1],KeyA:[-1,0],KeyD:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+const held=new Set();
+function panFromKeys(){ panX=0; panY=0; for(const k of held){ const d=PAN_KEYS[k]; if(d){ panX+=d[0]; panY+=d[1]; } } }
+addEventListener('keydown', e=>{ if(e.target&&/SELECT|INPUT|TEXTAREA/.test(e.target.tagName||'')) return;
+  if(PAN_KEYS[e.code]){ held.add(e.code); panFromKeys(); e.preventDefault(); }
+  else if(e.code==='KeyF' && sel.length){ followSel=!followSel; } });
+addEventListener('keyup', e=>{ if(held.delete(e.code)) panFromKeys(); });
 function setHint(){ document.getElementById('q').textContent = `You: ${ME} (blue)   vs   CPU: ${CPU} (green) — destroy the enemy HQ`; }
 document.getElementById('diff').onchange = e => DIFF = e.target.value;
 document.getElementById('speed').onchange = e => BUILDMULT = SPEEDS[e.target.value];
