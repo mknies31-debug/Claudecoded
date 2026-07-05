@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RTS · Visual Style Guide</title>
+<style>
+  :root{
+    --ink:#0E1116; --bg:#12161C; --panel:#1B212B; --panel2:#232B37; --line:#313b49;
+    --text:#EAF0FF; --muted:#9AA7BB;
+    --dir:#2E6FB0; --dir-d:#1C3F6E; --dir-l:#63A6E6; --dir-body:#5A6B78; --dir-body-d:#3A4650; --dir-acc:#F5A623;
+    --cov:#5F8A3A; --cov-d:#3C5824; --cov-l:#9ED16A; --cov-body:#6B6152; --cov-body-d:#453E33; --cov-acc:#C15A22; --cov-stl:#3FB6A8;
+    --arr:#7A4FC0; --arr-d:#4A2E80; --arr-l:#B79BEE; --arr-body:#C7CEDE; --arr-body-d:#8A93A8; --arr-acc:#2AE0E0;
+    --ground:#7C8A54; --ground-d:#5E6B3F; --dirt:#8A7A52; --rock:#7B7466; --water:#3E86A0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(1200px 600px at 50% -10%, #1c2532 0%, var(--bg) 60%);
+      color:var(--text);font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 22px 80px}
+  header{text-align:center;margin-bottom:8px}
+  .kicker{font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--muted)}
+  h1{font-size:clamp(2rem,5vw,3.4rem);margin:.15em 0 .1em;letter-spacing:-.01em;
+     text-shadow:0 3px 0 var(--ink),0 4px 14px rgba(0,0,0,.5)}
+  .statement{max-width:620px;margin:6px auto 0;color:var(--muted);font-size:1.02rem}
+  .statement b{color:var(--text)}
+  h2{font-size:.8rem;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);
+     margin:44px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .pill .n{font-weight:800;color:var(--dir-l);font-size:.8rem;letter-spacing:.1em}
+  .pill h3{margin:2px 0 4px;font-size:1rem}
+  .pill p{margin:0;color:var(--muted);font-size:.86rem}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,#151b23 100%);
+        border:1px solid var(--line);border-radius:18px;overflow:hidden;position:relative}
+  .card .stage{height:210px;display:flex;align-items:center;justify-content:center;position:relative;
+        background:radial-gradient(120% 90% at 50% 20%, #222c39 0%, #10151c 100%)}
+  .card .stage svg{width:88%;height:88%;filter:drop-shadow(0 10px 10px rgba(0,0,0,.45))}
+  .card .body{padding:14px 16px 16px}
+  .fname{font-size:1.35rem;font-weight:800;letter-spacing:.01em;margin:0;display:flex;align-items:center;gap:10px}
+  .tag{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:999px;
+       background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+  .role{color:var(--muted);font-size:.82rem;margin:.2em 0 12px}
+  .sw{display:flex;gap:6px;flex-wrap:wrap}
+  .sw span{width:26px;height:26px;border-radius:7px;border:2px solid rgba(0,0,0,.35);
+     box-shadow:inset 0 2px 3px rgba(255,255,255,.15)}
+  .accentbar{height:5px;width:100%}
+  .env{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+  .env div{height:70px;display:flex;align-items:flex-end;justify-content:center;font-size:.66rem;color:rgba(0,0,0,.55);
+     font-weight:700;letter-spacing:.06em;padding-bottom:6px}
+  .ui{display:flex;gap:14px;flex-wrap:wrap;align-items:stretch}
+  .cmdbar{flex:1;min-width:280px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:10px;align-items:center}
+  .portrait{width:64px;height:64px;border-radius:12px;border:2px solid var(--dir);background:radial-gradient(circle at 40% 30%,#2b3644,#141a22);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+  .hpbar{height:9px;border-radius:5px;background:#2a3340;overflow:hidden;border:1px solid #000}
+  .hpbar i{display:block;height:100%;background:linear-gradient(90deg,#57d06b,#3aa64f)}
+  .btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+  .btns button{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;
+     width:40px;height:40px;font-size:1.1rem;cursor:pointer;box-shadow:0 2px 0 #0a0e13}
+  .btns button:active{transform:translateY(1px)}
+  .resbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;justify-content:center;min-width:150px}
+  .res{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1.05rem}
+  .res small{color:var(--muted);font-weight:600;font-size:.7rem}
+  .dmg{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .dmg .stage{height:150px}
+  .dmg figcaption{text-align:center;color:var(--muted);font-size:.8rem;margin-top:8px}
+  .dmg figure{margin:0}
+  .foot{margin-top:50px;color:var(--muted);font-size:.8rem;text-align:center;border-top:1px solid var(--line);padding-top:18px}
+  code{background:#0c1015;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.8em;color:var(--dir-l)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">RTS · Visual Style Guide</div>
+    <h1>Slightly Cartoon, but Detailed</h1>
+    <p class="statement"><b>Cartoon silhouette, detailed surface.</b> Bold, chunky, instantly-readable shapes at RTS zoom — with the detail carried in the surface (panel lines, rivets, glow) rather than a busy outline. Readable like a cartoon, finished like a model kit.</p>
+  </header>
+
+  <h2>Style Pillars</h2>
+  <div class="pillars">
+    <div class="pill"><div class="n">01</div><h3>Silhouette first</h3><p>Identifiable by outline alone at full zoom-out. Distinct per role and faction.</p></div>
+    <div class="pill"><div class="n">02</div><h3>Clean outlines</h3><p>~2–3px dark outline (<code>#0E1116</code>) on major forms; thinner interior lines.</p></div>
+    <div class="pill"><div class="n">03</div><h3>Cel + one detail pass</h3><p>Body tone · shadow · highlight · soft occlusion, then panel lines &amp; rivets.</p></div>
+    <div class="pill"><div class="n">04</div><h3>Chunky proportions</h3><p>Oversized cannons, heavy treads and feet — pushed past realism, still grounded.</p></div>
+    <div class="pill"><div class="n">05</div><h3>20% team color</h3><p>Faction color covers ~a fifth of the unit; the rest is a desaturated body.</p></div>
+    <div class="pill"><div class="n">06</div><h3>Always grounded</h3><p>A soft contact shadow under every unit for readability on any terrain.</p></div>
+  </div>
+
+  <h2>Factions &amp; Roster</h2>
+  <div class="cards">
+
+    <!-- DIRECTORATE -->
+    <div class="card">
+      <div class="stage">
+        <svg viewBox="0 0 260 170" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="130" cy="150" rx="92" ry="15" fill="#000" opacity=".38"/>
+          <!-- treads -->
+          <g stroke="#0E1116" stroke-width="3">
+            <rect x="30" y="112" width="200" height="30" rx="12" fill="#2b333c"/>
+            <rect x="30" y="112" width="200" height="14" rx="7" fill="#3a4650" stroke="none"/>
+          </g>
+          <g stroke="#0E1116" stroke-width="1.4" opacity=".7">
+            <line x1="46" y1="112" x2="46" y2="142"/><line x1="66" y1="112" x2="66" y2="142"/>
+            <line x1="86" y1="112" x2="86" y2="142"/><line x1="106" y1="112" x2="106" y2="142"/>
+            <line x1="126" y1="112" x2="126" y2="142"/><line x1="146" y1="112" x2="146" y2="142"/>
+            <line x1="166" y1="112" x2="166" y2="142"/><line x1="186" y1="112" x2="186" y2="142"/>
+            <line x1="206" y1="112" x2="206" y2="142"/>
+          </g>
+          <!-- hull -->
+          <path d="M40 112 L52 84 L212 84 L224 112 Z" fill="#5A6B78" stroke="#0E1116" stroke-width="3"/>
+          <path d="M40 112 L52 84 L132 84 L120 112 Z" fill="#3A4650" opacity=".55" stroke="none"/>
+          <path d="M52 84 L212 84 L208 90 L56 90 Z" fill="#7f8f9c" opacity=".8" stroke="none"/>
+          <!-- amber hazard stripe -->
+          <rect x="60" y="100" width="140" height="6" fill="#F5A623" stroke="#0E1116" stroke-width="1.5"/>
+          <!-- rivets -->
+          <g fill="#2a323b">
+            <circle cx="60" cy="96" r="2"/><circle cx="200" cy="96" r="2"/>
+            <circle cx="60" cy="110" r="2"/><circle cx="200" cy="110" r="2"/>
+          </g>
+          <!-- turret -->
+          <rect x="92" y="52" width="84" height="40" rx="12" fill="#5A6B78" stroke="#0E1116" stroke-width="3"/>
+          <rect x="92" y="52" width="84" height="16" rx="8" fill="#7f8f9c" opacity=".85" stroke="none"/>
+          <rect x="98" y="70" width="72" height="7" fill="#2E6FB0" stroke="#0E1116" stroke-width="1.5"/>
+          <circle cx="118" cy="63" r="4.5" fill="#F5A623" stroke="#0E1116" stroke-width="2"/>
+          <!-- barrel -->
+          <rect x="168" y="60" width="76" height="12" rx="4" fill="#454f59" stroke="#0E1116" stroke-width="3"/>
+          <rect x="236" y="57" width="12" height="18" rx="3" fill="#3A4650" stroke="#0E1116" stroke-width="3"/>
+        </svg>
+      </div>
+      <div class="accentbar" style="background:var(--dir)"></div>
+      <div class="body">
+        <p class="fname" style="color:var(--dir-l)">Directorate <span class="tag">Easy</span></p>
+        <p class="role">Vanguard MBT — durable, symmetrical, riveted steel. Industrial &amp; orderly.</p>
+        <div class="sw">
+          <span style="background:var(--dir)" title="team #2E6FB0"></span>
+          <span style="background:var(--dir-d)" title="team dark"></span>
+          <span style="background:var(--dir-body)" title="body"></span>
+          <span style="background:var(--dir-body-d)" title="body dark"></span>
+          <span style="background:var(--dir-acc)" title="hazard amber"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COVENANT -->
+    <div class="card">
+      <div class="stage">
+        <svg viewBox="0 0 260 170" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="130" cy="150" rx="94" ry="15" fill="#000" opacity=".38"/>
+          <!-- wheels -->
+          <g stroke="#0E1116" stroke-width="3">
+            <circle cx="72" cy="132" r="26" fill="#2c2a24"/><circle cx="188" cy="132" r="26" fill="#2c2a24"/>
+          </g>
+          <circle cx="72" cy="132" r="12" fill="#6B6152" stroke="#0E1116" stroke-width="2.5"/>
+          <circle cx="188" cy="132" r="12" fill="#6B6152" stroke="#0E1116" stroke-width="2.5"/>
+          <g stroke="#453E33" stroke-width="2.5">
+            <line x1="72" y1="120" x2="72" y2="144"/><line x1="60" y1="132" x2="84" y2="132"/>
+            <line x1="188" y1="120" x2="188" y2="144"/><line x1="176" y1="132" x2="200" y2="132"/>
+          </g>
+          <!-- salvaged plating body -->
+          <path d="M46 128 L58 96 L176 92 L214 116 L210 130 Z" fill="#6B6152" stroke="#0E1116" stroke-width="3"/>
+          <path d="M46 128 L58 96 L120 94 L112 128 Z" fill="#453E33" opacity=".5" stroke="none"/>
+          <!-- rust accents -->
+          <path d="M120 94 L176 92 L214 116 L150 118 Z" fill="#C15A22" opacity=".9" stroke="#0E1116" stroke-width="1.5"/>
+          <!-- exposed roll cage -->
+          <g fill="none" stroke="#3C3830" stroke-width="4" stroke-linecap="round">
+            <path d="M70 96 L84 66 L150 64 L168 92"/>
+            <line x1="108" y1="65" x2="112" y2="94"/>
+          </g>
+          <g fill="none" stroke="#8a8070" stroke-width="1.6" stroke-linecap="round">
+            <path d="M70 96 L84 66 L150 64 L168 92"/>
+          </g>
+          <!-- mounted gun with stealth glow -->
+          <rect x="150" y="58" width="70" height="9" rx="4" fill="#3C3830" stroke="#0E1116" stroke-width="3"/>
+          <circle cx="150" cy="62" r="8" fill="#5F8A3A" stroke="#0E1116" stroke-width="2.5"/>
+          <circle cx="216" cy="62" r="6" fill="#3FB6A8" stroke="#0E1116" stroke-width="2"/>
+          <circle cx="216" cy="62" r="11" fill="#3FB6A8" opacity=".25" stroke="none"/>
+        </svg>
+      </div>
+      <div class="accentbar" style="background:var(--cov)"></div>
+      <div class="body">
+        <p class="fname" style="color:var(--cov-l)">Covenant <span class="tag">Hard</span></p>
+        <p class="role">Raider buggy — asymmetric, exposed frame, improvised salvage. Fast &amp; sneaky.</p>
+        <div class="sw">
+          <span style="background:var(--cov)" title="team #5F8A3A"></span>
+          <span style="background:var(--cov-body)" title="body"></span>
+          <span style="background:var(--cov-body-d)" title="body dark"></span>
+          <span style="background:var(--cov-acc)" title="rust orange"></span>
+          <span style="background:var(--cov-stl)" title="stealth teal"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARRAY -->
+    <div class="card">
+      <div class="stage">
+        <svg viewBox="0 0 260 170" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="130" cy="152" rx="70" ry="12" fill="#000" opacity=".33"/>
+          <ellipse cx="130" cy="150" rx="70" ry="14" fill="#2AE0E0" opacity=".14"/>
+          <!-- legs -->
+          <g stroke="#0E1116" stroke-width="3" fill="#8A93A8">
+            <path d="M104 108 L92 140 L104 146 L114 112 Z"/>
+            <path d="M156 108 L168 140 L156 146 L146 112 Z"/>
+          </g>
+          <!-- body plating -->
+          <path d="M92 66 Q130 44 168 66 L160 112 Q130 124 100 112 Z" fill="#C7CEDE" stroke="#0E1116" stroke-width="3"/>
+          <path d="M92 66 Q130 44 168 66 L163 78 Q130 60 97 78 Z" fill="#eef2fa" opacity=".8" stroke="none"/>
+          <path d="M100 112 Q130 124 160 112 L157 102 Q130 114 103 102 Z" fill="#8A93A8" opacity=".7" stroke="none"/>
+          <!-- violet team panels -->
+          <path d="M100 112 L96 90 L120 96 L118 116 Z" fill="#7A4FC0" stroke="#0E1116" stroke-width="2"/>
+          <path d="M160 112 L164 90 L140 96 L142 116 Z" fill="#7A4FC0" stroke="#0E1116" stroke-width="2"/>
+          <!-- energy core + shield ring -->
+          <circle cx="130" cy="90" r="30" fill="none" stroke="#2AE0E0" stroke-width="2" opacity=".5" stroke-dasharray="5 7"/>
+          <circle cx="130" cy="90" r="15" fill="#2AE0E0" opacity=".22"/>
+          <circle cx="130" cy="90" r="9" fill="#5AF0FF" stroke="#0E1116" stroke-width="2.5"/>
+          <circle cx="130" cy="90" r="3.5" fill="#EAF7FF"/>
+          <!-- sensor spikes -->
+          <g stroke="#0E1116" stroke-width="3" stroke-linecap="round">
+            <line x1="112" y1="54" x2="106" y2="40"/><line x1="148" y1="54" x2="154" y2="40"/>
+          </g>
+          <circle cx="106" cy="40" r="3.5" fill="#2AE0E0" stroke="#0E1116" stroke-width="1.5"/>
+          <circle cx="154" cy="40" r="3.5" fill="#2AE0E0" stroke="#0E1116" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="accentbar" style="background:var(--arr)"></div>
+      <div class="body">
+        <p class="fname" style="color:var(--arr-l)">Array <span class="tag">Hard</span></p>
+        <p class="role">Warden walker — smooth white plating, glowing core, shield ring. High-tech &amp; energetic.</p>
+        <div class="sw">
+          <span style="background:var(--arr)" title="team #7A4FC0"></span>
+          <span style="background:var(--arr-d)" title="team dark"></span>
+          <span style="background:var(--arr-body)" title="body"></span>
+          <span style="background:var(--arr-body-d)" title="body dark"></span>
+          <span style="background:var(--arr-acc)" title="cyan energy"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Environment Palette</h2>
+  <div class="env">
+    <div style="background:var(--ground)">GRASS</div>
+    <div style="background:var(--ground-d)">SCRUB</div>
+    <div style="background:var(--dirt)">DIRT</div>
+    <div style="background:var(--rock)">ROCK</div>
+    <div style="background:var(--water);color:rgba(255,255,255,.8)">WATER</div>
+  </div>
+
+  <h2>UI Chrome</h2>
+  <div class="ui">
+    <div class="cmdbar">
+      <div class="portrait">🛡️</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Vanguard MBT</strong><span class="tag" style="border-color:var(--dir);color:var(--dir-l)">Vet ★</span>
+        </div>
+        <div style="color:var(--muted);font-size:.78rem;margin:3px 0 6px">Directorate · 3 cmd · 900 cr</div>
+        <div class="hpbar"><i style="width:72%"></i></div>
+        <div class="btns">
+          <button title="Move">➤</button><button title="Attack">⚔️</button>
+          <button title="Hold">✋</button><button title="Repair">🔧</button>
+        </div>
+      </div>
+    </div>
+    <div class="resbox">
+      <div class="res">💰 <span>2,140</span> <small>credits</small></div>
+      <div class="res">⚙️ <span>28 / 40</span> <small>command</small></div>
+      <div class="res">⚡ <span>+180</span> <small>power</small></div>
+    </div>
+  </div>
+
+  <h2>Damage States</h2>
+  <div class="dmg">
+    <figure>
+      <div class="stage">
+        <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="104" rx="66" ry="10" fill="#000" opacity=".35"/>
+          <rect x="30" y="78" width="140" height="20" rx="9" fill="#2b333c" stroke="#0E1116" stroke-width="2.5"/>
+          <path d="M40 78 L50 56 L156 56 L166 78 Z" fill="#5A6B78" stroke="#0E1116" stroke-width="2.5"/>
+          <rect x="80" y="34" width="60" height="26" rx="9" fill="#5A6B78" stroke="#0E1116" stroke-width="2.5"/>
+          <rect x="86" y="49" width="48" height="5" fill="#2E6FB0"/>
+          <rect x="134" y="42" width="52" height="8" rx="3" fill="#454f59" stroke="#0E1116" stroke-width="2.5"/>
+        </svg>
+      </div><figcaption>Healthy — full color</figcaption>
+    </figure>
+    <figure>
+      <div class="stage">
+        <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="104" rx="66" ry="10" fill="#000" opacity=".35"/>
+          <rect x="30" y="78" width="140" height="20" rx="9" fill="#2b333c" stroke="#0E1116" stroke-width="2.5"/>
+          <path d="M40 78 L50 56 L156 56 L166 78 Z" fill="#5A6B78" stroke="#0E1116" stroke-width="2.5"/>
+          <rect x="80" y="34" width="60" height="26" rx="9" fill="#5A6B78" stroke="#0E1116" stroke-width="2.5"/>
+          <rect x="86" y="49" width="48" height="5" fill="#2E6FB0"/>
+          <rect x="134" y="42" width="52" height="8" rx="3" fill="#454f59" stroke="#0E1116" stroke-width="2.5"/>
+          <path d="M96 44 q6 -6 12 0 q-3 5 -12 0Z" fill="#1a1a1a" opacity=".8"/>
+          <ellipse cx="60" cy="70" rx="9" ry="6" fill="#1a1a1a" opacity=".55"/>
+          <path d="M118 34 q4 -14 12 -22 q-2 12 4 18" fill="none" stroke="#8a8f96" stroke-width="4" stroke-linecap="round" opacity=".5"/>
+        </svg>
+      </div><figcaption>Damaged — scorch + smoke wisp</figcaption>
+    </figure>
+    <figure>
+      <div class="stage">
+        <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="104" rx="66" ry="10" fill="#000" opacity=".35"/>
+          <rect x="30" y="78" width="140" height="20" rx="9" fill="#23282e" stroke="#0E1116" stroke-width="2.5"/>
+          <path d="M40 78 L50 56 L156 56 L166 78 Z" fill="#49555f" stroke="#0E1116" stroke-width="2.5"/>
+          <path d="M92 56 L108 56 L104 66 L112 66 L96 78 L100 68 L92 68Z" fill="#7a7f86"/>
+          <rect x="80" y="34" width="60" height="26" rx="9" fill="#49555f" stroke="#0E1116" stroke-width="2.5"/>
+          <rect x="86" y="49" width="48" height="5" fill="#274d70"/>
+          <rect x="134" y="42" width="52" height="8" rx="3" fill="#3a424b" stroke="#0E1116" stroke-width="2.5"/>
+          <path d="M104 40 q-8 -10 0 -18 q8 8 3 16 q10 -6 6 -16 q10 12 -2 24Z" fill="#F5A623"/>
+          <path d="M106 40 q-4 -6 0 -12 q5 6 1 12Z" fill="#ffe08a"/>
+          <path d="M120 34 q6 -18 16 -28 q-3 16 6 22" fill="none" stroke="#6b7178" stroke-width="6" stroke-linecap="round" opacity=".6"/>
+          <g fill="#ffd36b"><circle cx="70" cy="60" r="2"/><circle cx="150" cy="66" r="1.6"/><circle cx="60" cy="72" r="1.4"/></g>
+        </svg>
+      </div><figcaption>Critical — fire, exposed metal, sparks</figcaption>
+    </figure>
+  </div>
+
+  <div class="foot">
+    Style: <b>“slightly cartoon, but detailed.”</b> Spec: <code>rts/design/10-art-direction.md</code> · Palettes &amp; rules: <code>rts/data/art.json</code>.<br>
+    All art here is inline SVG placeholder in the target style — units are illustrative, not final models.
+  </div>
+</div>
+</body>
+</html>

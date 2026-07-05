@@ -1,0 +1,40 @@
+{
+  "_source": "Resolution of open question #1 (faction power budget). See design/11-budget-options.md.",
+  "_problemsFound": {
+    "totals": "Original category values sum to 143 (Directorate), 150 (Covenant), 149 (Array) — not 100 and not equal.",
+    "soleLeadRule": "'No faction #1 in more than 3 categories' is impossible with 10 categories and 3 factions (3*3=9 < 10) unless categories tie. Original already breaks it: Directorate and Covenant each lead 4."
+  },
+  "categories10": ["economyReliability","expansionSpeed","earlyPressure","directCombat","mobility","durability","stealthDeception","battlefieldControl","technologyScaling","easeOfUse"],
+  "optionA_equal100_tiesAllowed": {
+    "rule": "Every faction totals exactly 100. Sole-#1 capped at 3 by design; contested categories tie on purpose.",
+    "contested": ["economyReliability (Directorate≈Array)", "mobility (Covenant≈Array)"],
+    "budgets": {
+      "Directorate": {"economyReliability":12,"expansionSpeed":7,"earlyPressure":9,"directCombat":14,"mobility":7,"durability":15,"stealthDeception":3,"battlefieldControl":8,"technologyScaling":12,"easeOfUse":13},
+      "Covenant":    {"economyReliability":10,"expansionSpeed":14,"earlyPressure":13,"directCombat":8,"mobility":13,"durability":6,"stealthDeception":14,"battlefieldControl":9,"technologyScaling":7,"easeOfUse":6},
+      "Array":       {"economyReliability":12,"expansionSpeed":8,"earlyPressure":7,"directCombat":10,"mobility":13,"durability":10,"stealthDeception":7,"battlefieldControl":14,"technologyScaling":13,"easeOfUse":6}
+    },
+    "solePeaks": {"Directorate":["directCombat","durability","easeOfUse"],"Covenant":["expansionSpeed","earlyPressure","stealthDeception"],"Array":["battlefieldControl","technologyScaling"]}
+  },
+  "optionB_eightCategories_equal150": {
+    "rule": "Drop to 8 power categories so the sole-#1 rule is actually satisfiable (8 <= 9). Fold expansion into economy; move ease-of-use out of the power budget into a separate complexity tag. Every faction totals 150.",
+    "categories8": ["economy","earlyPressure","directCombat","durability","mobility","stealthDeception","battlefieldControl","technologyScaling"],
+    "complexityTag": {"Directorate":"easy","Covenant":"hard","Array":"hard"},
+    "budgets": {
+      "Directorate": {"economy":24,"earlyPressure":16,"directCombat":26,"durability":30,"mobility":13,"stealthDeception":6,"battlefieldControl":17,"technologyScaling":18},
+      "Covenant":    {"economy":22,"earlyPressure":24,"directCombat":14,"durability":10,"mobility":25,"stealthDeception":26,"battlefieldControl":18,"technologyScaling":11},
+      "Array":       {"economy":18,"earlyPressure":12,"directCombat":20,"durability":20,"mobility":20,"stealthDeception":14,"battlefieldControl":26,"technologyScaling":20}
+    },
+    "solePeaks": {"Directorate":["economy","directCombat","durability"],"Covenant":["earlyPressure","mobility","stealthDeception"],"Array":["battlefieldControl","technologyScaling"]}
+  },
+  "optionC_difficultyWeighted": {
+    "rule": "Keep 10 categories and unequal totals ON PURPOSE: total power scales inversely with ease of use — easier factions carry less raw budget, harder factions more (skill payoff). Two contested ties fix the sole-#1 rule.",
+    "totals": {"Directorate":141,"Covenant":150,"Array":155},
+    "contested": ["economyReliability (Directorate≈Array)", "mobility (Covenant≈Array)"],
+    "budgets": {
+      "Directorate": {"economyReliability":16,"expansionSpeed":11,"earlyPressure":13,"directCombat":19,"mobility":11,"durability":20,"stealthDeception":5,"battlefieldControl":11,"technologyScaling":17,"easeOfUse":18},
+      "Covenant":    {"economyReliability":15,"expansionSpeed":19,"earlyPressure":19,"directCombat":12,"mobility":19,"durability":9,"stealthDeception":20,"battlefieldControl":14,"technologyScaling":13,"easeOfUse":10},
+      "Array":       {"economyReliability":16,"expansionSpeed":14,"earlyPressure":10,"directCombat":17,"mobility":19,"durability":16,"stealthDeception":12,"battlefieldControl":20,"technologyScaling":20,"easeOfUse":11}
+    },
+    "solePeaks": {"Directorate":["directCombat","durability","easeOfUse"],"Covenant":["expansionSpeed","earlyPressure","stealthDeception"],"Array":["battlefieldControl","technologyScaling"]}
+  }
+}

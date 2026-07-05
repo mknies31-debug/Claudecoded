@@ -1,0 +1,26 @@
+{
+  "_source": "Armor-archetype resistance table (fix for matchup findings §15-A). Resist % by armor archetype × damage type; negative = takes bonus damage. Applied to units by scripts/apply-armor.mjs (class → archetype).",
+  "classToArchetype": {
+    "Basic infantry": "infantry",
+    "Specialist infantry": "infantry",
+    "Scout vehicle": "light",
+    "Advanced vehicle": "medium",
+    "Main battle tank": "heavy",
+    "Artillery": "artillery",
+    "Aircraft": "aircraft",
+    "Structure": "structure",
+    "Epic unit": "epic"
+  },
+  "table": {
+    "infantry":  {"smallArms": 0,  "explosive": -25, "antiArmor": 65, "energy": 0,  "air": 0,   "siege": -25},
+    "light":     {"smallArms": 20, "explosive": -10, "antiArmor": -5, "energy": 0,  "air": 0,   "siege": -10},
+    "medium":    {"smallArms": 40, "explosive": 5,   "antiArmor": -20,"energy": 0,  "air": 0,   "siege": -10},
+    "heavy":     {"smallArms": 55, "explosive": 20,  "antiArmor": -30,"energy": 0,  "air": 0,   "siege": -10},
+    "artillery": {"smallArms": 10, "explosive": -10, "antiArmor": -15,"energy": 0,  "air": 0,   "siege": 0},
+    "aircraft":  {"smallArms": 55, "explosive": 0,   "antiArmor": 0,  "energy": 10, "air": 0,   "siege": 45},
+    "structure": {"smallArms": 55, "explosive": 25,  "antiArmor": 20, "energy": 0,  "air": -10, "siege": -25},
+    "epic":      {"smallArms": 60, "explosive": 35,  "antiArmor": 5,  "energy": 0,  "air": -10, "siege": 20}
+  },
+  "arrayShieldEnergyBonus": 25,
+  "shieldBreakUnits": ["Disruptor", "Nullifier"]
+}

@@ -1,0 +1,46 @@
+{
+  "_source": "Art direction — 'slightly cartoon but detailed'. See design/10-art-direction.md.",
+  "styleName": "Stylized Realism (cartoon silhouette, detailed surface)",
+  "pillars": [
+    "Bold, readable silhouettes first — RTS units must be identifiable at 100% zoom-out",
+    "Clean dark outlines (2-3px equivalent) around major forms, thinner interior lines",
+    "Cel shading: 1 body tone + 1 shadow + 1 highlight, plus a soft occlusion pass",
+    "Detail lives in the surface, not the silhouette: panel lines, rivets, vents, wear",
+    "Slightly exaggerated proportions (chunky treads, oversized cannons, heavy feet)",
+    "Saturated faction 'team color' on ~20% of the unit; desaturated body for the rest",
+    "Grounded contact shadow under every unit for readability on any terrain"
+  ],
+  "rendering": {
+    "outline": "#0E1116",
+    "outlineWidthPx": [2, 3],
+    "cel": { "tones": 1, "shadow": 1, "highlight": 1, "occlusion": "soft multiply" },
+    "teamColorCoverage": 0.20,
+    "contactShadow": "radial, ~35% opacity, offset down"
+  },
+  "factionPalettes": {
+    "Directorate": {
+      "identity": "Industrial, durable, orderly",
+      "team": "#2E6FB0", "teamDark": "#1C3F6E", "teamLight": "#63A6E6",
+      "body": "#5A6B78", "bodyDark": "#3A4650", "accent": "#F5A623", "hazard": "#F2C744"
+    },
+    "Covenant": {
+      "identity": "Scrappy, fast, stealthy, salvage",
+      "team": "#5F8A3A", "teamDark": "#3C5824", "teamLight": "#9ED16A",
+      "body": "#6B6152", "bodyDark": "#453E33", "accent": "#C15A22", "stealth": "#3FB6A8"
+    },
+    "Array": {
+      "identity": "High-tech, energy, shields",
+      "team": "#7A4FC0", "teamDark": "#4A2E80", "teamLight": "#B79BEE",
+      "body": "#C7CEDE", "bodyDark": "#8A93A8", "accent": "#2AE0E0", "energy": "#5AF0FF"
+    }
+  },
+  "environment": {
+    "ground": "#7C8A54", "groundDark": "#5E6B3F", "dirt": "#8A7A52",
+    "rock": "#7B7466", "water": "#3E86A0", "ui": "#12161C", "uiPanel": "#1B212B", "uiInk": "#EAF0FF"
+  },
+  "damageStates": {
+    "healthy": "full color",
+    "damaged": "scorch decals + thin smoke wisp",
+    "critical": "exposed metal, fire flicker, heavier smoke, sparks"
+  }
+}

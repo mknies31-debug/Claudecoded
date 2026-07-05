@@ -1,0 +1,46 @@
+{
+  "_source": "Balance Bible §17 (Tech), §20 (Build times), §21 (Command capacity), §29 (Disables), §35 (Superweapon), §28 (Stealth reveal)",
+  "techWindows": {
+    "_note": "Players may reach earlier through economic sacrifice (smaller army, less map control, more vulnerable).",
+    "tier1": "start",
+    "tier2": { "minMin": 3.5, "maxMin": 6.0 },
+    "tier3": { "minMin": 7.0, "maxMin": 11.0 },
+    "epicUnit": { "minMin": 11.0, "maxMin": 18.0 },
+    "superweaponActivation": { "minMin": 14.0, "maxMin": 22.0 }
+  },
+  "buildTimesSec": {
+    "basicInfantry":     [5, 10],
+    "specialistInfantry":[10, 18],
+    "scoutVehicle":      [12, 20],
+    "mainBattleTank":    [22, 35],
+    "artillery":         [28, 45],
+    "aircraft":          [25, 45],
+    "advancedVehicle":   [35, 55],
+    "epicUnit":          [90, 180]
+  },
+  "commandCapacity": {
+    "_note": "Soft cap: going over slows production rather than destroying units.",
+    "costs": { "infantrySquad": 1, "lightVehicle": 2, "tank": 3, "artillery": 4, "aircraft": 4, "epicUnit": 15 }
+  },
+  "disableDurationsSec": {
+    "slow":           [3, 8],
+    "weaponDisable":  [2, 5],
+    "movementDisable":[1.5, 4],
+    "fullEMP":        [2, 5],
+    "visionReduction":[5, 12],
+    "mindControl":    "requires channel or strict limit",
+    "diminishingReturns": { "first": 1.0, "secondWithin10s": 0.5, "third": 0.25, "then": "temporary immunity" }
+  },
+  "stealth": {
+    "revealAfterFiringSec": [2, 4],
+    "revealTriggers": ["firing", "capturing", "taking significant damage", "entering detection radius", "certain abilities"],
+    "requiredDetection": ["tier1 mobile detector", "defensive detector", "tier2 advanced detector", "temporary support-power detection"]
+  },
+  "superweapon": {
+    "constructionEarliestTier": 3,
+    "initialActivationMin": [4, 7],
+    "rechargeMin": [5, 8],
+    "requiredProperties": ["visible facility", "discoverable countdown", "global warning near launch", "clear target indicator", "evacuation opportunity", "long rebuild and recharge", "countered by destroying the facility"],
+    "damageStandard": "May destroy light structures at center, severely damage production, damage heavy buildings, force movement, disable an area. Must NOT erase a full healthy HQ complex in one strike."
+  }
+}

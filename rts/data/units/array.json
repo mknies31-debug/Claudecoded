@@ -1,0 +1,711 @@
+{
+  "_source": "Array roster v1. Fields match rts/lab schema; validated by scripts/validate-roster.mjs.",
+  "faction": "Array",
+  "identity": "Technology & battlefield-control specialist: shields, energy weapons, immobilization fields, mobile infrastructure, expensive specialists. Scales hard into late game. Weak early pressure, economy reliability, replacement speed, and simplicity.",
+  "buildTechNote": "Fewer, pricier, slower-built units than the other factions (weak replacement, small early army), but high tech ceiling and strong control (§4 budget peaks: battlefieldControl, technologyScaling). Shields are represented as elevated resist + an EMP weakness (EMP drops the shield).",
+  "units": [
+    {
+      "name": "Sentinel Trooper",
+      "tier": 1,
+      "class": "Basic infantry",
+      "role": "shielded anti-infantry",
+      "cost": 260,
+      "build": 9,
+      "pop": 1,
+      "hp": 240,
+      "resist": {
+        "smallArms": 0,
+        "explosive": -25,
+        "antiArmor": 65,
+        "energy": 25,
+        "air": 0,
+        "siege": -25
+      },
+      "dmg": 16,
+      "proj": 2,
+      "reload": 1.1,
+      "acc": 74,
+      "general": false,
+      "weaknesses": [
+        "EMP (drops shield)",
+        "area damage"
+      ],
+      "answers": [
+        "massInfantry",
+        "harassment"
+      ],
+      "counteredBy": [
+        "EMP + follow-up",
+        "area damage"
+      ],
+      "notes": "Personal shield gives resist until EMP'd; pricier and sturdier than a Raider Squad.",
+      "dmgType": "energy",
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 1,
+      "mobile": true
+    },
+    {
+      "name": "Disruptor",
+      "tier": 2,
+      "class": "Specialist infantry",
+      "role": "shield-break anti-armor",
+      "cost": 450,
+      "build": 16,
+      "pop": 1,
+      "hp": 200,
+      "resist": {
+        "smallArms": 0,
+        "explosive": -25,
+        "antiArmor": 65,
+        "energy": 25,
+        "air": 0,
+        "siege": -25
+      },
+      "dmg": 95,
+      "proj": 1,
+      "reload": 1.7,
+      "acc": 82,
+      "general": false,
+      "weaknesses": [
+        "anti-tank infantry",
+        "area damage",
+        "dispersed light infantry"
+      ],
+      "answers": [
+        "heavyArmor",
+        "epicUnits",
+        "superweapons"
+      ],
+      "counteredBy": [
+        "area damage",
+        "focused fire"
+      ],
+      "notes": "Shield-disrupting energy beam — the Array's heavy-armor answer (§5); shreds shields and armor alike.",
+      "dmgType": "energy",
+      "armor": "infantry",
+      "ignoreResist": true,
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
+    },
+    {
+      "name": "Architect",
+      "tier": 1,
+      "class": "Specialist infantry",
+      "role": "infrastructure / capture / repair",
+      "cost": 320,
+      "build": 15,
+      "pop": 1,
+      "hp": 170,
+      "resist": {
+        "smallArms": 0,
+        "explosive": -25,
+        "antiArmor": 65,
+        "energy": 0,
+        "air": 0,
+        "siege": -25
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "focused fire",
+        "dispersed light infantry"
+      ],
+      "answers": [
+        "economicExpansion",
+        "staticDefenses"
+      ],
+      "counteredBy": [
+        "any direct fire"
+      ],
+      "notes": "Deploys/relocates mobile infrastructure (§4 identity), captures neutral tech, repairs; unarmed.",
+      "dmgType": "none",
+      "armor": "infantry",
+      "range": 4,
+      "aoe": 0,
+      "mobile": true
+    },
+    {
+      "name": "Probe Skimmer",
+      "tier": 1,
+      "class": "Scout vehicle",
+      "role": "recon + mobile detector",
+      "cost": 380,
+      "build": 16,
+      "pop": 1,
+      "hp": 280,
+      "resist": {
+        "smallArms": 20,
+        "explosive": -10,
+        "antiArmor": -5,
+        "energy": 25,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 10,
+      "proj": 1,
+      "reload": 1.2,
+      "acc": 72,
+      "general": false,
+      "weaknesses": [
+        "anti-air",
+        "focused fire",
+        "EMP"
+      ],
+      "answers": [
+        "stealth",
+        "harassment",
+        "artillery"
+      ],
+      "counteredBy": [
+        "AA",
+        "anything heavier"
+      ],
+      "notes": "Hover recon + Tier-1 detector (§28); flanks enemy artillery.",
+      "dmgType": "smallArms",
+      "armor": "light",
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
+    },
+    {
+      "name": "Extractor Core",
+      "tier": 1,
+      "class": "Structure",
+      "role": "economy (stationary extractor)",
+      "cost": 1600,
+      "build": 25,
+      "pop": 0,
+      "hp": 1300,
+      "resist": {
+        "smallArms": 55,
+        "explosive": 25,
+        "antiArmor": 20,
+        "energy": 0,
+        "air": -10,
+        "siege": -25
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "harassment",
+        "immobile",
+        "cannot flee"
+      ],
+      "answers": [
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "sustained raids",
+        "siege"
+      ],
+      "notes": "Array's economy is a stationary core rather than mobile harvesters — reliable output, but a fixed, exposed target (§11).",
+      "dmgType": "none",
+      "armor": "structure",
+      "range": 6,
+      "aoe": 0,
+      "mobile": false
+    },
+    {
+      "name": "Aegis Tank",
+      "tier": 2,
+      "class": "Main battle tank",
+      "role": "general-purpose shielded armor",
+      "cost": 1050,
+      "build": 32,
+      "pop": 3,
+      "hp": 1500,
+      "resist": {
+        "smallArms": 55,
+        "explosive": 20,
+        "antiArmor": -30,
+        "energy": 25,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 115,
+      "proj": 1,
+      "reload": 1.9,
+      "acc": 84,
+      "general": true,
+      "weaknesses": [
+        "EMP (drops shield)",
+        "anti-armor specialists",
+        "aircraft",
+        "slow replacement"
+      ],
+      "answers": [
+        "heavyArmor",
+        "staticDefenses",
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "EMP + anti-armor",
+        "aircraft"
+      ],
+      "notes": "Front shield makes it tanky until EMP'd; pricier and slower to replace than other MBTs (§9, 4 weaknesses).",
+      "dmgType": "energy",
+      "armor": "heavy",
+      "range": 5,
+      "aoe": 1,
+      "mobile": true
+    },
+    {
+      "name": "Arc Walker",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "anti-air / anti-infantry",
+      "cost": 780,
+      "build": 40,
+      "pop": 2,
+      "hp": 640,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 25,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 34,
+      "proj": 2,
+      "reload": 0.9,
+      "acc": 78,
+      "general": false,
+      "weaknesses": [
+        "heavy armor",
+        "artillery",
+        "EMP"
+      ],
+      "answers": [
+        "aircraft",
+        "massInfantry"
+      ],
+      "counteredBy": [
+        "tanks",
+        "artillery"
+      ],
+      "notes": "Chain-arc energy; hits air and clumped infantry, folds to armor.",
+      "dmgType": "energy",
+      "armor": "medium",
+      "range": 7,
+      "aoe": 3,
+      "mobile": true
+    },
+    {
+      "name": "Warp Snare",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "immobilization control",
+      "cost": 850,
+      "build": 42,
+      "pop": 3,
+      "hp": 560,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "focused fire",
+        "EMP",
+        "aircraft"
+      ],
+      "answers": [
+        "heavyArmor",
+        "epicUnits",
+        "economicExpansion"
+      ],
+      "counteredBy": [
+        "kill it first",
+        "spread out"
+      ],
+      "notes": "Projects a movement-disable field (§29: 1.5–4 s, diminishing returns) — pins armor and epics for focus fire; no weapon of its own.",
+      "dmgType": "none",
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
+    },
+    {
+      "name": "Nullifier",
+      "tier": 3,
+      "class": "Advanced vehicle",
+      "role": "anti-armor specialist",
+      "cost": 1300,
+      "build": 48,
+      "pop": 4,
+      "hp": 850,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 25,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 300,
+      "proj": 1,
+      "reload": 2.8,
+      "acc": 88,
+      "general": false,
+      "weaknesses": [
+        "infantry",
+        "aircraft",
+        "expensive",
+        "slow to field"
+      ],
+      "answers": [
+        "heavyArmor",
+        "epicUnits"
+      ],
+      "counteredBy": [
+        "infantry swarm",
+        "aircraft"
+      ],
+      "notes": "Expensive shield-disrupting lance; the Array's dedicated armor/epic killer (§5).",
+      "dmgType": "energy",
+      "armor": "medium",
+      "ignoreResist": true,
+      "range": 7,
+      "aoe": 1,
+      "mobile": true
+    },
+    {
+      "name": "Prism Artillery",
+      "tier": 2,
+      "class": "Artillery",
+      "role": "energy siege",
+      "cost": 1200,
+      "build": 44,
+      "pop": 4,
+      "hp": 520,
+      "resist": {
+        "smallArms": 10,
+        "explosive": -10,
+        "antiArmor": -15,
+        "energy": 25,
+        "air": 0,
+        "siege": 0
+      },
+      "dmg": 190,
+      "proj": 1,
+      "reload": 5,
+      "acc": 62,
+      "general": false,
+      "weaknesses": [
+        "minimum-range",
+        "low durability",
+        "deployment time",
+        "flanking"
+      ],
+      "answers": [
+        "staticDefenses",
+        "massInfantry",
+        "artillery"
+      ],
+      "counteredBy": [
+        "fast flankers",
+        "aircraft"
+      ],
+      "notes": "Beam siege; dominates static targets, collapses when reached (§22).",
+      "dmgType": "siege",
+      "armor": "artillery",
+      "range": 9,
+      "aoe": 6,
+      "mobile": true
+    },
+    {
+      "name": "Restorer Drone",
+      "tier": 2,
+      "class": "Advanced vehicle",
+      "role": "shield / repair support",
+      "cost": 650,
+      "build": 36,
+      "pop": 2,
+      "hp": 520,
+      "resist": {
+        "smallArms": 40,
+        "explosive": 5,
+        "antiArmor": -20,
+        "energy": 0,
+        "air": 0,
+        "siege": -10
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "focused fire",
+        "EMP",
+        "aircraft"
+      ],
+      "answers": [
+        "epicUnits"
+      ],
+      "counteredBy": [
+        "focus fire"
+      ],
+      "notes": "Recharges nearby shields and repairs (§31); vulnerable support piece.",
+      "dmgType": "none",
+      "armor": "medium",
+      "range": 5,
+      "aoe": 0,
+      "mobile": true
+    },
+    {
+      "name": "Phase Interceptor",
+      "tier": 3,
+      "class": "Aircraft",
+      "role": "energy anti-air / precision",
+      "cost": 1250,
+      "build": 40,
+      "pop": 4,
+      "hp": 680,
+      "resist": {
+        "smallArms": 55,
+        "explosive": 0,
+        "antiArmor": 0,
+        "energy": 35,
+        "air": 0,
+        "siege": 45
+      },
+      "dmg": 145,
+      "proj": 1,
+      "reload": 2.4,
+      "acc": 90,
+      "general": false,
+      "weaknesses": [
+        "dedicated AA",
+        "ammunition",
+        "expensive replacement"
+      ],
+      "answers": [
+        "aircraft",
+        "artillery",
+        "superweapons",
+        "staticDefenses"
+      ],
+      "counteredBy": [
+        "AA",
+        "flak"
+      ],
+      "notes": "Airfield-bound (§27); precise energy strikes, and raids superweapon facilities.",
+      "dmgType": "air",
+      "armor": "aircraft",
+      "range": 8,
+      "aoe": 3,
+      "mobile": true
+    },
+    {
+      "name": "Pylon Turret",
+      "tier": 1,
+      "class": "Structure",
+      "role": "static energy defense + detector",
+      "cost": 750,
+      "build": 22,
+      "pop": 0,
+      "hp": 1150,
+      "resist": {
+        "smallArms": 55,
+        "explosive": 25,
+        "antiArmor": 20,
+        "energy": 25,
+        "air": -10,
+        "siege": -25
+      },
+      "dmg": 85,
+      "proj": 1,
+      "reload": 1.9,
+      "acc": 90,
+      "general": false,
+      "weaknesses": [
+        "artillery",
+        "cannot move",
+        "can be bypassed"
+      ],
+      "answers": [
+        "harassment",
+        "heavyArmor",
+        "aircraft",
+        "stealth"
+      ],
+      "counteredBy": [
+        "artillery",
+        "flanking"
+      ],
+      "notes": "Structure (§30) that also serves as a defensive detector (§28).",
+      "dmgType": "energy",
+      "armor": "structure",
+      "range": 6,
+      "aoe": 1,
+      "mobile": false
+    },
+    {
+      "name": "Arbiter",
+      "tier": 3,
+      "class": "Epic unit",
+      "role": "epic + shield-aura support",
+      "cost": 8000,
+      "build": 165,
+      "pop": 15,
+      "hp": 8000,
+      "resist": {
+        "smallArms": 60,
+        "explosive": 35,
+        "antiArmor": 5,
+        "energy": 25,
+        "air": -10,
+        "siege": 20
+      },
+      "dmg": 280,
+      "proj": 1,
+      "reload": 2.9,
+      "acc": 82,
+      "general": false,
+      "weaknesses": [
+        "EMP susceptibility (drops shield)",
+        "no air defense",
+        "vulnerable rear",
+        "slow movement",
+        "visible construction"
+      ],
+      "answers": [
+        "heavyArmor",
+        "staticDefenses",
+        "massInfantry"
+      ],
+      "counteredBy": [
+        "EMP then focus",
+        "aircraft",
+        "correct counters"
+      ],
+      "notes": "Slowest/priciest epic; projects a shield aura over nearby units (§34). Devastating supported, helpless once EMP'd and flanked.",
+      "dmgType": "energy",
+      "armor": "epic",
+      "range": 6,
+      "aoe": 1,
+      "mobile": true
+    },
+    {
+      "name": "Stasis Lance",
+      "tier": 3,
+      "class": "Epic unit",
+      "role": "superweapon (area stasis + energy)",
+      "cost": 5200,
+      "build": 130,
+      "pop": 0,
+      "hp": 2600,
+      "resist": {
+        "smallArms": 60,
+        "explosive": 35,
+        "antiArmor": 5,
+        "energy": 0,
+        "air": -10,
+        "siege": 20
+      },
+      "dmg": 0,
+      "proj": 0,
+      "reload": 0,
+      "acc": 0,
+      "general": false,
+      "weaknesses": [
+        "visible construction",
+        "destroyable facility",
+        "long recharge"
+      ],
+      "answers": [
+        "staticDefenses",
+        "superweapons",
+        "massInfantry"
+      ],
+      "counteredBy": [
+        "destroy the facility",
+        "evacuate",
+        "spread out"
+      ],
+      "notes": "§35: freezes and damages a marked zone (control, not deletion) — global warning, evacuation window, 4–7 min first charge, 5–8 min recharge.",
+      "dmgType": "none",
+      "armor": "epic",
+      "range": 6,
+      "aoe": 0,
+      "mobile": true
+    }
+  ],
+  "threatCoverage": {
+    "massInfantry": [
+      "Sentinel Trooper",
+      "Arc Walker",
+      "Prism Artillery",
+      "Pylon Turret",
+      "Arbiter"
+    ],
+    "heavyArmor": [
+      "Disruptor",
+      "Nullifier",
+      "Warp Snare",
+      "Aegis Tank",
+      "Prism Artillery"
+    ],
+    "aircraft": [
+      "Arc Walker",
+      "Phase Interceptor",
+      "Pylon Turret"
+    ],
+    "artillery": [
+      "Probe Skimmer",
+      "Prism Artillery",
+      "Phase Interceptor"
+    ],
+    "stealth": [
+      "Probe Skimmer",
+      "Pylon Turret"
+    ],
+    "staticDefenses": [
+      "Prism Artillery",
+      "Phase Interceptor",
+      "Arbiter",
+      "Stasis Lance"
+    ],
+    "harassment": [
+      "Sentinel Trooper",
+      "Probe Skimmer",
+      "Pylon Turret",
+      "Warp Snare"
+    ],
+    "epicUnits": [
+      "Nullifier",
+      "Warp Snare (immobilize + focus)",
+      "Disruptor",
+      "Prism Artillery"
+    ],
+    "superweapons": [
+      "Phase Interceptor (raid facility)",
+      "Disruptor (infiltrate)",
+      "Stasis Lance"
+    ],
+    "economicExpansion": [
+      "Aegis Tank",
+      "Phase Interceptor",
+      "Warp Snare",
+      "Pylon Turret"
+    ]
+  }
+}

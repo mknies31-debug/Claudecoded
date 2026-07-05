@@ -1,0 +1,46 @@
+{
+  "_source": "Balance Bible §11 (Economy model), §12 (Lead limits), §13 (Harassment), §14 (Comebacks)",
+  "startingConditions": {
+    "_rule": "Economically equivalent, not identical. First two minutes of potential income within ~5% across factions.",
+    "examples": ["one large harvester", "two smaller collectors", "one stationary extractor core"]
+  },
+  "payback": {
+    "harvesterSec": [100, 140],
+    "harvesterExample": { "costCredits": 1400, "incomePerSec": 12, "paybackSec": 117 },
+    "refineryPlusHarvesterSec": [150, 220],
+    "_note": "Too-fast payback creates exponential growth; too-slow discourages expansion."
+  },
+  "incomeCurveCreditsPerMin": {
+    "0-3min":  [500, 700],
+    "3-7min":  [800, 1200],
+    "7-12min": [1200, 1800],
+    "12min+":  [1500, 2400],
+    "_note": "Numbers depend on unit pricing; requirement is controlled escalation."
+  },
+  "leadBehavior": {
+    "incomeLead10pct": "small strategic advantage",
+    "incomeLead20pct": "significant advantage",
+    "incomeLead35pct": "strongly favored",
+    "incomeLead50pct": "usually wins unless severe mistakes",
+    "avoid": "small income lead instantly financing more economy with no vulnerability"
+  },
+  "expansionSafeguards": ["upfront investment", "travel time", "map control", "defense", "delayed payback", "visible construction"],
+  "harassment": {
+    "harvesterReactionWindowSec": [8, 15],
+    "defenderShouldGet": ["chance to retreat", "chance to bring defenders", "chance to repair"],
+    "rule": "A fully unprotected harvester should still die if the raid is not answered.",
+    "successLevels": {
+      "minor": ["lost mining time", "repairs", "forced defensive production"],
+      "moderate": ["destroys one collector", "attackers escape with some losses"],
+      "major": ["destroys multiple collectors", "damages refinery", "preserves most attackers"]
+    },
+    "majorRequires": ["good scouting", "good control", "opponent error", "significant army investment"]
+  },
+  "comebacks": {
+    "approvedTools": ["selling structures", "salvaging wreckage", "capturing neutral income", "ambushing reinforcements", "destroying advanced technology", "interrupting superweapon construction", "using terrain defensively", "rebuilding with cheap basic units"],
+    "emergencyRecoveryAfterPrimaryRefineryLoss": {
+      "grants": "a discounted replacement collector",
+      "notGrants": ["free resources", "automatic income", "combat bonus"]
+    }
+  }
+}
