@@ -32,6 +32,10 @@ const body = JSON.stringify(samples, null, 2);
 let html = fs.readFileSync(LAB, 'utf8');
 const re = /\/\*ROSTER_START\*\/[\s\S]*?\/\*ROSTER_END\*\//;
 if (!re.test(html)) { console.error('markers /*ROSTER_START*/ … /*ROSTER_END*/ not found in', LAB); process.exit(1); }
-html = html.replace(re, `/*ROSTER_START*/${body}/*ROSTER_END*/`);
+// Use a replacer FUNCTION, not a string: a string replacement makes
+// String.replace interpret `$&`, `` $` ``, `$'`, `$n`, `$$` inside `body`
+// (e.g. a unit field containing `$`), which would splice document text into
+// the output and corrupt the file. A function's return value is inserted verbatim.
+html = html.replace(re, () => `/*ROSTER_START*/${body}/*ROSTER_END*/`);
 fs.writeFileSync(LAB, html);
 console.log(`Injected ${count} units (+ blank template) into ${LAB}.`);
