@@ -36,6 +36,8 @@ Everything quantitative is JSON so a balance tool, simulator, or prototype can r
 - [`data/factions.json`](data/factions.json) — 100-pt power budget per faction, counter-coverage matrix
 - [`data/timings.json`](data/timings.json) — tech windows, build times, command capacity, disable durations, stealth reveal, superweapon timing
 - [`data/economy.json`](data/economy.json) — payback periods, income curve, lead limits, harassment windows, comeback tools
+- [`data/resources.json`](data/resources.json) — the two harvestable resources: wood (cheap/fast/renewable floor) vs ore (valuable/slow/finite ceiling)
+- [`data/terrain.json`](data/terrain.json) — high-ground modifiers (offensive + defensive), natural barriers, choke widths, per-map terrain tests
 - [`data/combat-rules.json`](data/combat-rules.json) — unit-value/DPS formulas, anti-spam rule, armor facing, terrain, upgrades, veterancy, repair, air, epic, hero, support, RNG rules
 
 ## The three factions
