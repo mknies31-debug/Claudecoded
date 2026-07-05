@@ -133,10 +133,11 @@ const effHP = (def, atkType, atk) => { if(atk&&atk.ignoreResist) return def.hp;
 
 // ---- world ----
 const W=MAP.size.w, H=MAP.size.h;
-const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-let SCALE=6, OX=0, OY=0;
+const cv=document.getElementById('cv'); let ctx=cv.getContext('2d');
+let SCALE=6, OX=0, OY=0, terrDirty=true, vignette=null;
 function resize(){ const r=cv.parentElement.getBoundingClientRect(); cv.width=r.width; cv.height=r.height;
-  SCALE=Math.min(cv.width/W, cv.height/H); OX=(cv.width-W*SCALE)/2; OY=(cv.height-H*SCALE)/2; }
+  SCALE=Math.min(cv.width/W, cv.height/H); OX=(cv.width-W*SCALE)/2; OY=(cv.height-H*SCALE)/2;
+  terrDirty=true; vignette=null; }
 addEventListener('resize',resize);
 const sx=x=>OX+x*SCALE, sy=y=>OY+y*SCALE;
 const wx=px=>(px-OX)/SCALE, wy=py=>(py-OY)/SCALE;
@@ -243,6 +244,7 @@ function newGame(){
   startGatherers('cpu', hqCpu, GATH[CPU].wood);
   const ban=document.getElementById('banner'); if(ban) ban.style.display='none';
   const bh=document.getElementById('buildhead'); if(bh) bh.textContent='Build · '+ME;
+  terrDirty=true;                              // repaint the cached terrain layer
   updateSel(); renderBuild();
 }
 
@@ -398,9 +400,15 @@ function loop(now){ acc+=Math.min(0.1,(now-last)/1000); last=now;
 
 // ---- render ----
 const hash=n=>{ n=(n<<13)^n; return 1-((n*(n*n*15731+789221)+1376312589)&0x7fffffff)/1073741824; };
-function render(){ resizeIfNeeded(); FRAME++; const S=SCALE, tt=FRAME*0.05;
-  ctx.clearRect(0,0,cv.width,cv.height);
-  const gx0=OX, gy0=OY, gw=W*S, gh=H*S;
+// Static terrain is painted ONCE into an offscreen layer, rebuilt only on
+// resize / newGame (design/21 P0b) — per-frame render is a blit plus the
+// animated accents (water shimmer, rich-ore pulse, relay ring) and entities.
+let terrCv=null;
+function paintTerrain(){
+  if(!terrCv) terrCv=document.createElement('canvas');
+  terrCv.width=cv.width; terrCv.height=cv.height;
+  const main=ctx; ctx=terrCv.getContext('2d');   // swap so every helper draws into the cache
+  const S=SCALE, gx0=OX, gy0=OY, gw=W*S, gh=H*S;
   // ground: soft vertical gradient + a faint tile weave
   let bg=ctx.createLinearGradient(0,gy0,0,gy0+gh); bg.addColorStop(0,'#243626'); bg.addColorStop(0.5,'#1c2b1f'); bg.addColorStop(1,'#16221a');
   ctx.fillStyle=bg; ctx.fillRect(gx0,gy0,gw,gh);
@@ -420,13 +428,11 @@ function render(){ resizeIfNeeded(); FRAME++; const S=SCALE, tt=FRAME*0.05;
     let hg=ctx.createRadialGradient(cx-rr*0.3,cy-rr*0.4,rr*0.2,cx,cy,rr); hg.addColorStop(0,'#48633f'); hg.addColorStop(1,'#324a30');
     ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(cx,cy,rr,0,7); ctx.fill();
     ctx.strokeStyle='rgba(150,190,130,.35)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(cx,cy,rr-2,Math.PI*1.05,Math.PI*1.95); ctx.stroke(); }
-  // water — gradient pool with a shoreline and a moving shimmer
+  // water — static pool body + shoreline (shimmer is per-frame)
   for(const b of MAP.barriers.filter(b=>b.type==='water')){ const x0=sx(b.from.x),y0=sy(b.from.y),x1=sx(b.to.x),y1=sy(b.to.y);
     ctx.lineCap='round'; ctx.strokeStyle='#3d6d96'; ctx.lineWidth=S*4.2; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
     let wg=ctx.createLinearGradient(0,y0-S*2,0,y0+S*2); wg.addColorStop(0,'#3f7fae'); wg.addColorStop(1,'#204d70');
-    ctx.strokeStyle=wg; ctx.lineWidth=S*3.4; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-    ctx.strokeStyle='rgba(200,230,255,.25)'; ctx.lineWidth=1.2;
-    for(let k=0;k<3;k++){ const yy=y0-S+k*S+Math.sin(tt+k)*1.5; ctx.beginPath(); ctx.moveTo(x0+S,yy); ctx.lineTo(x1-S,yy); ctx.stroke(); } }
+    ctx.strokeStyle=wg; ctx.lineWidth=S*3.4; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); }
   // cliffs — dark rock wall with a beveled top edge
   for(const b of MAP.barriers.filter(b=>b.type==='cliff')){ const x0=sx(b.from.x),y0=sy(b.from.y),x1=sx(b.to.x),y1=sy(b.to.y);
     ctx.lineCap='round'; ctx.strokeStyle='#0a0d11'; ctx.lineWidth=S*1.5; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
@@ -437,21 +443,34 @@ function render(){ resizeIfNeeded(); FRAME++; const S=SCALE, tt=FRAME*0.05;
       ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(tx,ty+s*0.5,s*0.9,s*0.5,0,0,7); ctx.fill();
       ctx.fillStyle='#274d2b'; ctx.beginPath(); ctx.arc(tx,ty,s,0,7); ctx.fill();
       ctx.fillStyle='#3a6e3e'; ctx.beginPath(); ctx.arc(tx-s*0.25,ty-s*0.3,s*0.55,0,7); ctx.fill(); } }
-  // resource nodes — log stacks (wood) / crystal clusters (ore)
+  // resource nodes — log stacks (wood) / crystal clusters (ore); rich pulse is per-frame
   for(const n of nodes){ const cx=sx(n.x), cy=sy(n.y), rich=n.type==='ore'&&n.owner==='contested';
     ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(cx,cy+S*1.2,S*2,S*1,0,0,7); ctx.fill();
     if(n.type==='wood'){ for(let k=0;k<3;k++){ ctx.fillStyle=k%2?'#9c6528':'#b5772e'; ctx.beginPath();
         ctx.ellipse(cx+(k-1)*S*1.1,cy,S*0.7,S*1.4,0,0,7); ctx.fill(); ctx.fillStyle='#c98a3f'; ctx.beginPath(); ctx.arc(cx+(k-1)*S*1.1,cy-S*1.1,S*0.5,0,7); ctx.fill(); } }
-    else { const pulse=rich?0.6+0.4*Math.sin(tt*1.5):1; ctx.fillStyle='rgba('+(rich?'255,210,80':'224,165,42')+','+(0.25*pulse)+')';
-      ctx.beginPath(); ctx.arc(cx,cy,S*3,0,7); ctx.fill();
+    else { if(!rich){ ctx.fillStyle='rgba(224,165,42,.25)'; ctx.beginPath(); ctx.arc(cx,cy,S*3,0,7); ctx.fill(); }
       for(let k=0;k<5;k++){ const a=k*1.257, d=S*1.1; ctx.save(); ctx.translate(cx+Math.cos(a)*d*0.5,cy+Math.sin(a)*d*0.5); ctx.rotate(a);
         ctx.fillStyle=rich?'#ffd24d':'#e0a52a'; ctx.beginPath(); ctx.moveTo(0,-S*1.5); ctx.lineTo(S*0.7,S*0.6); ctx.lineTo(-S*0.7,S*0.6); ctx.closePath(); ctx.fill();
         ctx.fillStyle='rgba(255,255,255,.4)'; ctx.beginPath(); ctx.moveTo(0,-S*1.5); ctx.lineTo(S*0.25,0); ctx.lineTo(-S*0.15,0); ctx.closePath(); ctx.fill(); ctx.restore(); } } }
-  // neutral relay towers
+  // relay tower bodies (breathing detection ring is per-frame)
   for(const o of (MAP.neutralObjectives||[])){ const cx=sx(o.x), cy=sy(o.y);
-    ctx.strokeStyle='rgba(200,212,224,'+(0.12+0.1*Math.sin(tt))+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,S*6,0,7); ctx.stroke();
     ctx.fillStyle='#0009'; ctx.fillRect(cx-S*0.9,cy-S*0.5,S*1.8,S*2.2);
     ctx.fillStyle='#aeb9c6'; ctx.fillRect(cx-S*0.7,cy-S*2.2,S*1.4,S*2); ctx.fillStyle='#5fd0e0'; ctx.beginPath(); ctx.arc(cx,cy-S*2.2,S*0.5,0,7); ctx.fill(); }
+  ctx=main;
+}
+function render(){ resizeIfNeeded(); FRAME++; const S=SCALE, tt=FRAME*0.05;
+  if(terrDirty||!terrCv){ paintTerrain(); terrDirty=false; }
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(terrCv,0,0);
+  // animated terrain accents over the cached layer
+  ctx.strokeStyle='rgba(200,230,255,.25)'; ctx.lineWidth=1.2;
+  for(const b of MAP.barriers.filter(b=>b.type==='water')){ const x0=sx(b.from.x),y0=sy(b.from.y),x1=sx(b.to.x);
+    for(let k=0;k<3;k++){ const yy=y0-S+k*S+Math.sin(tt+k)*1.5; ctx.beginPath(); ctx.moveTo(x0+S,yy); ctx.lineTo(x1-S,yy); ctx.stroke(); } }
+  for(const n of nodes){ if(n.type!=='ore'||n.owner!=='contested') continue;
+    const pulse=0.6+0.4*Math.sin(tt*1.5); ctx.fillStyle='rgba(255,210,80,'+(0.25*pulse)+')';
+    ctx.beginPath(); ctx.arc(sx(n.x),sy(n.y),S*3,0,7); ctx.fill(); }
+  for(const o of (MAP.neutralObjectives||[])){ ctx.strokeStyle='rgba(200,212,224,'+(0.12+0.1*Math.sin(tt))+')';
+    ctx.lineWidth=1; ctx.beginPath(); ctx.arc(sx(o.x),sy(o.y),S*6,0,7); ctx.stroke(); }
   // entities — an enemy stealth unit stays hidden until a 'me' detector reveals it
   for(const e of ents){ if(e.owner==='cpu' && e.u.stealth && !revealed(e,'me')) continue; drawEnt(e); }
   // selection — animated corner brackets
@@ -462,9 +481,10 @@ function render(){ resizeIfNeeded(); FRAME++; const S=SCALE, tt=FRAME*0.05;
   // drag box
   if(drag){ ctx.fillStyle='rgba(143,208,255,.08)'; ctx.fillRect(drag.x0,drag.y0,drag.x1-drag.x0,drag.y1-drag.y0);
     ctx.strokeStyle='#8fd0ff'; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.strokeRect(drag.x0,drag.y0,drag.x1-drag.x0,drag.y1-drag.y0); ctx.setLineDash([]); }
-  // vignette for depth
-  const vg=ctx.createRadialGradient(cv.width/2,cv.height/2,Math.min(cv.width,cv.height)*0.35,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*0.72);
-  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.35)'); ctx.fillStyle=vg; ctx.fillRect(0,0,cv.width,cv.height);
+  // vignette for depth (gradient cached; rebuilt on resize)
+  if(!vignette){ vignette=ctx.createRadialGradient(cv.width/2,cv.height/2,Math.min(cv.width,cv.height)*0.35,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*0.72);
+    vignette.addColorStop(0,'rgba(0,0,0,0)'); vignette.addColorStop(1,'rgba(0,0,0,.35)'); }
+  ctx.fillStyle=vignette; ctx.fillRect(0,0,cv.width,cv.height);
   // HUD
   document.getElementById('cr').textContent=Math.floor(credits.me);
   document.getElementById('cpucr').textContent=Math.floor(credits.cpu);
