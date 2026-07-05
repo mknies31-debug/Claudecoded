@@ -25,6 +25,8 @@ A structured, buildable version of the **Competitive Balance Bible** for a moder
 | [design/14-array-roster.md](design/14-array-roster.md) · [data/units/array.json](data/units/array.json) | Array roster (15 units, validated) — all 3 factions complete | 5, 9, 20 |
 | [design/15-matchup-findings.md](design/15-matchup-findings.md) | duel sim (counters) — findings + fixes | 6–8 |
 | [design/16-composition-findings.md](design/16-composition-findings.md) | army-composition sim (mixed vs spam) — infantry-spam fix + backlog | 10 |
+| [design/17-architecture-review.md](design/17-architecture-review.md) · [design/18-feature-research.md](design/18-feature-research.md) | architecture/consistency review · cited feature research | — |
+| [design/19-ai-opponent.md](design/19-ai-opponent.md) · [maps/twin-ridge.html](maps/twin-ridge.html) | CPU-opponent design for 1 v CPU (§40) · first map viewer | 40, 37 |
 | [lab/](lab/index.html) | interactive balance calculator + budget validator | 6–9 |
 | [CHECKLIST.md](CHECKLIST.md) | launch certification gate — **20/20 design gates pass** ([certify.mjs](scripts/certify.mjs)) | 50 |
 
@@ -41,6 +43,7 @@ Everything provable on paper is proven by a script — run any of them from the 
 | [`scripts/cost-efficiency.mjs`](scripts/cost-efficiency.mjs) | **§8 cost auditor** — mono-spam efficiency vs a competent best-response, graded against the ≥1.6 problematic band |
 | [`scripts/economy-check.mjs`](scripts/economy-check.mjs) | **economy verifier (§11)** — payback bands, wood/ore invariants, ore tech-gate, roster gatherers (58 assertions) |
 | [`scripts/map-check.mjs`](scripts/map-check.mjs) | **§37 map auditor** — rotational symmetry, travel-time/resource equality, flank-around-narrow-choke, ramp-per-plateau, artillery safety |
+| [`scripts/ai-policy.mjs`](scripts/ai-policy.mjs) | **CPU brain (§40)** — reference composition policy; self-test proves difficulty = decisions not stat cheats (easy 1/12 → expert 12/12) |
 | [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
 | [`scripts/build-lab-data.mjs`](scripts/build-lab-data.mjs) · [`scripts/build-prototype-data.mjs`](scripts/build-prototype-data.mjs) | re-inject roster JSON into the lab / prototype (keep them in sync with `data/units/`) |
 

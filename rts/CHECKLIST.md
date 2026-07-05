@@ -23,7 +23,7 @@
 ## Tech / tooling
 - [ ] **Replays function reliably** — *engine feature (runtime)*
 - [ ] **Telemetry functions correctly** — §45 · *engine feature (runtime)*
-- [ ] **AI uses legal resources** (no hidden HP/damage/armor) — §40 · *engine/AI audit (runtime)*
+- [ ] **AI uses legal resources** (no hidden HP/damage/armor) — §40 · *design + reference brain done ([design/19](design/19-ai-opponent.md), `ai-policy.mjs`): difficulty = composition choice, proven legal (easy 1/12 → expert 12/12, same stats). Full CPU needs the engine (perception/actuation) — runtime*
 - [ ] **All critical counters are visually readable** — §46, §47(step 2) · *art/UX pass — style guide exists ([style/](style/index.html)); needs in-engine verification (runtime)*
 
 ## Meta health
