@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTS Skirmish — Twin Ridge</title>
+<style>
+  :root{ --bg:#10141b; --panel:#1a2029; --line:#2c3644; --ink:#e7edf5; --dim:#93a1b3;
+    --me:#63a6e6; --cpu:#8bbf5a; --wood:#b5772e; --ore:#e0a52a; --gold:#ffd24d; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);
+    font:13px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
+  #top{display:flex;align-items:center;gap:16px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+  #top b{font-size:15px} .stat{color:var(--dim)} .stat span{color:var(--ink);font-weight:700}
+  .credit{color:var(--gold);font-weight:800;font-size:15px}
+  #wrap{display:flex;height:calc(100vh - 45px)}
+  #stage{flex:1;position:relative;background:#0c1017}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+  #side{width:210px;background:var(--panel);border-left:1px solid var(--line);padding:12px;overflow:auto}
+  #side h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
+  .bbtn{display:flex;justify-content:space-between;width:100%;text-align:left;border:1px solid var(--line);
+    background:#222a35;color:var(--ink);border-radius:7px;padding:7px 9px;margin-bottom:6px;cursor:pointer;font-size:12.5px}
+  .bbtn:hover:not(:disabled){border-color:var(--me)} .bbtn:disabled{opacity:.4;cursor:not-allowed}
+  .bbtn .c{color:var(--gold);font-weight:700}
+  .bbtn.locked{opacity:.5}
+  #sel{margin-top:12px;color:var(--dim);font-size:12px;min-height:40px}
+  #banner{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;
+    background:rgba(8,11,16,.78);font-size:34px;font-weight:800}
+  #banner button{margin-top:16px;font-size:15px;padding:10px 20px;border:0;border-radius:8px;background:var(--me);color:#fff;font-weight:700;cursor:pointer}
+  #hint{position:absolute;left:10px;bottom:8px;color:#93a1b3aa;font-size:11.5px;pointer-events:none}
+  #q{position:absolute;left:10px;top:8px;color:#cfe0f2;font-size:12px;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="top">
+  <b>Twin Ridge</b>
+  <span class="stat">Credits <span class="credit" id="cr">0</span></span>
+  <span class="stat">Army <span id="army">0</span></span>
+  <span class="stat">Ore <span id="ore">locked</span></span>
+  <span class="stat" style="margin-left:auto;color:var(--cpu)">CPU credits <span id="cpucr">0</span> · army <span id="cpuarmy">0</span></span>
+</div>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="q"></div>
+    <div id="hint">Left-drag: select · Right-click: move / attack · Right-click a resource with a gatherer: harvest</div>
+    <div id="banner"><div id="bantext"></div><button onclick="location.reload()">Play again</button></div>
+  </div>
+  <div id="side">
+    <h3>Build (Directorate)</h3>
+    <div id="build"></div>
+    <div id="sel">No selection.</div>
+  </div>
+</div>
+
+<script>
+const ROSTER = /*ROSTER_START*/{"Directorate":[{"name":"Rifleman Squad","tier":1,"class":"Basic infantry","role":"anti-infantry / garrison","cost":300,"build":8,"hp":220,"dmg":6,"proj":4,"reload":1,"acc":70,"dmgType":"smallArms","range":4,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Missile Trooper","tier":1,"class":"Specialist infantry","role":"anti-armor / anti-air","cost":350,"build":13,"hp":180,"dmg":68,"proj":1,"reload":2,"acc":80,"dmgType":"antiArmor","range":8,"aoe":2,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Field Engineer","tier":1,"class":"Specialist infantry","role":"capture / field repair","cost":300,"build":14,"hp":150,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":4,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Recon Spotter","tier":1,"class":"Scout vehicle","role":"recon + mobile detector","cost":350,"build":14,"hp":300,"dmg":10,"proj":1,"reload":1.2,"acc":70,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":true},{"name":"Vanguard MBT","tier":2,"class":"Main battle tank","role":"general-purpose armor","cost":900,"build":28,"hp":1600,"dmg":120,"proj":1,"reload":1.8,"acc":85,"dmgType":"antiArmor","range":5,"aoe":2,"mobile":true,"general":true,"resist":{"smallArms":55,"explosive":20,"antiArmor":-30,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Warden AA Halftrack","tier":2,"class":"Advanced vehicle","role":"anti-air / anti-infantry","cost":700,"build":38,"hp":620,"dmg":30,"proj":2,"reload":0.8,"acc":75,"dmgType":"explosive","range":8,"aoe":3,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Lancer Tank Destroyer","tier":2,"class":"Advanced vehicle","role":"dedicated anti-armor","cost":1000,"build":42,"hp":900,"dmg":300,"proj":1,"reload":3.5,"acc":88,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Howitzer","tier":2,"class":"Artillery","role":"siege artillery","cost":1100,"build":40,"hp":500,"dmg":180,"proj":1,"reload":5,"acc":60,"dmgType":"siege","range":9,"aoe":6,"mobile":true,"general":false,"resist":{"smallArms":10,"explosive":-10,"antiArmor":-15,"energy":0,"air":0,"siege":0},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Falcon Gunship","tier":3,"class":"Aircraft","role":"precision strike","cost":1200,"build":35,"hp":700,"dmg":150,"proj":1,"reload":2.5,"acc":90,"dmgType":"air","range":8,"aoe":3,"mobile":true,"general":false,"resist":{"smallArms":55,"explosive":0,"antiArmor":0,"energy":10,"air":0,"siege":45},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Lumber Harvester","tier":1,"class":"Advanced vehicle","role":"economy / wood harvester","cost":900,"build":35,"hp":600,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Mining Vehicle","tier":1,"class":"Advanced vehicle","role":"economy / ore mining","cost":1400,"build":45,"hp":1000,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Repair Rig","tier":2,"class":"Advanced vehicle","role":"field repair support","cost":600,"build":36,"hp":600,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Bastion Land Battleship","tier":3,"class":"Epic unit","role":"epic assault + army support","cost":7500,"build":150,"hp":9000,"dmg":300,"proj":1,"reload":3,"acc":82,"dmgType":"siege","range":6,"aoe":6,"mobile":true,"general":false,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Sentry Turret","tier":1,"class":"Structure","role":"static anti-vehicle defense","cost":700,"build":20,"hp":1200,"dmg":90,"proj":1,"reload":2,"acc":90,"dmgType":"antiArmor","range":6,"aoe":2,"mobile":false,"general":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Flak Battery","tier":2,"class":"Structure","role":"static anti-air + detector","cost":800,"build":22,"hp":900,"dmg":45,"proj":2,"reload":0.9,"acc":80,"dmgType":"explosive","range":7,"aoe":3,"mobile":false,"general":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":true},{"name":"Judgment Cannon","tier":3,"class":"Epic unit","role":"superweapon","cost":5000,"build":120,"hp":2500,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":6,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null}],"Covenant":[{"name":"Raider Squad","tier":1,"class":"Basic infantry","role":"anti-infantry / harass","cost":260,"build":7,"hp":150,"dmg":6,"proj":3,"reload":1,"acc":68,"dmgType":"smallArms","range":4,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Saboteur","tier":1,"class":"Specialist infantry","role":"stealth demolition / anti-armor","cost":400,"build":15,"hp":140,"dmg":90,"proj":1,"reload":4,"acc":85,"dmgType":"antiArmor","range":5,"aoe":2,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"stealth":true,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Hijacker","tier":1,"class":"Specialist infantry","role":"vehicle theft","cost":500,"build":16,"hp":130,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":4,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":0.15,"detector":null},{"name":"Recon Hound","tier":1,"class":"Scout vehicle","role":"recon + mobile detector","cost":300,"build":12,"hp":220,"dmg":8,"proj":1,"reload":1.2,"acc":66,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":true},{"name":"Raider Buggy","tier":1,"class":"Scout vehicle","role":"fast economy raider","cost":420,"build":14,"hp":480,"dmg":44,"proj":2,"reload":1.2,"acc":78,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Rocket Technical","tier":2,"class":"Advanced vehicle","role":"anti-air / anti-armor","cost":650,"build":36,"hp":500,"dmg":65,"proj":1,"reload":2.2,"acc":76,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Scorch Buggy","tier":2,"class":"Advanced vehicle","role":"anti-infantry flame / area","cost":520,"build":36,"hp":470,"dmg":30,"proj":1,"reload":1,"acc":90,"dmgType":"explosive","range":4,"aoe":5,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Mine Layer","tier":2,"class":"Advanced vehicle","role":"area denial","cost":550,"build":35,"hp":520,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":400,"convert":null,"detector":null},{"name":"Marauder Scrap Tank","tier":2,"class":"Main battle tank","role":"general-purpose light armor","cost":700,"build":24,"hp":1050,"dmg":95,"proj":1,"reload":1.9,"acc":80,"dmgType":"antiArmor","range":5,"aoe":2,"mobile":true,"general":true,"resist":{"smallArms":55,"explosive":20,"antiArmor":-30,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Ambush Tank","tier":2,"class":"Advanced vehicle","role":"stealth flanker","cost":900,"build":40,"hp":700,"dmg":160,"proj":1,"reload":3.2,"acc":85,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":true,"flank":true,"mine":null,"convert":null,"detector":null},{"name":"Timber Technical","tier":1,"class":"Advanced vehicle","role":"economy / wood harvester + salvage","cost":900,"build":35,"hp":520,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Scrap Hauler","tier":1,"class":"Advanced vehicle","role":"economy / ore mining","cost":1400,"build":44,"hp":900,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Interceptor Gyro","tier":3,"class":"Aircraft","role":"fast anti-air / harass","cost":850,"build":28,"hp":520,"dmg":70,"proj":2,"reload":1.6,"acc":82,"dmgType":"air","range":8,"aoe":3,"mobile":true,"general":false,"resist":{"smallArms":55,"explosive":0,"antiArmor":0,"energy":10,"air":0,"siege":45},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Sensor Spike","tier":1,"class":"Structure","role":"static detector","cost":500,"build":18,"hp":700,"dmg":20,"proj":1,"reload":1.5,"acc":85,"dmgType":"smallArms","range":6,"aoe":1,"mobile":false,"general":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":true},{"name":"Rocket Nest","tier":2,"class":"Structure","role":"static anti-vehicle / air","cost":650,"build":20,"hp":900,"dmg":60,"proj":1,"reload":1.8,"acc":85,"dmgType":"antiArmor","range":7,"aoe":2,"mobile":false,"general":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":0,"air":-10,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Ravager","tier":3,"class":"Epic unit","role":"fast epic raider + salvage","cost":6500,"build":130,"hp":6500,"dmg":220,"proj":1,"reload":2.6,"acc":80,"dmgType":"siege","range":6,"aoe":6,"mobile":true,"general":false,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Locust Swarm","tier":3,"class":"Epic unit","role":"superweapon (drone swarm)","cost":4500,"build":110,"hp":2000,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":6,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null}],"Array":[{"name":"Sentinel Trooper","tier":1,"class":"Basic infantry","role":"shielded anti-infantry","cost":260,"build":9,"hp":240,"dmg":16,"proj":2,"reload":1.1,"acc":74,"dmgType":"energy","range":4,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":25,"air":0,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Disruptor","tier":2,"class":"Specialist infantry","role":"shield-break anti-armor","cost":450,"build":16,"hp":200,"dmg":95,"proj":1,"reload":1.7,"acc":82,"dmgType":"energy","range":5,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":25,"air":0,"siege":-25},"ignoreResist":true,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Architect","tier":1,"class":"Specialist infantry","role":"infrastructure / capture / repair","cost":320,"build":15,"hp":170,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":4,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":0,"explosive":-25,"antiArmor":65,"energy":0,"air":0,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Probe Skimmer","tier":1,"class":"Scout vehicle","role":"recon + mobile detector","cost":380,"build":16,"hp":280,"dmg":10,"proj":1,"reload":1.2,"acc":72,"dmgType":"smallArms","range":5,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":true},{"name":"Harvest Drone","tier":1,"class":"Advanced vehicle","role":"economy / wood harvester","cost":900,"build":35,"hp":560,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":20,"explosive":-10,"antiArmor":-5,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Extractor Walker","tier":1,"class":"Advanced vehicle","role":"economy / ore mining (relocatable extractor)","cost":1400,"build":45,"hp":950,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Aegis Tank","tier":2,"class":"Main battle tank","role":"general-purpose shielded armor","cost":1050,"build":32,"hp":1500,"dmg":115,"proj":1,"reload":1.9,"acc":84,"dmgType":"energy","range":5,"aoe":1,"mobile":true,"general":true,"resist":{"smallArms":55,"explosive":20,"antiArmor":-30,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Arc Walker","tier":2,"class":"Advanced vehicle","role":"anti-air / anti-infantry","cost":780,"build":40,"hp":640,"dmg":34,"proj":2,"reload":0.9,"acc":78,"dmgType":"energy","range":7,"aoe":3,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":25,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Warp Snare","tier":2,"class":"Advanced vehicle","role":"immobilization control","cost":850,"build":42,"hp":560,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Nullifier","tier":3,"class":"Advanced vehicle","role":"anti-armor specialist","cost":1300,"build":48,"hp":850,"dmg":300,"proj":1,"reload":2.8,"acc":88,"dmgType":"energy","range":7,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":25,"air":0,"siege":-10},"ignoreResist":true,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Prism Artillery","tier":2,"class":"Artillery","role":"energy siege","cost":1200,"build":44,"hp":520,"dmg":190,"proj":1,"reload":5,"acc":62,"dmgType":"siege","range":9,"aoe":6,"mobile":true,"general":false,"resist":{"smallArms":10,"explosive":-10,"antiArmor":-15,"energy":25,"air":0,"siege":0},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Restorer Drone","tier":2,"class":"Advanced vehicle","role":"shield / repair support","cost":650,"build":36,"hp":520,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":5,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":40,"explosive":5,"antiArmor":-20,"energy":0,"air":0,"siege":-10},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Phase Interceptor","tier":3,"class":"Aircraft","role":"energy anti-air / precision","cost":1250,"build":40,"hp":680,"dmg":145,"proj":1,"reload":2.4,"acc":90,"dmgType":"air","range":8,"aoe":3,"mobile":true,"general":false,"resist":{"smallArms":55,"explosive":0,"antiArmor":0,"energy":35,"air":0,"siege":45},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Pylon Turret","tier":1,"class":"Structure","role":"static energy defense + detector","cost":750,"build":22,"hp":1150,"dmg":85,"proj":1,"reload":1.9,"acc":90,"dmgType":"energy","range":6,"aoe":1,"mobile":false,"general":false,"resist":{"smallArms":55,"explosive":25,"antiArmor":20,"energy":25,"air":-10,"siege":-25},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":true},{"name":"Arbiter","tier":3,"class":"Epic unit","role":"epic + shield-aura support","cost":8000,"build":165,"hp":8000,"dmg":280,"proj":1,"reload":2.9,"acc":82,"dmgType":"energy","range":6,"aoe":1,"mobile":true,"general":false,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":25,"air":-10,"siege":20},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null},{"name":"Stasis Lance","tier":3,"class":"Epic unit","role":"superweapon (area stasis + energy)","cost":5200,"build":130,"hp":2600,"dmg":0,"proj":0,"reload":0,"acc":0,"dmgType":"none","range":6,"aoe":0,"mobile":true,"general":false,"resist":{"smallArms":60,"explosive":35,"antiArmor":5,"energy":0,"air":-10,"siege":20},"ignoreResist":null,"stealth":null,"flank":null,"mine":null,"convert":null,"detector":null}]}/*ROSTER_END*/;
+const MAP = /*MAP_START*/{"_source":"First competitive map. Built against the §37 per-map tests (design/07-maps.md) and the terrain rules in data/terrain.json. Verified by scripts/map-check.mjs.","name":"Twin Ridge","players":2,"size":{"w":128,"h":128},"center":{"x":64,"y":64},"symmetry":"180-rotational","_symmetryNote":"Every element has a counterpart at rot(x,y) = (128-x, 128-y); central elements are self-symmetric. This makes all travel-time and resource tests exact by construction (§37).","tileScale":"1 tile ≈ 4 m; ranges in data/units are in these tiles.","style":"moderate choke-point + multi-route (design/07 §38 pool slot). Low-ground bases, a central narrow throat overlooked by two high-ground ridges, and two wide flank lanes around it.","spawns":[{"id":"p1","x":24,"y":24,"elevation":0,"buildRadius":14},{"id":"p2","x":104,"y":104,"elevation":0,"buildRadius":14}],"resources":[{"type":"wood","x":18,"y":32,"owner":"p1","richness":"standard","nearBase":true,"note":"p1 wood floor — safe, renewable, near-base (§04)"},{"type":"wood","x":110,"y":96,"owner":"p2","richness":"standard","nearBase":true,"note":"p2 wood floor (rot of p1)"},{"type":"ore","x":36,"y":18,"owner":"p1","richness":"standard","nearBase":false,"note":"p1 natural-expansion ore — the affordable ceiling, semi-exposed"},{"type":"ore","x":92,"y":110,"owner":"p2","richness":"standard","nearBase":false,"note":"p2 natural-expansion ore (rot of p1)"},{"type":"ore","x":58,"y":64,"owner":"contested","richness":"rich","nearBase":false,"note":"central rich ore, west of the throat — the map's prize"},{"type":"ore","x":70,"y":64,"owner":"contested","richness":"rich","nearBase":false,"note":"central rich ore, east of the throat (rot pair)"}],"highGround":[{"id":"north-ridge","x":64,"y":84,"elevation":1,"radius":12,"ramps":[{"x":80,"y":90,"toward":"se-flank"}],"overlooks":"throat","note":"hold it to first-strike the central throat; artillery position (§37)"},{"id":"south-ridge","x":64,"y":44,"elevation":1,"radius":12,"ramps":[{"x":48,"y":38,"toward":"nw-flank"}],"overlooks":"throat","note":"rot of north-ridge"}],"chokes":[{"id":"throat","x":64,"y":64,"width":"narrow","lanes":2,"connects":["p1","p2"],"flankedBy":["nw-pass","se-pass"],"note":"direct route; narrow, cliff-walled, overlooked by both ridges — splash/first-strike terrain (§37)"},{"id":"nw-pass","x":36,"y":92,"width":"wide","lanes":6,"connects":["p1","p2"],"flankedBy":[],"note":"wide NW flank — mobility/vehicle route around the throat, with forest cover"},{"id":"se-pass","x":92,"y":36,"width":"wide","lanes":6,"connects":["p1","p2"],"flankedBy":[],"note":"wide SE flank (rot of nw-pass)"}],"barriers":[{"type":"cliff","from":{"x":52,"y":58},"to":{"x":52,"y":70},"note":"west wall of the throat"},{"type":"cliff","from":{"x":76,"y":58},"to":{"x":76,"y":70},"note":"east wall of the throat (rot)"},{"type":"cliff","from":{"x":52,"y":76},"to":{"x":76,"y":76},"note":"south face of north-ridge (impassable except ramp)"},{"type":"cliff","from":{"x":52,"y":52},"to":{"x":76,"y":52},"note":"north face of south-ridge (rot)"},{"type":"water","from":{"x":20,"y":60},"to":{"x":40,"y":60},"note":"NW pool — channels the flank; air/amphibious only"},{"type":"water","from":{"x":88,"y":68},"to":{"x":108,"y":68},"note":"SE pool (rot)"}],"forests":[{"id":"nw-wood-cover","x":36,"y":92,"radius":8,"note":"infantry cover/concealment on the NW flank (combat-rules forestConcealment)"},{"id":"se-wood-cover","x":92,"y":36,"radius":8,"note":"rot of nw-wood-cover"}],"neutralObjectives":[{"id":"relay-north","type":"relay-tower","x":64,"y":88,"grants":"vision + detection over the throat","capturable":true,"note":"capturing reveals the central contest — rewards map control, counters stealth pushes (§28)"},{"id":"relay-south","type":"relay-tower","x":64,"y":40,"grants":"vision + detection over the throat","capturable":true,"note":"rot of relay-north"}],"expansions":[{"id":"p1-natural","x":36,"y":18,"owner":"p1","resources":["ore"],"safety":"semi-exposed"},{"id":"p2-natural","x":92,"y":110,"owner":"p2","resources":["ore"],"safety":"semi-exposed"},{"id":"center-west","x":58,"y":64,"owner":"contested","resources":["ore"],"safety":"contested"},{"id":"center-east","x":70,"y":64,"owner":"contested","resources":["ore"],"safety":"contested"}],"lanes":[{"id":"center","from":"p1","to":"p2","via":"throat","relativeLength":1,"kind":"narrow-direct"},{"id":"nw","from":"p1","to":"p2","via":"nw-pass","relativeLength":1.35,"kind":"wide-flank"},{"id":"se","from":"p1","to":"p2","via":"se-pass","relativeLength":1.35,"kind":"wide-flank"}],"airspace":"open — aircraft and climb/jump units cross the ridges freely, bypassing the ground throat (terrain.json highGround.access)","designTests":{"_note":"Mirrors terrain.json perMapTestHooks + design/07 §37; asserted by map-check.mjs.","resourceEquality":"each player: 1 wood + 1 natural ore; central rich ore is a symmetric contested pair","travelTimeEquality":"exact by 180° symmetry (§37 tolerance 0 s)","flankAroundEveryNarrowChoke":"throat (narrow) is flanked by nw-pass and se-pass (wide)","everyPlateauHasARamp":"north-ridge and south-ridge each have a ground ramp","elevatedArtilleryCannotHitBaseFromSafety":"min ridge→base distance ≈ 45 tiles ≫ artillery range 9","spawnsEqualElevation":"both mains at elevation 0"}}/*MAP_END*/;
+const ME='Directorate', CPU='Covenant';
+const byName={}; for(const f in ROSTER) for(const u of ROSTER[f]) byName[u.name]={...u,faction:f};
+
+// ---- combat math: identical to combat-core.mjs ----
+const pdps = u => u.reload>0 ? (u.dmg*u.proj/u.reload)*(u.acc/100) : 0;
+const effHP = (def, atkType, atk) => { if(atk&&atk.ignoreResist) return def.hp;
+  const r=(def.resist?.[atkType]??0)/100; return r<1?def.hp/(1-r):Infinity; };
+
+// ---- world ----
+const W=MAP.size.w, H=MAP.size.h;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let SCALE=6, OX=0, OY=0;
+function resize(){ const r=cv.parentElement.getBoundingClientRect(); cv.width=r.width; cv.height=r.height;
+  SCALE=Math.min(cv.width/W, cv.height/H); OX=(cv.width-W*SCALE)/2; OY=(cv.height-H*SCALE)/2; }
+addEventListener('resize',resize);
+const sx=x=>OX+x*SCALE, sy=y=>OY+y*SCALE;
+const wx=px=>(px-OX)/SCALE, wy=py=>(py-OY)/SCALE;
+
+const SPEED = c => ({'Basic infantry':5,'Specialist infantry':4.5,'Scout vehicle':9,'Main battle tank':4.5,
+  'Advanced vehicle':5.5,'Artillery':3.5,'Aircraft':11}[c] ?? 5);
+const RAD = c => ({'Basic infantry':0.9,'Specialist infantry':1,'Scout vehicle':1.2,'Main battle tank':1.7,
+  'Advanced vehicle':1.5,'Artillery':1.5,'Aircraft':1.4,'HQ':4.5}[c] ?? 1.1);
+const WOODCR=8, ORECR=11;
+
+let ents=[], credits={me:1200,cpu:1200}, oreUnlocked={me:false,cpu:false}, over=null;
+let uid=1;
+function spawn(owner, name, x, y){ const u=byName[name];
+  const e={id:uid++, owner, u, name, x, y, hp:u.hp, maxHp:u.hp, cd:Math.random()*u.reload,
+    order:'idle', tx:x, ty:y, tgt:null, node:null, cls:u.class}; ents.push(e); return e; }
+const HQ_STATS={class:'HQ',hp:6000,resist:{smallArms:40,explosive:10,antiArmor:0,energy:0,air:-15,siege:-30}}; // small-arms shrug off; siege/air bust it (combined arms matters)
+function spawnHQ(owner,x,y){ const e={id:uid++,owner,u:HQ_STATS,name:'HQ',x,y,hp:HQ_STATS.hp,maxHp:HQ_STATS.hp,
+  order:'hq',cls:'HQ',queue:[],rally:{x:x+(owner==='me'?6:-6),y}}; ents.push(e); return e; }
+
+// resource nodes from the map
+let nodes = MAP.resources.map(r=>({type:r.type, x:r.x, y:r.y, owner:r.owner}));
+function nearestNode(e,type){ let best=null,bd=1e9; for(const n of nodes){ if(type&&n.type!==type)continue;
+  const d=Math.hypot(n.x-e.x,n.y-e.y); if(d<bd){bd=d;best=n;} } return best; }
+
+// high ground bonus
+function onHigh(x,y){ return MAP.highGround.some(g=>Math.hypot(g.x-x,g.y-y)<=g.radius); }
+
+// ---- setup: HQ + 2 wood gatherers each ----
+const hqMe=spawnHQ('me', MAP.spawns[0].x, MAP.spawns[0].y);
+const hqCpu=spawnHQ('cpu', MAP.spawns[1].x, MAP.spawns[1].y);
+function startGatherers(owner, hq, woodName){ const wn=nearestNode(hq,'wood');
+  for(let i=0;i<2;i++){ const g=spawn(owner, woodName, hq.x+(i-0.5)*2, hq.y+3); g.order='harvest'; g.node=wn; } }
+startGatherers('me', hqMe, ROSTER[ME].find(u=>/harvest|lumber/i.test(u.role||u.name))?.name || 'Lumber Harvester');
+startGatherers('cpu', hqCpu, ROSTER[CPU].find(u=>/timber|harvest|wood/i.test(u.name))?.name || 'Timber Technical');
+
+// ---- build menu (player) ----
+const BUILDABLE = {
+  Directorate:['Lumber Harvester','Mining Vehicle','Rifleman Squad','Missile Trooper','Warden AA Halftrack','Vanguard MBT','Lancer Tank Destroyer','Howitzer'],
+  Covenant:['Timber Technical','Scrap Hauler','Raider Squad','Rocket Technical','Scorch Buggy','Marauder Scrap Tank','Ambush Tank','Interceptor Gyro'],
+};
+const buildDiv=document.getElementById('build');
+function renderBuild(){ buildDiv.innerHTML='';
+  for(const name of BUILDABLE[ME]){ const u=byName[name]; const b=document.createElement('button');
+    b.className='bbtn'; const locked=u.tier>=2 && !oreUnlocked.me;
+    b.innerHTML=`<span>${name}${locked?' 🔒':''}</span><span class="c">${u.cost}</span>`;
+    b.disabled = credits.me<u.cost || locked;
+    b.title = locked?'Needs an ore gatherer (tier-2+ tech gate)':`Build ${name} (${u.build||20}s)`;
+    b.onclick=()=>queueBuild('me',hqMe,name); buildDiv.appendChild(b); } }
+function queueBuild(owner,hq,name){ const u=byName[name]; if(credits[owner]<u.cost) return;
+  if(u.tier>=2 && !oreUnlocked[owner]) return;
+  credits[owner]-=u.cost; hq.queue.push({name, left:(u.build||20)}); }
+
+// ---- selection & orders ----
+let sel=[], drag=null;
+cv.addEventListener('mousedown',e=>{ if(e.button!==0) return; drag={x0:e.offsetX,y0:e.offsetY,x1:e.offsetX,y1:e.offsetY}; });
+cv.addEventListener('mousemove',e=>{ over={x:wx(e.offsetX),y:wy(e.offsetY)}; if(drag){drag.x1=e.offsetX;drag.y1=e.offsetY;} });
+addEventListener('mouseup',e=>{ if(e.button!==0||!drag) return;
+  const a={x0:Math.min(drag.x0,drag.x1),y0:Math.min(drag.y0,drag.y1),x1:Math.max(drag.x0,drag.x1),y1:Math.max(drag.y0,drag.y1)};
+  const box=(a.x1-a.x0)>4||(a.y1-a.y0)>4;
+  sel = ents.filter(en=>en.owner==='me'&&en.cls!=='HQ'&&(box
+      ? sx(en.x)>=a.x0&&sx(en.x)<=a.x1&&sy(en.y)>=a.y0&&sy(en.y)<=a.y1
+      : Math.hypot(sx(en.x)-drag.x1,sy(en.y)-drag.y1)<Math.max(10,RAD(en.cls)*SCALE)));
+  drag=null; updateSel(); });
+cv.addEventListener('contextmenu',e=>{ e.preventDefault(); if(!sel.length) return;
+  const t={x:wx(e.offsetX),y:wy(e.offsetY)};
+  const enemy=ents.find(en=>en.owner==='cpu'&&Math.hypot(en.x-t.x,en.y-t.y)<Math.max(2,RAD(en.cls)));
+  const node=nodes.find(n=>Math.hypot(n.x-t.x,n.y-t.y)<3);
+  for(const s of sel){
+    if(enemy){ s.order='attack'; s.tgt=enemy; s.tx=enemy.x; s.ty=enemy.y; }
+    else if(node && /harvest|lumber|mining|timber|scrap/i.test(s.name)){ s.order='harvest'; s.node=node; }
+    else { s.order='move'; s.tx=t.x; s.ty=t.y; s.tgt=null; } }
+});
+function updateSel(){ const d=document.getElementById('sel');
+  if(!sel.length){ d.textContent='No selection.'; return; }
+  const by={}; for(const s of sel) by[s.name]=(by[s.name]||0)+1;
+  d.innerHTML='<b>'+sel.length+' selected</b><br>'+Object.entries(by).map(([n,c])=>`${c}× ${n}`).join('<br>'); }
+
+// ---- movement + combat ----
+const DT=1/30; let acc=0, last=performance.now();
+function moveToward(e, tx, ty, sp){ const dx=tx-e.x, dy=ty-e.y, d=Math.hypot(dx,dy);
+  if(d<0.05) return 0; const step=Math.min(d, sp*DT); e.x+=dx/d*step; e.y+=dy/d*step; return d-step; }
+function separate(e){ for(const o of ents){ if(o===e||o.cls==='HQ') continue;
+  const dx=e.x-o.x, dy=e.y-o.y, d=Math.hypot(dx,dy), min=RAD(e.cls)+RAD(o.cls);
+  if(d>0&&d<min){ const p=(min-d)*0.5; e.x+=dx/d*p; e.y+=dy/d*p; } } }
+
+function acquire(e){ let best=null,bd=1e9; const rng=(e.u.range||5)+3;
+  for(const o of ents){ if(o.owner===e.owner) continue; const d=Math.hypot(o.x-e.x,o.y-e.y);
+    if(d<rng+ (o.cls==='HQ'?4:0) && d<bd){bd=d;best=o;} } return best; }
+
+function combat(e){ if(pdps(e.u)<=0) return; // unarmed (gatherers)
+  let t=e.tgt;
+  if(!t||t.hp<=0||t.owner===e.owner){ t=acquire(e); e.tgt=t; }   // reacquire; DON'T cancel an attack-move if none found
+  if(!t){ return; }               // no enemy in reach → updateEnt keeps the attack-move rolling toward tx/ty
+  e.tx=t.x; e.ty=t.y;             // track the target as the fallback destination
+  const d=Math.hypot(t.x-e.x,t.y-e.y), rng=e.u.range||5;
+  if(d>rng){ if(e.cls!=='Artillery'||d>rng+3) moveToward(e,t.x,t.y,SPEED(e.cls)); return; }
+  e.cd-=DT; if(e.cd>0) return; e.cd=e.u.reload;
+  // damage = fraction of target removed per shot, from the sim's effHP model
+  const mult = (onHigh(e.x,e.y)&&!onHigh(t.x,t.y))?1.15:1;
+  const dmg = t.maxHp * (pdps(e.u)*e.u.reload/ effHP(t.u,e.u.dmgType,e.u)) * mult;
+  applyDamage(t, dmg, e);
+  if((e.u.aoe||1)>1){ for(const o of ents){ if(o.owner===e.owner||o===t) continue;
+    if(Math.hypot(o.x-t.x,o.y-t.y)<=e.u.aoe){ applyDamage(o, dmg*0.5, e); } } }
+  e.fx={x:t.x,y:t.y,life:4,type:e.u.dmgType};
+}
+function applyDamage(t,dmg,src){ t.hp-=dmg; if(t.hp<=0){ if(t.cls==='HQ') endGame(t.owner==='me'?'cpu':'me');
+  ents=ents.filter(x=>x!==t); sel=sel.filter(x=>x!==t); } }
+
+function harvest(e){ if(!e.node){ e.node=nearestNode(e, /mining|scrap/i.test(e.name)?'ore':'wood'); }
+  const n=e.node; if(!n) return; const d=Math.hypot(n.x-e.x,n.y-e.y);
+  if(d>1.4){ moveToward(e,n.x,n.y,SPEED(e.cls)); }
+  else { const rate=(n.type==='ore'?ORECR:WOODCR)*DT; credits[e.owner]+=rate;
+    if(n.type==='ore') oreUnlocked[e.owner]=true; } }
+
+function updateEnt(e){
+  if(e.cls==='HQ'){ if(e.queue.length){ e.queue[0].left-=DT;
+    if(e.queue[0].left<=0){ const b=e.queue.shift(); const g=spawn(e.owner,b.name,e.rally.x+(Math.random()-0.5)*3,e.rally.y+(Math.random()-0.5)*3);
+      if(/harvest|lumber|mining|timber|scrap/i.test(b.name)){ g.order='harvest'; g.node=nearestNode(g, /mining|scrap/i.test(b.name)?'ore':'wood'); } } } return; }
+  if(e.order==='harvest'){ harvest(e); return; }
+  if(pdps(e.u)>0){ combat(e); if(e.tgt){ return; } }
+  if(e.order==='move'||e.order==='attack'){ const rem=moveToward(e,e.tx,e.ty,SPEED(e.cls)); if(rem<0.1) e.order='idle'; }
+  separate(e);
+}
+
+// ---- CPU brain: build counters (ai-policy heuristic) + attack ----
+let cpuTimer=0, cpuAttack=false;
+function cpuThink(){
+  const myArmy = ents.filter(e=>e.owner==='me'&&pdps(e.u)>0);
+  const cpuGath = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)<=0&&e.cls!=='HQ').length;
+  const oreComing = oreUnlocked.cpu || hqCpu.queue.some(q=>q.name==='Scrap Hauler')
+    || ents.some(e=>e.owner==='cpu'&&/scrap hauler/i.test(e.name));
+  // economy: reach 3 gatherers, then SAVE for the ore gatherer (tech gate) before
+  // spending on army — tryCpuBuild only fires when affordable, so this accumulates.
+  if(cpuGath<3){ tryCpuBuild('Timber Technical'); }
+  else if(!oreComing){ tryCpuBuild('Scrap Hauler'); }
+  else {
+    // composition: score buildable combat units as counters to the player's army
+    const enemy = myArmy.length?myArmy:[{u:byName['Rifleman Squad']}];
+    const cand = BUILDABLE[CPU].map(n=>byName[n]).filter(u=>pdps(u)>0);
+    let best=null,bs=-1; for(const c of cand){ if(c.tier>=2&&!oreUnlocked.cpu) continue;
+      let s=0; for(const en of enemy){ const eff=effHP(en.u,c.dmgType,c); s+=pdps(c)/(isFinite(eff)?eff:1e9); }
+      s/=Math.max(1,c.cost/400); if(s>bs){bs=s;best=c;} }
+    if(best) tryCpuBuild(best.name);
+  }
+  // attack when army value is enough
+  const cpuArmy = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0);
+  const val = cpuArmy.reduce((a,e)=>a+e.u.cost,0);
+  if(val>2600) cpuAttack=true; if(cpuArmy.length<3) cpuAttack=false;
+  if(cpuAttack){ for(const e of cpuArmy){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=hqMe.x; e.ty=hqMe.y; } } }
+}
+function tryCpuBuild(name){ const u=byName[name]; if(!u||credits.cpu<u.cost) return false;
+  if(u.tier>=2&&!oreUnlocked.cpu) return false; credits.cpu-=u.cost; hqCpu.queue.push({name,left:(u.build||20)}); return true; }
+
+// ---- loop ----
+function endGame(winner){ if(over) return; over=winner;
+  document.getElementById('banner').style.display='flex';
+  document.getElementById('bantext').textContent = winner==='me'?'Victory':'Defeat';
+  document.getElementById('bantext').style.color = winner==='me'?'var(--me)':'var(--cpu)'; }
+
+function tick(){ if(over) return;
+  for(const e of [...ents]) updateEnt(e);
+  cpuTimer-=DT; if(cpuTimer<=0){ cpuThink(); cpuTimer=5; }
+}
+function loop(now){ acc+=Math.min(0.1,(now-last)/1000); last=now;
+  while(acc>=DT){ tick(); acc-=DT; }
+  render(); requestAnimationFrame(loop); }
+
+// ---- render ----
+function render(){ resizeIfNeeded(); ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='#16241a'; ctx.fillRect(OX,OY,W*SCALE,H*SCALE);
+  // high ground
+  for(const g of MAP.highGround){ ctx.fillStyle='#2f4a30'; ctx.beginPath(); ctx.arc(sx(g.x),sy(g.y),g.radius*SCALE,0,7); ctx.fill(); }
+  // water
+  ctx.strokeStyle='#25507a'; ctx.lineWidth=SCALE*3.2; ctx.lineCap='round';
+  for(const b of MAP.barriers.filter(b=>b.type==='water')){ ctx.beginPath(); ctx.moveTo(sx(b.from.x),sy(b.from.y)); ctx.lineTo(sx(b.to.x),sy(b.to.y)); ctx.stroke(); }
+  // cliffs
+  ctx.strokeStyle='#0c0f13'; ctx.lineWidth=SCALE*1.1;
+  for(const b of MAP.barriers.filter(b=>b.type==='cliff')){ ctx.beginPath(); ctx.moveTo(sx(b.from.x),sy(b.from.y)); ctx.lineTo(sx(b.to.x),sy(b.to.y)); ctx.stroke(); }
+  // nodes
+  for(const n of nodes){ ctx.save(); ctx.translate(sx(n.x),sy(n.y)); ctx.rotate(0.78);
+    ctx.fillStyle=n.type==='wood'?'#b5772e':'#e0a52a'; ctx.fillRect(-SCALE*1.3,-SCALE*1.3,SCALE*2.6,SCALE*2.6); ctx.restore(); }
+  // entities
+  for(const e of ents) drawEnt(e);
+  // selection markers
+  ctx.strokeStyle='#63a6e6'; ctx.lineWidth=1.5;
+  for(const s of sel){ ctx.beginPath(); ctx.arc(sx(s.x),sy(s.y),RAD(s.cls)*SCALE+3,0,7); ctx.stroke(); }
+  // drag box
+  if(drag){ ctx.strokeStyle='#63a6e6'; ctx.setLineDash([4,3]); ctx.strokeRect(drag.x0,drag.y0,drag.x1-drag.x0,drag.y1-drag.y0); ctx.setLineDash([]); }
+  // HUD
+  document.getElementById('cr').textContent=Math.floor(credits.me);
+  document.getElementById('cpucr').textContent=Math.floor(credits.cpu);
+  document.getElementById('army').textContent=ents.filter(e=>e.owner==='me'&&pdps(e.u)>0).length;
+  document.getElementById('cpuarmy').textContent=ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0).length;
+  document.getElementById('ore').textContent=oreUnlocked.me?'unlocked':'locked';
+  renderBuild();
+}
+let lastW=0,lastH=0;
+function resizeIfNeeded(){ if(cv.clientWidth!==lastW||cv.clientHeight!==lastH){ resize(); lastW=cv.clientWidth; lastH=cv.clientHeight; } }
+function drawEnt(e){ const col=e.owner==='me'?'#63a6e6':'#8bbf5a'; const r=RAD(e.cls)*SCALE;
+  ctx.save(); ctx.translate(sx(e.x),sy(e.y));
+  if(e.cls==='HQ'){ ctx.fillStyle=col; ctx.fillRect(-r,-r,r*2,r*2); ctx.strokeStyle='#0009'; ctx.lineWidth=2; ctx.strokeRect(-r,-r,r*2,r*2);
+    ctx.fillStyle='#fff'; ctx.font='bold '+(r*0.7)+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('HQ',0,r*0.3); }
+  else if(e.cls==='Aircraft'){ ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(0,-r); ctx.lineTo(r,r); ctx.lineTo(-r,r); ctx.closePath(); ctx.fill(); ctx.strokeStyle='#0009'; ctx.stroke(); }
+  else { ctx.fillStyle=pdps(e.u)>0?col:'#7d8a97'; ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.fill(); ctx.strokeStyle='#0009'; ctx.lineWidth=1.2; ctx.stroke(); }
+  ctx.restore();
+  // hp bar
+  if(e.hp<e.maxHp){ const w=r*2.2,x=sx(e.x)-w/2,y=sy(e.y)-r-5; ctx.fillStyle='#0008'; ctx.fillRect(x,y,w,3);
+    ctx.fillStyle=e.hp/e.maxHp>0.4?'#5fd06a':'#e0623a'; ctx.fillRect(x,y,w*Math.max(0,e.hp/e.maxHp),3); }
+  // muzzle flash
+  if(e.fx&&e.fx.life>0){ ctx.strokeStyle={smallArms:'#ddd',antiArmor:'#ff7a45',explosive:'#ffca3a',energy:'#5fd0e0',siege:'#ef5350',air:'#90caf9'}[e.fx.type]||'#ccc';
+    ctx.lineWidth=1.5; ctx.globalAlpha=e.fx.life/4; ctx.beginPath(); ctx.moveTo(sx(e.x),sy(e.y)); ctx.lineTo(sx(e.fx.x),sy(e.fx.y)); ctx.stroke(); ctx.globalAlpha=1; e.fx.life--; }
+}
+document.getElementById('q').textContent = `You: Directorate (blue)   vs   CPU: Covenant (green) — destroy the enemy HQ`;
+resize(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>
