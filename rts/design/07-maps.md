@@ -64,3 +64,17 @@ The ranked pool must contain a mix — **do not include only one style**:
 - Maps with limited environmental hazards
 
 **A faction must not be balanced around maps that always favor its preferred army.** If a faction performs very differently by map (a §49 warning sign), the map pool — not just the faction — is suspect.
+
+## First map: Twin Ridge
+
+Data: [`../data/maps/twin-ridge.json`](../data/maps/twin-ridge.json) · viewer: [`../maps/twin-ridge.html`](../maps/twin-ridge.html) · verified by [`../scripts/map-check.mjs`](../scripts/map-check.mjs) — **passes all 17 §37 tests.**
+
+A 2-player, **180°-rotationally-symmetric** map (which makes travel-time and resource equality *exact* by construction, not by hand-tuning). It fills the "moderate choke + multi-route" pool slot (§38):
+
+- **Three lanes** — a central **narrow throat** (splash/first-strike terrain) plus **two wide flank passes** (mobility/vehicle routes), so the narrow choke is always flankable (§37).
+- **Two high-ground ridges** overlook the throat; each is reachable by a **ground ramp** (no air-only high ground), and both sit ~45 tiles from either base so **elevated artillery can't shell a main from safety**.
+- **Economy geography matches §04/§11:** each player gets a **wood floor** next to its base (safe, renewable) and a **natural-expansion ore** (the affordable ceiling); the **rich contested ore** sits in the central throat — the map's prize, and the reason to fight for the middle.
+- **Two capturable relay towers** on the ridges grant vision/detection over the throat, giving a map answer to stealth pushes (§28) and rewarding map control.
+- Cliffs and water channel movement; forests on the flanks give infantry cover/concealment.
+
+`map-check.mjs` operationalizes the §37 per-map test list against the map data — any future map drops into the same gate.

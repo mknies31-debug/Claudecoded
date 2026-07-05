@@ -1,0 +1,93 @@
+{
+  "_source": "First competitive map. Built against the §37 per-map tests (design/07-maps.md) and the terrain rules in data/terrain.json. Verified by scripts/map-check.mjs.",
+  "name": "Twin Ridge",
+  "players": 2,
+  "size": { "w": 128, "h": 128 },
+  "center": { "x": 64, "y": 64 },
+  "symmetry": "180-rotational",
+  "_symmetryNote": "Every element has a counterpart at rot(x,y) = (128-x, 128-y); central elements are self-symmetric. This makes all travel-time and resource tests exact by construction (§37).",
+  "tileScale": "1 tile ≈ 4 m; ranges in data/units are in these tiles.",
+
+  "style": "moderate choke-point + multi-route (design/07 §38 pool slot). Low-ground bases, a central narrow throat overlooked by two high-ground ridges, and two wide flank lanes around it.",
+
+  "spawns": [
+    { "id": "p1", "x": 24,  "y": 24,  "elevation": 0, "buildRadius": 14 },
+    { "id": "p2", "x": 104, "y": 104, "elevation": 0, "buildRadius": 14 }
+  ],
+
+  "resources": [
+    { "type": "wood", "x": 18,  "y": 32,  "owner": "p1", "richness": "standard", "nearBase": true,  "note": "p1 wood floor — safe, renewable, near-base (§04)" },
+    { "type": "wood", "x": 110, "y": 96,  "owner": "p2", "richness": "standard", "nearBase": true,  "note": "p2 wood floor (rot of p1)" },
+    { "type": "ore",  "x": 36,  "y": 18,  "owner": "p1", "richness": "standard", "nearBase": false, "note": "p1 natural-expansion ore — the affordable ceiling, semi-exposed" },
+    { "type": "ore",  "x": 92,  "y": 110, "owner": "p2", "richness": "standard", "nearBase": false, "note": "p2 natural-expansion ore (rot of p1)" },
+    { "type": "ore",  "x": 58,  "y": 64,  "owner": "contested", "richness": "rich", "nearBase": false, "note": "central rich ore, west of the throat — the map's prize" },
+    { "type": "ore",  "x": 70,  "y": 64,  "owner": "contested", "richness": "rich", "nearBase": false, "note": "central rich ore, east of the throat (rot pair)" }
+  ],
+
+  "highGround": [
+    { "id": "north-ridge", "x": 64, "y": 84, "elevation": 1, "radius": 12,
+      "ramps": [ { "x": 80, "y": 90, "toward": "se-flank" } ],
+      "overlooks": "throat", "note": "hold it to first-strike the central throat; artillery position (§37)" },
+    { "id": "south-ridge", "x": 64, "y": 44, "elevation": 1, "radius": 12,
+      "ramps": [ { "x": 48, "y": 38, "toward": "nw-flank" } ],
+      "overlooks": "throat", "note": "rot of north-ridge" }
+  ],
+
+  "chokes": [
+    { "id": "throat", "x": 64, "y": 64, "width": "narrow", "lanes": 2,
+      "connects": ["p1", "p2"], "flankedBy": ["nw-pass", "se-pass"],
+      "note": "direct route; narrow, cliff-walled, overlooked by both ridges — splash/first-strike terrain (§37)" },
+    { "id": "nw-pass", "x": 36, "y": 92, "width": "wide", "lanes": 6,
+      "connects": ["p1", "p2"], "flankedBy": [],
+      "note": "wide NW flank — mobility/vehicle route around the throat, with forest cover" },
+    { "id": "se-pass", "x": 92, "y": 36, "width": "wide", "lanes": 6,
+      "connects": ["p1", "p2"], "flankedBy": [],
+      "note": "wide SE flank (rot of nw-pass)" }
+  ],
+
+  "barriers": [
+    { "type": "cliff", "from": { "x": 52, "y": 58 }, "to": { "x": 52, "y": 70 }, "note": "west wall of the throat" },
+    { "type": "cliff", "from": { "x": 76, "y": 58 }, "to": { "x": 76, "y": 70 }, "note": "east wall of the throat (rot)" },
+    { "type": "cliff", "from": { "x": 52, "y": 76 }, "to": { "x": 76, "y": 76 }, "note": "south face of north-ridge (impassable except ramp)" },
+    { "type": "cliff", "from": { "x": 52, "y": 52 }, "to": { "x": 76, "y": 52 }, "note": "north face of south-ridge (rot)" },
+    { "type": "water", "from": { "x": 20, "y": 60 }, "to": { "x": 40, "y": 60 }, "note": "NW pool — channels the flank; air/amphibious only" },
+    { "type": "water", "from": { "x": 88, "y": 68 }, "to": { "x": 108, "y": 68 }, "note": "SE pool (rot)" }
+  ],
+
+  "forests": [
+    { "id": "nw-wood-cover", "x": 36, "y": 92, "radius": 8, "note": "infantry cover/concealment on the NW flank (combat-rules forestConcealment)" },
+    { "id": "se-wood-cover", "x": 92, "y": 36, "radius": 8, "note": "rot of nw-wood-cover" }
+  ],
+
+  "neutralObjectives": [
+    { "id": "relay-north", "type": "relay-tower", "x": 64, "y": 88, "grants": "vision + detection over the throat", "capturable": true,
+      "note": "capturing reveals the central contest — rewards map control, counters stealth pushes (§28)" },
+    { "id": "relay-south", "type": "relay-tower", "x": 64, "y": 40, "grants": "vision + detection over the throat", "capturable": true,
+      "note": "rot of relay-north" }
+  ],
+
+  "expansions": [
+    { "id": "p1-natural",  "x": 36, "y": 18,  "owner": "p1", "resources": ["ore"], "safety": "semi-exposed" },
+    { "id": "p2-natural",  "x": 92, "y": 110, "owner": "p2", "resources": ["ore"], "safety": "semi-exposed" },
+    { "id": "center-west", "x": 58, "y": 64,  "owner": "contested", "resources": ["ore"], "safety": "contested" },
+    { "id": "center-east", "x": 70, "y": 64,  "owner": "contested", "resources": ["ore"], "safety": "contested" }
+  ],
+
+  "lanes": [
+    { "id": "center", "from": "p1", "to": "p2", "via": "throat",  "relativeLength": 1.00, "kind": "narrow-direct" },
+    { "id": "nw",     "from": "p1", "to": "p2", "via": "nw-pass", "relativeLength": 1.35, "kind": "wide-flank" },
+    { "id": "se",     "from": "p1", "to": "p2", "via": "se-pass", "relativeLength": 1.35, "kind": "wide-flank" }
+  ],
+
+  "airspace": "open — aircraft and climb/jump units cross the ridges freely, bypassing the ground throat (terrain.json highGround.access)",
+
+  "designTests": {
+    "_note": "Mirrors terrain.json perMapTestHooks + design/07 §37; asserted by map-check.mjs.",
+    "resourceEquality": "each player: 1 wood + 1 natural ore; central rich ore is a symmetric contested pair",
+    "travelTimeEquality": "exact by 180° symmetry (§37 tolerance 0 s)",
+    "flankAroundEveryNarrowChoke": "throat (narrow) is flanked by nw-pass and se-pass (wide)",
+    "everyPlateauHasARamp": "north-ridge and south-ridge each have a ground ramp",
+    "elevatedArtilleryCannotHitBaseFromSafety": "min ridge→base distance ≈ 45 tiles ≫ artillery range 9",
+    "spawnsEqualElevation": "both mains at elevation 0"
+  }
+}

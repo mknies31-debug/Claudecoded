@@ -14,7 +14,7 @@
 - [x] **No single-unit composition dominates** — §9–10 · [design/03](design/03-combat-systems.md) · *composition.mjs: no §49 SPAM unit; 2 flags documented (see below)*
 
 ## Systems
-- [ ] All ranked maps pass **travel-time tests** — §37 · [design/07](design/07-maps.md) · *terrain.json defines the tests; **no maps authored yet** (runtime)*
+- [ ] All ranked maps pass **travel-time tests** — §37 · [design/07](design/07-maps.md) · *`map-check.mjs` proves the §37 tests; **first map Twin Ridge passes 17/17**; a full ranked pool (§38) is still to author*
 - [x] **Superweapons allow reaction** — §35 · [design/06](design/06-power-units.md) · *timings.json superweapon activation window 14–22 min; reaction-time rule in design/06*
 - [x] **Early harassment allows response** (8–15 s window) — §13 · [design/04](design/04-economy.md) · *economy.json harvesterReactionWindowSec [8,15]*
 - [x] **Economy cannot grow without map exposure** — §11–12 · *resources.json: ore (the ceiling) is finite + at contested points; economy.json expansionSafeguards*
