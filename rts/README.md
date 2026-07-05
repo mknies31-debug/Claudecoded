@@ -44,10 +44,11 @@ Everything provable on paper is proven by a script — run any of them from the 
 | [`scripts/economy-check.mjs`](scripts/economy-check.mjs) | **economy verifier (§11)** — payback bands, wood/ore invariants, ore tech-gate, roster gatherers (58 assertions) |
 | [`scripts/map-check.mjs`](scripts/map-check.mjs) | **§37 map auditor** — rotational symmetry, travel-time/resource equality, flank-around-narrow-choke, ramp-per-plateau, artillery safety |
 | [`scripts/ai-policy.mjs`](scripts/ai-policy.mjs) | **CPU brain (§40)** — reference composition policy; self-test proves difficulty = decisions not stat cheats (easy 1/12 → expert 12/12) |
+| [`scripts/build-game-data.mjs`](scripts/build-game-data.mjs) | inject roster + map into the playable [`game/`](game/index.html) |
 | [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
 | [`scripts/build-lab-data.mjs`](scripts/build-lab-data.mjs) · [`scripts/build-prototype-data.mjs`](scripts/build-prototype-data.mjs) | re-inject roster JSON into the lab / prototype (keep them in sync with `data/units/`) |
 
-**Interactive:** [`lab/index.html`](lab/index.html) — balance calculator + budget validator · [`prototype/index.html`](prototype/index.html) — **visual battle sandbox** that animates the composition sim (mixed vs spam) with the faction art · [`style/index.html`](style/index.html) — cel-shaded style guide. All single-file, offline.
+**Interactive:** [`game/index.html`](game/index.html) — **▶ the playable skirmish** (you vs CPU on Twin Ridge, real units/economy/combat) · [`lab/index.html`](lab/index.html) — balance calculator + budget validator · [`prototype/index.html`](prototype/index.html) — visual battle sandbox (composition sim) · [`maps/twin-ridge.html`](maps/twin-ridge.html) — map viewer · [`style/index.html`](style/index.html) — cel-shaded style guide. All single-file, offline.
 
 ## Data files (the numbers)
 
@@ -86,7 +87,7 @@ _Things that need a design decision — flagged, not silently resolved._
 - Two-resource economy **wired and verified** — `economy-check.mjs` (58/58): payback bands, wood-floor/ore-ceiling invariants, ore soft-tech-gate, roster gatherers
 - Launch checklist: **20/20 design gates pass** (`certify.mjs`)
 
-Everything left is, by nature, **runtime**: it can only be proven by a playable build — real win rates, match-length curves, replay/telemetry systems, AI legality, in-engine visual readability, and authored competitive maps. See [CHECKLIST.md](CHECKLIST.md) for the exact split.
+**The playable engine now exists** ([`game/index.html`](game/index.html), [design/20](design/20-engine.md)) — a single-file skirmish reusing the real data, map, combat math, and CPU brain; a full match runs to a decisive result. The remaining gates are **instrumentation** of that engine (win-rate/match-length/pick-rate telemetry over headless match batches) plus depth (pathfinding, fog-of-war, more maps). See [CHECKLIST.md](CHECKLIST.md) for the split.
 
 ### Known backlog (scoped, non-blocking)
 - ~~**Unify the two combat cores**~~ **DONE** — both sims now share [`combat-core.mjs`](scripts/combat-core.mjs) (effective-HP, DPS, kiting, first-strike). This **resolved the original heavy-tank flag** (Directorate mix vs Vanguard spam: 28% loss → 54% win) and duels stay 0-broken. [design/16](design/16-composition-findings.md), [design/17](design/17-architecture-review.md) P0.1
