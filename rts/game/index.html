@@ -466,7 +466,11 @@ function cpuThink(){
   const cpuArmy = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0);
   const val = cpuArmy.reduce((a,e)=>a+e.u.cost,0);
   const foeVal = myArmy.reduce((a,e)=>a+e.u.cost,0);
-  const gate = simSecs < d.commitT ? Infinity : Math.max(1200, d.margin*foeVal);
+  // stalemate breaker (§35 "force action"): past 2× the gate time, the margin
+  // requirement drops — two equal armies must eventually fight, not sit forever
+  const gate = simSecs < d.commitT ? Infinity
+             : simSecs > d.commitT*2 ? 1200
+             : Math.max(1200, d.margin*foeVal);
   if(val>gate) cpuAttack=true; if(cpuArmy.length<3) cpuAttack=false;
   if(cpuAttack){ for(const e of cpuArmy){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=hqMe.x; e.ty=hqMe.y; } } }
 }

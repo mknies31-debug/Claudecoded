@@ -73,7 +73,7 @@ function mirrorThink(api, st, secs){
   const army = ents.filter(e=>e.owner==='me'&&pdps(e.u)>0&&e.cls!=='HQ');
   const val = army.reduce((a,e)=>a+e.u.cost,0);
   const foeVal = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)>0&&e.cls!=='HQ').reduce((a,e)=>a+e.u.cost,0);
-  const gate = secs<240 ? Infinity : Math.max(1200, 1.1*foeVal);
+  const gate = secs<240 ? Infinity : secs>480 ? 1200 : Math.max(1200, 1.1*foeVal);   // incl. stalemate breaker
   if(val>gate) st.attack=true; if(army.length<3) st.attack=false;
   if(st.attack) for(const e of army){ if(e.order==='idle'||!e.tgt){ e.order='attack'; e.tx=hqCpu.x; e.ty=hqCpu.y; e.tgt=null; } }
 }
