@@ -7,6 +7,7 @@
 //   node rts/scripts/composition.mjs           # curated report
 //   node rts/scripts/composition.mjs A,B,C  vs  X          # custom (comma lists)
 import fs from 'fs';
+import { pdps, effHP, kiteFactor, firstStrikeWindow } from './combat-core.mjs';
 
 const units = {};
 for (const f of ['directorate','covenant','array']) {
@@ -14,11 +15,6 @@ for (const f of ['directorate','covenant','array']) {
   for (const u of r.units) units[u.name] = { ...u, faction: r.faction };
 }
 const U = n => units[n] || (()=>{throw new Error('unknown unit: '+n)})();
-const pdps = u => u.reload>0 ? (u.dmg*u.proj/u.reload)*(u.acc/100) : 0;
-const effHP = (def, atkType, atk) => {
-  if (atk && atk.ignoreResist) return def.hp;
-  const r=(def.resist?.[atkType]??0)/100; return r<1?def.hp/(1-r):Infinity;
-};
 const DT=0.1, MAX_T=240;
 
 // ---- mechanic-aware layer (opt-in via --mechanics; default OFF) ----
@@ -99,10 +95,49 @@ function step(att, def, mech=false){
     for (const d of def){ if (d.n<=0) continue; const e=effHP(d.u, a.u.dmgType, a.u); if (e<bestE){bestE=e; best=d;} }
     if (!best) continue;
     const mult = mech ? mechMult(a.u, best) : 1;     // rear-armor bonus when flanking
+    // range/kiting (shared with the duel): if this type is out-ranged by the type
+    // it focus-fires, it returns less fire while closing — mobile partly, immobile hard.
+    const kite = kiteFactor(a.u.range, best.u.range, a.u.mobile);
+    const shots = a.n*pdps(a.u)*Math.min(a.u.aoe||1, Math.max(1,Math.ceil(best.n)))*mult*kite;
+    kills.set(best.u.name, kills.get(best.u.name) + shots/bestE);
+  }
+  return kills;
+}
+
+// First-strike opening (shared concept with the duel): a type that out-ranges
+// the type it focus-fires gets a head-start window of unanswered fire, sized by
+// its range advantage (min(8, myRange - targetRange) s). Both sides resolve at
+// once, so every engagement where one type out-ranges its target contributes —
+// the multi-type generalisation of the duel's "longer-range side fires alone".
+// This is core physics, so it runs in BOTH default and --mechanics modes; it is
+// why range-8 missiles now matter against range-5 tank spam in the mix.
+function fsStep(att, def, elapsed, mech){
+  const kills = new Map(def.map(s=>[s.u.name,0]));
+  for (const a of att){
+    if (a.n<=0 || pdps(a.u)<=0) continue;
+    let best=null, bestE=Infinity;
+    for (const d of def){ if (d.n<=0) continue; const e=effHP(d.u, a.u.dmgType, a.u); if (e<bestE){bestE=e; best=d;} }
+    if (!best) continue;
+    if (elapsed >= firstStrikeWindow(a.u.range, best.u.range)) continue;   // window over / not out-ranging
+    const mult = mech ? mechMult(a.u, best) : 1;     // kite factor is 1 here (attacker out-ranges target)
     const shots = a.n*pdps(a.u)*Math.min(a.u.aoe||1, Math.max(1,Math.ceil(best.n)))*mult;
     kills.set(best.u.name, kills.get(best.u.name) + shots/bestE);
   }
   return kills;
+}
+function firstStrikePhase(A, B, mech=false){
+  const winOf = (att, def) => att.reduce((m,a)=>{
+    if (a.n<=0 || pdps(a.u)<=0) return m;
+    let best=null, bestE=Infinity;
+    for (const d of def){ if (d.n<=0) continue; const e=effHP(d.u, a.u.dmgType, a.u); if (e<bestE){bestE=e; best=d;} }
+    return best ? Math.max(m, firstStrikeWindow(a.u.range, best.u.range)) : m;
+  }, 0);
+  const maxWin = Math.max(winOf(A,B), winOf(B,A));
+  for (let t=0; t<maxWin && alive(A) && alive(B); t+=DT){
+    const dA=fsStep(A,B,t,mech), dB=fsStep(B,A,t,mech);
+    for (const s of B) s.n=Math.max(0, s.n - (dA.get(s.u.name)||0)*DT);
+    for (const s of A) s.n=Math.max(0, s.n - (dB.get(s.u.name)||0)*DT);
+  }
 }
 
 function battle(sideA, sideB, mech=false){
@@ -113,6 +148,7 @@ function battle(sideA, sideB, mech=false){
     for (const s of B) s.n=Math.max(0, s.n - (oa.get(s.u.name)||0));
     for (const s of A) s.n=Math.max(0, s.n - (ob.get(s.u.name)||0));
   }
+  firstStrikePhase(A, B, mech);                       // range/first-strike opening (both modes)
   for (let t=0;t<MAX_T && alive(A) && alive(B);t+=DT){
     const dA=step(A,B,mech), dB=step(B,A,mech);
     for (const s of B) s.n=Math.max(0, s.n - (dA.get(s.u.name)||0)*DT);
@@ -140,9 +176,30 @@ const SUITES = {
   }
 };
 
+// Best-response mixes for the spams the naive even-split loses to. This is the
+// test that separates the two very different reasons a mix can lose (§10):
+//   · "the even split was mis-weighted"  → a re-weighted mix WINS → adapt (§1), not a bug
+//   · "the spam is genuinely cost-efficient" → even the best response loses → a §8 question
+// The even split dilutes into short-range filler that long-range spam first-
+// strikes; a scouted response drops the filler and leans range/counters.
+const BEST_RESPONSE = {
+  'Vanguard MBT':        { mix:['Missile Trooper','Lancer Tank Destroyer','Howitzer','Warden AA Halftrack'], mech:false },
+  'Nullifier':           { mix:['Prism Artillery','Nullifier','Arc Walker'], mech:false },
+  'Rocket Technical':    { mix:['Ambush Tank','Rocket Technical','Marauder Scrap Tank'], mech:true },
+  'Marauder Scrap Tank': { mix:['Ambush Tank','Hijacker','Mine Layer','Rocket Technical'], mech:true },
+};
+// classify a decisive-spam flag by whether a best-response mix beats it.
+function classifyFlag(spam){
+  const br = BEST_RESPONSE[spam];
+  if (!br) return { verdict:'?', text:'no best-response defined' };
+  const r = battle(army(4000, br.mix), army(4000, [spam]), br.mech);
+  if (r.win==='A') return { verdict:'adapt', text:`best-response WINS ${r.remainPct.toFixed(0)}% (${br.mix.join('+')}${br.mech?' +mech':''}) → mis-weighting, not a bug` };
+  return { verdict:'§8', text:`best-response still loses ${r.remainPct.toFixed(0)}% → §8 cost-efficiency question for ${spam}` };
+}
+
 if (!process.argv.includes('vs')){
   console.log(`\nComposition report (§10 — mixed vs mono-spam, equal 4000 cr)${MECH?'  [MECHANICS ON: stealth/flank/mine/hijack]':''}\n`);
-  let broken=0;
+  let broken=0, adaptable=0;
   for (const [fac, {mixed, spams}] of Object.entries(SUITES)){
     console.log(`${fac} combined arms: ${mixed.join(' + ')}`);
     for (const spam of spams){
@@ -162,13 +219,18 @@ if (!process.argv.includes('vs')){
         delta = `  [DPS-only: ${rd.win==='A'?'mixed':'SPAM'} ${rd.remainPct.toFixed(0)}%]`; }
       const note = (!mixWon && !decisiveSpam)?' (even — re-weight the mix)':'';
       console.log(`   ${mark} vs ${spam.padEnd(22)} spam → ${who} wins ${r.remainPct.toFixed(0)}%${note}${delta}  (left: ${surv||'—'})`);
+      // for a decisive flag, run the best-response test to classify it
+      if (decisiveSpam){ const c = classifyFlag(spam);
+        if (c.verdict==='adapt') adaptable++;
+        console.log(`        ↳ ${c.text}`);
+      }
     }
     console.log('');
   }
   const tail = MECH ? ' (mechanics on)' : '';
   console.log(broken===0
     ? `✓ Combined arms beats every mono-spam${tail} — §10 holds; no spam-all-purpose unit found.`
-    : `⚠ ${broken} spam(s) beat combined arms${tail} — investigate (possible §49 spam unit).`);
+    : `⚠ ${broken} spam(s) beat the even-split mix${tail}: ${adaptable} mis-weighting (best-response wins) · ${broken-adaptable} §8 cost-efficiency question(s) (best-response still loses).`);
   if (!MECH) console.log('  (run with --mechanics to model Covenant stealth/flank/mine/hijack — the §16 blind spot.)');
   process.exit(broken?1:0);
 }

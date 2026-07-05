@@ -75,14 +75,15 @@ _Things that need a design decision — flagged, not silently resolved._
 **The spec is internally certified and ready to hand to an implementation.** Everything provable on paper is proven:
 - 3 factions × ~15 units each, all validating **0 failures / 0 warnings** (`validate-roster.mjs`)
 - Duel counters: **0 broken** (`matchup.mjs`)
-- Combined-arms beats mono-spam with **no §49 spam unit** (`composition.mjs`) — 2 residual flags documented, not tuned away
+- Combined-arms beats mono-spam with **no §49 spam unit** (`composition.mjs`) — residual flags are **self-classified** (best-response test) into mis-weighting vs §8 cost questions, none tuned away
+- Two-resource economy **wired and verified** — `economy-check.mjs` (58/58): payback bands, wood-floor/ore-ceiling invariants, ore soft-tech-gate, roster gatherers
 - Launch checklist: **20/20 design gates pass** (`certify.mjs`)
 
 Everything left is, by nature, **runtime**: it can only be proven by a playable build — real win rates, match-length curves, replay/telemetry systems, AI legality, in-engine visual readability, and authored competitive maps. See [CHECKLIST.md](CHECKLIST.md) for the exact split.
 
 ### Known backlog (scoped, non-blocking)
-- **Heavy-tank cost-efficiency** — the composition sim flags Directorate Vanguard / Covenant Marauder tank-spam; a §8 cost pass (duel tool) is the right instrument, not the composition sim. [design/16](design/16-composition-findings.md)
-- ~~**Mechanic-aware composition sim**~~ **DONE (v1)** — `composition.mjs --mechanics` models Covenant's utility anti-armor (stealth/flank/mine/hijack) as opt-in hooks; default report stays byte-identical. Cut the Covenant-vs-armor gap ~34 points; residual is now a calibration/playtest question, not a blind spot. [design/16](design/16-composition-findings.md)
-- **Unify the two combat cores** — the duel sim (`matchup.mjs`) has range/first-strike/kiting the composition sim lacks; per [design/17](design/17-architecture-review.md) P0.1 this divergence likely drives the heavy-tank flag. Merging them is the cleanest next engineering step.
+- ~~**Unify the two combat cores**~~ **DONE** — both sims now share [`combat-core.mjs`](scripts/combat-core.mjs) (effective-HP, DPS, kiting, first-strike). This **resolved the original heavy-tank flag** (Directorate mix vs Vanguard spam: 28% loss → 54% win) and duels stay 0-broken. [design/16](design/16-composition-findings.md), [design/17](design/17-architecture-review.md) P0.1
+- ~~**Mechanic-aware composition sim**~~ **DONE (v1)** — `composition.mjs --mechanics` models Covenant's utility anti-armor (stealth/flank/mine/hijack) as opt-in hooks; default report stays byte-identical. [design/16](design/16-composition-findings.md)
+- **High-alpha spam cost-efficiency (§8)** — the composition sim's `best-response` test isolates **2 genuine cost questions**: Nullifier (dmg 300, `ignoreResist`, r7) and massed MBTs beat even a scouted mix on cost. A §8 cost-curve pass (duel tool) is the right instrument — a deliberate tuning/playtest decision, not a sim fix. [design/16](design/16-composition-findings.md)
 - **Competitive maps** — [`terrain.json`](data/terrain.json) defines the high-ground / barrier / choke rules and the §37 tests; actual map files remain to be authored.
 - ~~**Browser prototype**~~ **DONE** — [`prototype/index.html`](prototype/index.html) animates the composition sim (mixed vs spam, any faction, any budget) using the exact certified combat model. A full *playable* real-time skirmish (the thing that closes the runtime win-rate gates) is the natural next engineering step.
