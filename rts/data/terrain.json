@@ -1,0 +1,79 @@
+{
+  "_source": "Balance Bible §37 (per-map tests: high ground, choke width, cover, buildable area, artillery positions). Numbers chosen to sit at or below the armor-facing swing (combat-rules.json armorFacing 0.9/1.1/1.3) so terrain shapes fights without deciding them outright.",
+
+  "highGround": {
+    "_rule": "High ground gives a real, symmetric edge — better both on defense (you see them coming, they hit you less) and on offense (your fire reaches farther and lands harder). It is strong but NOT absolute: mass, splash, and flanking from below still break a hilltop, so holding high ground rewards positioning without becoming a hard lock.",
+    "shootingDown": {
+      "damageMult": 1.15,
+      "rangeMult": 1.15,
+      "vision": "full — high ground sees over obstacles and further; the classic scouting perch",
+      "_note": "the OFFENSIVE half: longer reach + harder-hitting fire onto low ground"
+    },
+    "shootingUp": {
+      "damageMult": 0.85,
+      "rangeMult": 0.9,
+      "vision": "reduced — the plateau top is hidden until you climb, scout it, or gain elevated vision",
+      "_note": "the DEFENSIVE half: attackers below hit softer, shorter, and half-blind"
+    },
+    "netSwing": "~30% effective firepower swing to the holder of the high ground (≈+15% down, ≈−15% up), comparable to a rear-armor hit — meaningful, breakable by numbers.",
+    "appliesTo": "ranged direct-fire only",
+    "exemptions": {
+      "areaWeapons": "splash / artillery / flame IGNORE the shooting-up penalty (consistent with combat-rules.json coverNote) — dedicated area fire is how you dislodge a dug-in hilltop",
+      "shortRangeAndMelee": "no elevation modifier — you are already inside the gap",
+      "artilleryOnHighGround": "gains the rangeMult and full vision, making elevated artillery positions a §37 test item"
+    },
+    "access": {
+      "ramps": "the only ground route onto a plateau — a natural strongpoint and §14 'defensive terrain' comeback tool; narrow ramps concentrate the defender's fire and multiply splash",
+      "airAndClimbers": "aircraft and any climb/jump/teleport unit ignore ramps, so an all-ground army cannot be walled out of every hill"
+    }
+  },
+
+  "naturalBarriers": {
+    "_rule": "Barriers channel movement into readable lanes and create the chokes, flanks, and safe pockets the economy and army-composition rules assume. Every barrier states what it blocks and what bypasses it.",
+    "impassable": {
+      "types": ["cliff face", "deep water", "dense rock / canyon wall"],
+      "blocks": "all ground movement",
+      "bypassedBy": ["aircraft", "amphibious / naval where the map allows"],
+      "role": "define the map skeleton — spawns, expansion pockets, and the chokes between them"
+    },
+    "destructible": {
+      "forest": {
+        "blocks": "vehicle line-of-sight and vehicle movement; infantry may pass",
+        "grants": "concealment (see combat-rules.json forestConcealment — reduced enemy detection, no full invisibility while firing)",
+        "clearedBy": ["fire / flame", "explosives", "sustained damage"],
+        "_note": "infantry ambush terrain; the Scorch Buggy / Howitzer double as forest-clearers"
+      },
+      "rubble": {
+        "blocks": "partial — slows movement, gives light cover",
+        "grants": "temporary cover; salvageable wreckage (§14 comeback tool)",
+        "_note": "created by destroyed structures/vehicles; transient, unlike cliffs"
+      }
+    },
+    "chokes": {
+      "_rule": "Choke width is a §37 per-map test. Width sets which army the terrain rewards.",
+      "narrow": {
+        "lanes": "1-2",
+        "favors": "splash / artillery / defensive holds — few units engage the front, area fire is king",
+        "risk": "a single splash or a walled ramp can hard-stop a much larger force — pair with a flank route so it is not an auto-hold"
+      },
+      "medium": {
+        "lanes": "3-4",
+        "favors": "standard combined-arms engagements — the default competitive width"
+      },
+      "wideOpen": {
+        "lanes": "5+",
+        "favors": "mobility, flanking, and vehicles — mass and maneuver over chokepoint splash"
+      }
+    }
+  },
+
+  "perMapTestHooks": {
+    "_note": "extends the §37 checklist in design/07-maps.md with the numeric terrain items above",
+    "items": [
+      "every plateau reachable by ground via at least one ramp (no air-only high ground on a ground map)",
+      "high-ground artillery positions cannot bombard an enemy base from full safety (elevated range must not out-range the whole approach)",
+      "at least one flank around every narrow choke, so terrain rewards but never dictates",
+      "spawns not on unequal elevation relative to each other (mirror the high ground)"
+    ]
+  }
+}

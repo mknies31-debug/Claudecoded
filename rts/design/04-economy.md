@@ -1,6 +1,27 @@
 # 04 · Economy
 
-> Bible §11–14. Data: [`../data/economy.json`](../data/economy.json).
+> Bible §11–14. Data: [`../data/economy.json`](../data/economy.json) · resources: [`../data/resources.json`](../data/resources.json).
+
+## Two resources: wood (floor) & ore (ceiling)
+
+The map carries **two** harvestable resources with deliberately different risk/tempo profiles. Both convert to credits; both keep harvester payback inside the §11 band (100–140 s). The point is the *choice*, not two flavors of the same node.
+
+| | **Wood / Lumber** | **Ore / Minerals** |
+|---|---|---|
+| Value per load | low (30) | **high (75)** |
+| Extraction speed | **fast** (short cadence, quick trips) | slow — "lower to mine" |
+| Gatherer | Lumber Harvester — cheap (900), quick | Mining Vehicle — pricier (1400), slower, armored |
+| Effective cr/s | ~8 | ~11 (at a secured node) |
+| Node total | modest, **renewable — regrows fast** | large but **finite — depletes, never returns** |
+| Location | near base — **safe** | central + expansions — **contested** |
+| Role | economic **floor** | economic **ceiling** |
+
+**The tension this creates:**
+- **Wood only** → survivable but low-ceiling; anyone also holding ore out-scales you.
+- **Ore only** → high-ceiling but brittle; deny the mine (§13) or outlast its depletion and the economy collapses.
+- **Both (intended)** → wood keeps you alive, ore lets you win — and the ore contest is what drives map control and the harassment/comeback loops (§12–14).
+
+This dovetails with faction identity: the harass-and-expand Covenant can fall back on the un-killable wood floor when denied the map, while the ore contest rewards the scouting and aggression the whole design is built around. *(Open question in [`resources.json`](../data/resources.json): should ore also **gate** advanced tech — a hard second currency — or stay a pure credit source? Flagged, not silently adopted.)*
 
 ## Starting conditions (§11)
 

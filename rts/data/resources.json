@@ -1,0 +1,57 @@
+{
+  "_source": "Balance Bible §11 (economy model) — two resource types with distinct risk/tempo profiles. Both convert to credits; they differ in value-per-load, extraction speed, renewability, and where they sit on the map. Payback for both stays inside the §11 harvester band (100-140 s).",
+
+  "_designIntent": "Wood is the economic FLOOR — safe, near-base, renewable, low ceiling, hard to fully deny. Ore is the economic CEILING — richer but slower to extract, finite, and parked at contested/expansion points, so it rewards map control and scouting (§12/§13). You want both: wood keeps you alive, ore lets you win.",
+
+  "wood": {
+    "aka": ["lumber"],
+    "valuePerLoad": 30,
+    "extraction": "fast — short harvest cadence and quick round trips",
+    "effectiveCreditsPerSec": 8,
+    "gatherer": {
+      "name": "Lumber Harvester",
+      "cost": 900,
+      "notes": "cheap, quick to build, lightly armored — fast to get a first one running"
+    },
+    "paybackSec": 112,
+    "node": {
+      "location": "near base — the safe, default income",
+      "totalCapacity": "modest per stand",
+      "renewable": true,
+      "regrows": "fast — a harvested stand replenishes over time, so wood income is sustainable and hard to permanently deny"
+    },
+    "role": "reliable early trickle and the un-killable economic floor; the resource the harass-and-expand identities (Covenant) can lean on when denied the map"
+  },
+
+  "ore": {
+    "aka": ["minerals"],
+    "valuePerLoad": 75,
+    "extraction": "slow — 'lower to mine'; each load is worth far more but the extraction cadence is deliberate",
+    "effectiveCreditsPerSec": 11,
+    "gatherer": {
+      "name": "Mining Vehicle",
+      "cost": 1400,
+      "notes": "pricier, slower, better-armored dedicated miner — a real upfront investment, and a fat raid target (§13)"
+    },
+    "paybackSec": 127,
+    "node": {
+      "location": "central + expansion points — contested by design",
+      "totalCapacity": "large but FINITE — a mine depletes and does not come back, so map control over time is a scored resource",
+      "renewable": false,
+      "regrows": "none (or very slow) — unlike wood, a mined-out node is gone"
+    },
+    "role": "the economic ceiling and the reason to fight for the map; higher steady value at a secured node, but every credit is gated behind reaching, holding, and defending a contested finite point"
+  },
+
+  "tension": {
+    "_note": "The two resources create the strategic choice the maps are built around.",
+    "woodOnly": "survivable but low-ceiling — you will be out-scaled by anyone who also holds ore",
+    "oreOnly": "high-ceiling but brittle — deny the mine (§13 harassment) or outlast it (finite depletion) and the economy collapses",
+    "mixed": "the intended play — wood floor + ore ceiling, with the ore contest driving map control and the harassment/comeback loops (§12-14)"
+  },
+
+  "openQuestions": [
+    "Should ore additionally GATE advanced tech (a hard second currency), or stay a pure credit source with a different risk profile? Gating makes the map contest unskippable but is a larger change to the single-credit model in economy.json — flagged, not silently adopted.",
+    "Exact regrow rate for wood and depletion rate for ore need a live-economy pass to confirm they land inside the §11 income curve (economy.json incomeCurveCreditsPerMin) across a full match."
+  ]
+}
