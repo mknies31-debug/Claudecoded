@@ -37,6 +37,9 @@ Everything provable on paper is proven by a script — run any of them from the 
 | [`scripts/validate-roster.mjs`](scripts/validate-roster.mjs) | per-faction roster: anti-spam (§9), build bands (§20), threat coverage (§5), effective-HP sanity |
 | [`scripts/matchup.mjs`](scripts/matchup.mjs) | duel simulator (§6–8) — do counters actually counter? |
 | [`scripts/composition.mjs`](scripts/composition.mjs) | army-composition simulator (§10) — combined arms vs mono-spam |
+| [`scripts/combat-core.mjs`](scripts/combat-core.mjs) | shared combat primitives (effHP, DPS, kiting, first-strike) — imported by the duel and composition sims so they can't diverge |
+| [`scripts/cost-efficiency.mjs`](scripts/cost-efficiency.mjs) | **§8 cost auditor** — mono-spam efficiency vs a competent best-response, graded against the ≥1.6 problematic band |
+| [`scripts/economy-check.mjs`](scripts/economy-check.mjs) | **economy verifier (§11)** — payback bands, wood/ore invariants, ore tech-gate, roster gatherers (58 assertions) |
 | [`scripts/certify.mjs`](scripts/certify.mjs) | **launch auditor (§50)** — all design-verifiable checklist gates, runtime gates flagged pending |
 | [`scripts/build-lab-data.mjs`](scripts/build-lab-data.mjs) · [`scripts/build-prototype-data.mjs`](scripts/build-prototype-data.mjs) | re-inject roster JSON into the lab / prototype (keep them in sync with `data/units/`) |
 
@@ -84,6 +87,6 @@ Everything left is, by nature, **runtime**: it can only be proven by a playable 
 ### Known backlog (scoped, non-blocking)
 - ~~**Unify the two combat cores**~~ **DONE** — both sims now share [`combat-core.mjs`](scripts/combat-core.mjs) (effective-HP, DPS, kiting, first-strike). This **resolved the original heavy-tank flag** (Directorate mix vs Vanguard spam: 28% loss → 54% win) and duels stay 0-broken. [design/16](design/16-composition-findings.md), [design/17](design/17-architecture-review.md) P0.1
 - ~~**Mechanic-aware composition sim**~~ **DONE (v1)** — `composition.mjs --mechanics` models Covenant's utility anti-armor (stealth/flank/mine/hijack) as opt-in hooks; default report stays byte-identical. [design/16](design/16-composition-findings.md)
-- **High-alpha spam cost-efficiency (§8)** — the composition sim's `best-response` test isolates **2 genuine cost questions**: Nullifier (dmg 300, `ignoreResist`, r7) and massed MBTs beat even a scouted mix on cost. A §8 cost-curve pass (duel tool) is the right instrument — a deliberate tuning/playtest decision, not a sim fix. [design/16](design/16-composition-findings.md)
-- **Competitive maps** — [`terrain.json`](data/terrain.json) defines the high-ground / barrier / choke rules and the §37 tests; actual map files remain to be authored.
+- ~~**High-alpha spam cost-efficiency (§8)**~~ **DONE — cost-CLEARED.** `cost-efficiency.mjs` scores every flagged spam vs a competent best-response against the ≥1.6 problematic band: Nullifier 1.06, Marauder 1.45, both tanks weak — **no unit is problematically cost-efficient; no cost changes warranted.** The composition flags were even-split mis-weighting + the DPS view ignoring utility counters. [design/16](design/16-composition-findings.md)
+- **Competitive maps** — [`terrain.json`](data/terrain.json) defines the high-ground / barrier / choke rules and the §37 tests; actual map files remain to be authored. *(the last non-runtime item)*
 - ~~**Browser prototype**~~ **DONE** — [`prototype/index.html`](prototype/index.html) animates the composition sim (mixed vs spam, any faction, any budget) using the exact certified combat model. A full *playable* real-time skirmish (the thing that closes the runtime win-rate gates) is the natural next engineering step.

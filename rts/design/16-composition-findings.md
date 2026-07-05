@@ -33,17 +33,29 @@ Both sims now share [`combat-core.mjs`](../scripts/combat-core.mjs). Once the co
 `composition.mjs` grades a spam **⚠ decisive** when it beats the *even-split* mix by ≥15%, then runs a **best-response** mix (dropping short-range filler, leaning range/counters) to classify *why* the even split lost:
 
 - **`adapt`** — the best-response mix **wins** → the even split was just mis-weighted (§1), not a balance bug.
-- **`§8`** — even the best response **loses** → a genuine **cost-efficiency** question for that unit, for the duel/§8 cost tool (not something to tune away in the composition sim).
+- **`fair`** — the best-response loses the *battle*, but the spam's §8 efficiency-score (value destroyed / value lost) is **< 1.6** → a fair strong unit that wins by a normal margin; scout it and bring the counter.
+- **`§8`** — best-response loses **and** the efficiency-score is **≥ 1.6** → a genuine cost candidate for the §8 cost tool.
 
-Unifying range **relocated** the flags from mono-*tank* to concentrated **long-range high-alpha spam** (which correctly gets first-strike/kiting vs a diluted even split). Current report: **3 flags — 1 `adapt`, 2 `§8`:**
+Unifying range **relocated** the flags from mono-*tank* to concentrated **long-range high-alpha spam** (which correctly gets first-strike/kiting vs a diluted even split). Current report: **3 flags — 1 `adapt`, 2 `fair`, 0 genuine `§8`:**
 
-| Flag | Even-split | Best-response | Verdict |
-|---|--:|--:|---|
-| Covenant mix vs **Rocket Technical** spam | SPAM 21% | **mixed 40%** (+mech) | **`adapt`** — mis-weighting, not a bug |
-| Array mix vs **Nullifier** spam | SPAM 63% | SPAM 21% | **`§8`** — Nullifier (dmg 300, `ignoreResist`, r7 @1300) cost-efficiency |
-| Covenant mix vs **Marauder** spam | SPAM 47% | SPAM 39% (+mech) | **`§8`** — massed-tank cost-efficiency |
+| Flag | Even-split | Best-response | §8 efficiency | Verdict |
+|---|--:|--:|--:|---|
+| Covenant mix vs **Rocket Technical** spam | SPAM 21% | **mixed 40%** (+mech) | — | **`adapt`** — mis-weighting |
+| Array mix vs **Nullifier** spam | SPAM 63% | SPAM 21% | **1.06** | **`fair`** — normal efficiency |
+| Covenant mix vs **Marauder** spam | SPAM 47% | SPAM 39% (+mech) | **1.45** | **`fair`** — strong, not problematic |
 
-The two `§8` flags are the *same class* as the original heavy-tank finding — **high-alpha units are strong when massed**, which a best-response mix mitigates (63%→21%, 47%→39%) but doesn't erase. That's a deliberate **cost-curve/playtest decision** (are Nullifier and the MBTs slightly under-priced when spammed?), explicitly **not** resolved by fudging the sim. Covenant's Marauder flag additionally leans on the mechanic-aware mode below; even so it remains a cost question, not a blind spot.
+## §8 cost-efficiency audit — the flags are cost-CLEARED
+
+[`../scripts/cost-efficiency.mjs`](../scripts/cost-efficiency.mjs) runs the §8 pass the flags called for: each candidate as a mono-spam vs a *competent* best-response (mechanics on where the counter is Covenant utility), scoring **value destroyed / own value lost** against the `balance-targets.json` bands (problematic ≥ 1.6):
+
+| Unit | §8 efficiency | Band |
+|---|--:|---|
+| Nullifier | **1.06** | normal |
+| Marauder Scrap Tank | **1.45** | strong (not problematic) |
+| Vanguard MBT | 0.37 | weak |
+| Aegis Tank | 0.24 | weak |
+
+**Verdict: no unit is problematically cost-efficient.** The composition flags were artifacts of (1) the naive even-split diluting into short-range filler and (2) the DPS-only view scoring Covenant's utility counters at zero. With range unified and the utility counters modelled, every "cost question" resolves to *mis-weighting* or a *fair strong unit* — **no cost changes are warranted.** (The earlier 2.70 Marauder reading was the default engine disabling its own utility counters; the fair figure is 1.45.) The `§8` verdict remains wired so any future data change that pushes a unit ≥ 1.6 surfaces immediately.
 
 ## Mechanic-aware mode — closing the Covenant blind spot (§16)
 

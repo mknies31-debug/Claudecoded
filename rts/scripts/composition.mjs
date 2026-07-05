@@ -24,6 +24,7 @@ const DT=0.1, MAX_T=240;
 // mechanics OFF every number is byte-identical to before (units without the
 // fields are unaffected either way).
 const MECH = process.argv.includes('--mechanics');
+const isMain = !!(process.argv[1] && process.argv[1].endsWith('composition.mjs'));  // don't run the CLI when imported
 const RULES = JSON.parse(fs.readFileSync('rts/data/combat-rules.json','utf8'));
 const REAR = RULES.armorFacing?.rear ?? 1.3;        // 1.30 — already in the data, never applied
 const OPEN_SECS = 2;                                 // length of a stealth surprise volley
@@ -157,8 +158,12 @@ function battle(sideA, sideB, mech=false){
   }
   const win = alive(A)&&!alive(B) ? 'A' : alive(B)&&!alive(A) ? 'B' : (value(A)>=value(B)?'A':'B');
   const remain = win==='A' ? value(A)/vA0 : value(B)/vB0;
-  return {win, remainPct:remain*100, survA:A.filter(s=>s.n>0.5), survB:B.filter(s=>s.n>0.5)};
+  const vA=value(A), vB=value(B);
+  return {win, remainPct:remain*100, survA:A.filter(s=>s.n>0.5), survB:B.filter(s=>s.n>0.5),
+          vA, vB, vA0, vB0};   // raw values so §8 can compute destroyed/lost efficiency
 }
+// shared with cost-efficiency.mjs (§8) so there is ONE combat model, not a copy
+export { battle, army, value, initValue };
 
 // ---- curated report ----
 const SUITES = {
@@ -194,12 +199,18 @@ function classifyFlag(spam){
   if (!br) return { verdict:'?', text:'no best-response defined' };
   const r = battle(army(4000, br.mix), army(4000, [spam]), br.mech);
   if (r.win==='A') return { verdict:'adapt', text:`best-response WINS ${r.remainPct.toFixed(0)}% (${br.mix.join('+')}${br.mech?' +mech':''}) → mis-weighting, not a bug` };
-  return { verdict:'§8', text:`best-response still loses ${r.remainPct.toFixed(0)}% → §8 cost-efficiency question for ${spam}` };
+  // spam wins the battle — but is it problematically cost-efficient (§8), or just a
+  // fair strong unit that wins by a normal margin? Grade its efficiency-score
+  // (value destroyed / value lost) against the balance-targets ≥1.6 line. This is
+  // the same measure cost-efficiency.mjs reports; keeping them consistent.
+  const eff = (r.vB0-r.vB) > 1 ? (r.vA0-r.vA)/(r.vB0-r.vB) : Infinity;
+  if (eff >= 1.6) return { verdict:'§8', text:`best-response loses ${r.remainPct.toFixed(0)}%; §8 efficiency ${eff.toFixed(2)} ≥1.6 → genuine cost candidate (see cost-efficiency.mjs)` };
+  return { verdict:'fair', text:`best-response loses ${r.remainPct.toFixed(0)}% but §8 efficiency ${eff.toFixed(2)} (<1.6) → fair strong spam: scout it / bring the counter, not a cost bug` };
 }
 
-if (!process.argv.includes('vs')){
+if (isMain && !process.argv.includes('vs')){
   console.log(`\nComposition report (§10 — mixed vs mono-spam, equal 4000 cr)${MECH?'  [MECHANICS ON: stealth/flank/mine/hijack]':''}\n`);
-  let broken=0, adaptable=0;
+  let broken=0; const tally={};
   for (const [fac, {mixed, spams}] of Object.entries(SUITES)){
     console.log(`${fac} combined arms: ${mixed.join(' + ')}`);
     for (const spam of spams){
@@ -220,8 +231,7 @@ if (!process.argv.includes('vs')){
       const note = (!mixWon && !decisiveSpam)?' (even — re-weight the mix)':'';
       console.log(`   ${mark} vs ${spam.padEnd(22)} spam → ${who} wins ${r.remainPct.toFixed(0)}%${note}${delta}  (left: ${surv||'—'})`);
       // for a decisive flag, run the best-response test to classify it
-      if (decisiveSpam){ const c = classifyFlag(spam);
-        if (c.verdict==='adapt') adaptable++;
+      if (decisiveSpam){ const c = classifyFlag(spam); tally[c.verdict]=(tally[c.verdict]||0)+1;
         console.log(`        ↳ ${c.text}`);
       }
     }
@@ -230,15 +240,18 @@ if (!process.argv.includes('vs')){
   const tail = MECH ? ' (mechanics on)' : '';
   console.log(broken===0
     ? `✓ Combined arms beats every mono-spam${tail} — §10 holds; no spam-all-purpose unit found.`
-    : `⚠ ${broken} spam(s) beat the even-split mix${tail}: ${adaptable} mis-weighting (best-response wins) · ${broken-adaptable} §8 cost-efficiency question(s) (best-response still loses).`);
+    : `⚠ ${broken} spam(s) beat the even-split mix${tail}: ${tally.adapt||0} mis-weighting · ${tally.fair||0} fair-but-strong (§8-cleared) · ${tally['§8']||0} genuine §8 cost candidate(s).`);
+  if (broken>0 && !(tally['§8']>0)) console.log('  → none are actual cost bugs; every flag is either mis-weighting or a fair strong unit (confirmed by cost-efficiency.mjs).');
   if (!MECH) console.log('  (run with --mechanics to model Covenant stealth/flank/mine/hijack — the §16 blind spot.)');
   process.exit(broken?1:0);
 }
 
 // custom: "A,B,C vs X,Y"
-const i = process.argv.indexOf('vs');
-const left = process.argv[i-1].split(',').map(s=>s.trim());
-const right = process.argv[i+1].split(',').map(s=>s.trim());
-const r = battle(army(4000,left), army(4000,right), MECH);
-console.log(`\n  ${left.join('+')}  vs  ${right.join('+')}  @4000cr${MECH?'  [mechanics on]':''}`);
-console.log(`  → side ${r.win} wins ${r.remainPct.toFixed(0)}%`);
+if (isMain && process.argv.includes('vs')){
+  const i = process.argv.indexOf('vs');
+  const left = process.argv[i-1].split(',').map(s=>s.trim());
+  const right = process.argv[i+1].split(',').map(s=>s.trim());
+  const r = battle(army(4000,left), army(4000,right), MECH);
+  console.log(`\n  ${left.join('+')}  vs  ${right.join('+')}  @4000cr${MECH?'  [mechanics on]':''}`);
+  console.log(`  → side ${r.win} wins ${r.remainPct.toFixed(0)}%`);
+}
