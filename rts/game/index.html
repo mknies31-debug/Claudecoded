@@ -615,47 +615,89 @@ const hash=n=>{ n=(n<<13)^n; return 1-((n*(n*n*15731+789221)+1376312589)&0x7ffff
 // resize / newGame (design/21 P0b) — per-frame render is a blit plus the
 // animated accents (water shimmer, rich-ore pulse, relay ring) and entities.
 let terrCv=null;
-const TERR_PX=20;   // cache resolution (px per world tile) — camera-independent
+const TERR_PX=28;   // cache resolution (px per world tile) — sized for close zoom (camera-independent)
 function paintTerrain(){
   if(!terrCv) terrCv=document.createElement('canvas');
   terrCv.width=W*TERR_PX; terrCv.height=H*TERR_PX;
   const main=ctx, oS=SCALE, oOX=OX, oOY=OY;
   ctx=terrCv.getContext('2d'); SCALE=TERR_PX; OX=0; OY=0;   // paint in WORLD space through the same helpers
   const S=SCALE, gx0=OX, gy0=OY, gw=W*S, gh=H*S;
-  // ground: soft vertical gradient + a faint tile weave
+  // ground: gradient base + seeded organic mottling + fine speckle + scatter
+  // props (rocks, grass tufts) — the close-zoom detail the flat field lacked.
+  // All of this is painted ONCE into the cache; per-frame cost is zero.
   let bg=ctx.createLinearGradient(0,gy0,0,gy0+gh); bg.addColorStop(0,'#243626'); bg.addColorStop(0.5,'#1c2b1f'); bg.addColorStop(1,'#16221a');
   ctx.fillStyle=bg; ctx.fillRect(gx0,gy0,gw,gh);
-  ctx.strokeStyle='rgba(255,255,255,.022)'; ctx.lineWidth=1;
-  for(let i=8;i<W;i+=8){ ctx.beginPath(); ctx.moveTo(sx(i),gy0); ctx.lineTo(sx(i),gy0+gh); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(gx0,sy(i)); ctx.lineTo(gx0+gw,sy(i)); ctx.stroke(); }
+  for(let i=0;i<260;i++){ const x=gx0+Math.abs(hash(i*7+1))*gw, y=gy0+Math.abs(hash(i*13+5))*gh;
+    ctx.fillStyle = i%2 ? 'rgba(52,84,48,.14)' : 'rgba(20,32,22,.18)';
+    ctx.beginPath(); ctx.arc(x,y,S*(2+6*Math.abs(hash(i*3+11))),0,7); ctx.fill(); }
+  for(let i=0;i<2600;i++){ const x=gx0+Math.abs(hash(i*17+3))*gw, y=gy0+Math.abs(hash(i*29+9))*gh;
+    ctx.fillStyle = i%3 ? 'rgba(126,158,96,.10)' : 'rgba(8,16,10,.14)';
+    ctx.fillRect(x,y,S*0.15,S*0.15); }
+  for(let i=0;i<110;i++){ const px=sx(Math.abs(hash(i*31+7))*W), py=sy(Math.abs(hash(i*37+13))*H);
+    if(i%3===0){ // rock
+      ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(px,py+S*0.22,S*0.5,S*0.24,0,0,7); ctx.fill();
+      ctx.fillStyle='#5a6558'; ctx.beginPath(); ctx.arc(px,py,S*0.36,0,7); ctx.fill();
+      ctx.fillStyle='#7d8a7c'; ctx.beginPath(); ctx.arc(px-S*0.1,py-S*0.12,S*0.18,0,7); ctx.fill(); }
+    else { // grass tuft
+      ctx.strokeStyle='rgba(140,180,100,.45)'; ctx.lineWidth=S*0.08; ctx.lineCap='round';
+      for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(px+k*S*0.12,py); ctx.lineTo(px+k*S*0.22,py-S*0.42); ctx.stroke(); } } }
   // territory glow beneath each base
   for(const hq of [hqMe,hqCpu]){ if(!hq) continue; const col=hq.owner==='me'?'99,166,230':'139,191,90';
     const rg=ctx.createRadialGradient(sx(hq.x),sy(hq.y),0,sx(hq.x),sy(hq.y),26*S);
     rg.addColorStop(0,'rgba('+col+',.18)'); rg.addColorStop(1,'rgba('+col+',0)'); ctx.fillStyle=rg;
     ctx.fillRect(gx0,gy0,gw,gh); }
-  // high ground — raised plateaus with a lit top, shaded base rim, and ramps
+  // high ground — irregular MESAS: drop shadow, stepped ramps, rocky rim,
+  // lit top surface with its own speckle (they read as terrain, not buttons)
   for(const g of MAP.highGround){ const cx=sx(g.x), cy=sy(g.y), rr=g.radius*S;
-    ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(cx,cy+rr*0.16,rr*1.02,rr*0.9,0,0,7); ctx.fill();
-    for(const rp of (g.ramps||[])){ ctx.strokeStyle='#3a5238'; ctx.lineWidth=7*S*0.5; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(sx(rp.x),sy(rp.y)); ctx.stroke(); }
-    let hg=ctx.createRadialGradient(cx-rr*0.3,cy-rr*0.4,rr*0.2,cx,cy,rr); hg.addColorStop(0,'#48633f'); hg.addColorStop(1,'#324a30');
-    ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(cx,cy,rr,0,7); ctx.fill();
-    ctx.strokeStyle='rgba(150,190,130,.35)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(cx,cy,rr-2,Math.PI*1.05,Math.PI*1.95); ctx.stroke(); }
-  // water — static pool body + shoreline (shimmer is per-frame)
+    const lobe=t=>1+0.07*Math.sin(t*3+g.x)+0.05*Math.sin(t*7+g.y);        // organic silhouette
+    const path=(shrink=0)=>{ ctx.beginPath(); for(let t=0;t<=6.4;t+=0.12){ const R=rr*lobe(t)-shrink;
+        const px=cx+Math.cos(t)*R, py=cy+Math.sin(t)*R; t===0?ctx.moveTo(px,py):ctx.lineTo(px,py); } ctx.closePath(); };
+    ctx.save(); ctx.translate(rr*0.05,rr*0.14); ctx.fillStyle='rgba(0,0,0,.3)'; path(); ctx.fill(); ctx.restore();
+    for(const rp of (g.ramps||[])){ const rx=sx(rp.x), ry=sy(rp.y); ctx.lineCap='round';
+      ctx.strokeStyle='#243620'; ctx.lineWidth=S*4.4; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(rx,ry); ctx.stroke();
+      ctx.strokeStyle='#46603c'; ctx.lineWidth=S*3.4; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(rx,ry); ctx.stroke();
+      ctx.setLineDash([S*0.45,S*0.75]); ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=S*2.6;      // stepped treads
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(rx,ry); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.fillStyle='#26381f'; ctx.save(); ctx.translate(0,rr*0.06); path(); ctx.fill(); ctx.restore(); // rocky base rim
+    let hg=ctx.createRadialGradient(cx-rr*0.3,cy-rr*0.4,rr*0.15,cx,cy,rr); hg.addColorStop(0,'#557449'); hg.addColorStop(1,'#3a5637');
+    ctx.fillStyle=hg; path(); ctx.fill();
+    ctx.strokeStyle='rgba(13,20,14,.6)'; ctx.lineWidth=S*0.16; path(); ctx.stroke();
+    ctx.strokeStyle='rgba(175,215,150,.28)'; ctx.lineWidth=S*0.14; ctx.beginPath();                 // NW light lip
+    for(let t=3.4;t<=6.0;t+=0.1){ const R=rr*lobe(t)-S*0.18; const px=cx+Math.cos(t)*R, py=cy+Math.sin(t)*R;
+      t===3.4?ctx.moveTo(px,py):ctx.lineTo(px,py); } ctx.stroke();
+    for(let i=0;i<Math.round(g.radius*g.radius*0.6);i++){ const a=Math.abs(hash(i*23+g.x*7))*6.283, dd=rr*0.9*Math.sqrt(Math.abs(hash(i*41+g.y*3)));
+      ctx.fillStyle=i%2?'rgba(255,255,255,.05)':'rgba(0,0,0,.09)';
+      ctx.fillRect(cx+Math.cos(a)*dd, cy+Math.sin(a)*dd, S*0.16, S*0.16); } }
+  // water — organic pools: wobbled shore ring, deep body, lighter shallows
   for(const b of MAP.barriers.filter(b=>b.type==='water')){ const x0=sx(b.from.x),y0=sy(b.from.y),x1=sx(b.to.x),y1=sy(b.to.y);
-    ctx.lineCap='round'; ctx.strokeStyle='#3d6d96'; ctx.lineWidth=S*4.2; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-    let wg=ctx.createLinearGradient(0,y0-S*2,0,y0+S*2); wg.addColorStop(0,'#3f7fae'); wg.addColorStop(1,'#204d70');
-    ctx.strokeStyle=wg; ctx.lineWidth=S*3.4; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); }
-  // cliffs — dark rock wall with a beveled top edge
+    const L=Math.hypot(x1-x0,y1-y0), n=Math.max(2,Math.ceil(L/(S*1.1)));
+    const at=t=>({x:x0+(x1-x0)*t, y:y0+(y1-y0)*t});
+    for(let i=0;i<=n;i++){ const p=at(i/n), wob=S*(2.1+0.5*Math.abs(hash(i*13+b.from.x)));      // muddy shore
+      ctx.fillStyle='#42513a'; ctx.beginPath(); ctx.arc(p.x,p.y,wob+S*0.55,0,7); ctx.fill(); }
+    for(let i=0;i<=n;i++){ const p=at(i/n), wob=S*(2.1+0.5*Math.abs(hash(i*13+b.from.x)));      // deep water
+      ctx.fillStyle='#20486b'; ctx.beginPath(); ctx.arc(p.x,p.y,wob,0,7); ctx.fill(); }
+    for(let i=0;i<=n;i++){ const p=at(i/n), wob=S*(2.1+0.5*Math.abs(hash(i*13+b.from.x)));      // shallows
+      ctx.fillStyle='#37719c'; ctx.beginPath(); ctx.arc(p.x,p.y-S*0.3,wob*0.62,0,7); ctx.fill(); } }
+  // cliffs — boulder ridges instead of flat bars
   for(const b of MAP.barriers.filter(b=>b.type==='cliff')){ const x0=sx(b.from.x),y0=sy(b.from.y),x1=sx(b.to.x),y1=sy(b.to.y);
-    ctx.lineCap='round'; ctx.strokeStyle='#0a0d11'; ctx.lineWidth=S*1.5; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-    ctx.strokeStyle='#3b4450'; ctx.lineWidth=S*0.5; ctx.beginPath(); ctx.moveTo(x0,y0-S*0.4); ctx.lineTo(x1,y1-S*0.4); ctx.stroke(); }
-  // forests — clusters of cel-shaded trees
-  for(const f of (MAP.forests||[])){ const n=Math.round(f.radius*1.2);
-    for(let k=0;k<n;k++){ const a=k*2.4, rr=f.radius*(0.35+0.6*Math.abs(hash(f.x*97+k*13))); const tx=sx(f.x+Math.cos(a)*rr), ty=sy(f.y+Math.sin(a)*rr), s=S*(1+0.5*Math.abs(hash(k*7+f.y)));
-      ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(tx,ty+s*0.5,s*0.9,s*0.5,0,0,7); ctx.fill();
-      ctx.fillStyle='#274d2b'; ctx.beginPath(); ctx.arc(tx,ty,s,0,7); ctx.fill();
-      ctx.fillStyle='#3a6e3e'; ctx.beginPath(); ctx.arc(tx-s*0.25,ty-s*0.3,s*0.55,0,7); ctx.fill(); } }
+    ctx.lineCap='round'; ctx.strokeStyle='#0a0d11'; ctx.lineWidth=S*1.6; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+    const L=Math.hypot(x1-x0,y1-y0), n=Math.max(2,Math.ceil(L/(S*1.0)));
+    for(let i=0;i<=n;i++){ const t=i/n, bx=x0+(x1-x0)*t+hash(i*7+b.from.x)*S*0.3, by=y0+(y1-y0)*t+hash(i*11+b.from.y)*S*0.3;
+      const r=S*(0.5+0.35*Math.abs(hash(i*19+b.from.y)));
+      ctx.fillStyle=i%2?'#262e38':'#333d49'; ctx.beginPath(); ctx.arc(bx,by,r,0,7); ctx.fill();
+      ctx.fillStyle='rgba(165,180,195,.28)'; ctx.beginPath(); ctx.arc(bx-r*0.28,by-r*0.32,r*0.42,0,7); ctx.fill(); } }
+  // forests — woodland masses: uniform-disc scatter (no ring artifact), denser,
+  // painter-sorted, three-tone canopies
+  for(const f of (MAP.forests||[])){ const n=Math.round(f.radius*f.radius*0.55);
+    const trees=[];
+    for(let k=0;k<n;k++){ const a=Math.abs(hash(f.x*97+k*13))*6.283, rr=f.radius*Math.sqrt(Math.abs(hash(k*7+f.y*31)));
+      trees.push({x:f.x+Math.cos(a)*rr, y:f.y+Math.sin(a)*rr, s:0.75+0.85*Math.abs(hash(k*19+f.x))}); }
+    trees.sort((a,b)=>a.y-b.y);
+    for(const t of trees){ const tx=sx(t.x), ty=sy(t.y), s=S*t.s;
+      ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(tx+s*0.14,ty+s*0.42,s*0.85,s*0.4,0,0,7); ctx.fill();
+      ctx.fillStyle='#1e3d22'; ctx.beginPath(); ctx.arc(tx,ty,s*0.95,0,7); ctx.fill();
+      ctx.fillStyle='#2c5630'; ctx.beginPath(); ctx.arc(tx-s*0.12,ty-s*0.15,s*0.72,0,7); ctx.fill();
+      ctx.fillStyle='#3f7a42'; ctx.beginPath(); ctx.arc(tx-s*0.26,ty-s*0.3,s*0.42,0,7); ctx.fill(); } }
   // resource nodes — log stacks (wood) / crystal clusters (ore); rich pulse is per-frame
   for(const n of nodes){ const cx=sx(n.x), cy=sy(n.y), rich=n.type==='ore'&&n.owner==='contested';
     ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(cx,cy+S*1.2,S*2,S*1,0,0,7); ctx.fill();
@@ -680,6 +722,7 @@ function render(){ resizeIfNeeded(); FRAME++;
   const S=SCALE, tt=FRAME*0.05;
   if(terrDirty||!terrCv){ paintTerrain(); terrDirty=false; }
   ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.imageSmoothingEnabled=true; if('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality='high';
   ctx.drawImage(terrCv, sx(0), sy(0), W*SCALE, H*SCALE);   // one scaled blit under any camera
   // animated terrain accents over the cached layer
   ctx.strokeStyle='rgba(200,230,255,.25)'; ctx.lineWidth=1.2;
@@ -696,7 +739,7 @@ function render(){ resizeIfNeeded(); FRAME++;
   // order markers — collapsing ring where the command landed
   for(const mk of markers){ const f=mk.life/mk.max, col=mk.kind==='attack'?'224,98,58':mk.kind==='harvest'?'255,210,77':'95,208,106';
     ctx.strokeStyle='rgba('+col+','+(0.9*f)+')'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(sx(mk.x),sy(mk.y),(2+6*f)*SCALE*0.4,0,7); ctx.stroke(); mk.life--; }
+    ctx.beginPath(); ctx.arc(sx(mk.x),sy(mk.y),Math.min((2+6*f)*SCALE*0.4,36),0,7); ctx.stroke(); mk.life--; }   // capped so zoom can't blow it up
   markers=markers.filter(m=>m.life>0);
   // entities — an enemy stealth unit stays hidden until a 'me' detector reveals it
   for(const e of ents){ if(e.owner==='cpu' && e.u.stealth && !revealed(e,'me')) continue; drawEnt(e); }
@@ -709,7 +752,7 @@ function render(){ resizeIfNeeded(); FRAME++;
   if(idleN!==lastIdleN){ lastIdleN=idleN; const el=document.getElementById('idleg');
     if(el){ el.style.display=idleN?'':'none'; el.textContent='⛏ '+idleN+' idle'; } }
   // death bursts — expanding flash + fading ring
-  for(const d of fxDeaths){ const f=d.life/d.max, R=d.r*SCALE*(1+(1-f)*2.2);
+  for(const d of fxDeaths){ const f=d.life/d.max, R=Math.min(d.r*SCALE*(1+(1-f)*2.2),80);
     ctx.fillStyle='rgba(255,214,140,'+(0.55*f)+')'; ctx.beginPath(); ctx.arc(sx(d.x),sy(d.y),R*0.55,0,7); ctx.fill();
     ctx.strokeStyle='rgba('+d.col+','+(0.7*f)+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx(d.x),sy(d.y),R,0,7); ctx.stroke(); d.life--; }
   fxDeaths=fxDeaths.filter(d=>d.life>0);
