@@ -234,6 +234,7 @@ function spawn(owner, name, x, y){ const u=byName[name];
   // Array energy shield: a regenerating pool sized to base HP, absorbed before HP
   // unless the attacker is shield-piercing (ignoreResist). Reads resist.energy.
   if(u.faction==='Array' && (u.resist?.energy||0)>0){ e.shieldMax=u.hp; e.shield=u.hp; }
+  if(u.prod){ e.queue=[]; e.rally={x:x+(owner==='me'?3.5:-3.5), y:y+2.5}; }   // production buildings run their own queue (§19)
   ents.push(e); return e; }
 const HQ_STATS={class:'HQ',hp:6000,resist:{smallArms:40,explosive:10,antiArmor:0,energy:0,air:0,siege:-30}}; // small-arms shrug off; SIEGE busts it. Air was -15 → 0: a 10-second Gyro HQ-snipe outran any AA response (playtest P1); siege stays the dedicated base-buster
 function spawnHQ(owner,x,y){ const e={id:uid++,owner,u:HQ_STATS,name:'HQ',x,y,hp:HQ_STATS.hp,maxHp:HQ_STATS.hp,
@@ -313,29 +314,82 @@ function newGame(){
   hqCpu = spawnHQ('cpu', MAP.spawns[1].x, MAP.spawns[1].y);
   startGatherers('me',  hqMe,  GATH[ME].wood);
   startGatherers('cpu', hqCpu, GATH[CPU].wood);
+  // each side starts with a Barracks — tier-1 infantry from the first second,
+  // exactly like the old flat build menu, so early game timing is unchanged
+  spawn('me',  'Barracks', hqMe.x+(passable(hqMe.x+7,hqMe.y-4)?7:-7),  hqMe.y-4);
+  spawn('cpu', 'Barracks', hqCpu.x+(passable(hqCpu.x-7,hqCpu.y+4)?-7:7), hqCpu.y+4);
   const ban=document.getElementById('banner'); if(ban) ban.style.display='none';
   const bh=document.getElementById('buildhead'); if(bh) bh.textContent='Build · '+ME;
   terrDirty=true;                              // repaint the cached terrain layer
   updateSel(); renderBuild();
 }
 
+// ---- production hierarchy (§17/§19): HQ constructs BUILDINGS; buildings
+// produce units in their OWN independent queues. The chain:
+//   Barracks (start with one) → infantry
+//   Motor Pool (needs ore)    → ground vehicles/artillery
+//   Airstrip  (needs Motor Pool) + Tech Center → aircraft
+//   Tech Center (needs Motor Pool) → unlocks all tier-3 units
+// Clicking something whose prerequisite is missing AUTO-QUEUES the
+// prerequisite instead (the base assembles itself in the right order).
+const PROD = {
+  'Barracks':    { cost:600,  build:20, hp:1500 },
+  'Motor Pool':  { cost:1200, build:30, hp:1800 },
+  'Airstrip':    { cost:1000, build:35, hp:1400 },
+  'Tech Center': { cost:1500, build:40, hp:1200 },
+};
+for(const [n,p] of Object.entries(PROD)) byName[n]={ name:n, class:'Structure', prod:true, mobile:false,
+  tier:1, cost:p.cost, build:p.build, hp:p.hp, dmg:0, proj:0, reload:0, acc:0, dmgType:'none', range:5, aoe:0,
+  resist:{smallArms:55,explosive:25,antiArmor:20,energy:0,air:-10,siege:-25}, role:'production structure' };
+const producerOf = u => /infantry/i.test(u.class) ? 'Barracks' : u.class==='Aircraft' ? 'Airstrip' : 'Motor Pool';
+const ownEnt=(owner,name)=>ents.find(e=>e.owner===owner&&e.name===name);
+const queuedAnywhere=(owner,name)=>ents.some(e=>e.owner===owner&&e.queue&&e.queue.some(q=>q.name===name));
+// why can't `owner` build `name` right now? null = buildable · 'ore' = tech-gate
+// · otherwise the name of the missing prerequisite building
+function lockReason(owner,name){ const u=byName[name];
+  if(PROD[name]){
+    if(name==='Motor Pool') return oreUnlocked[owner]?null:'ore';
+    if(name==='Airstrip'||name==='Tech Center')
+      return (ownEnt(owner,'Motor Pool')||queuedAnywhere(owner,'Motor Pool'))?null:'Motor Pool';
+    return null; }                                          // Barracks: credits only
+  if(u.class==='Structure'||isGath(name)) return null;      // defense + economy stay HQ-built (gate-exempt)
+  if(u.detector&&u.tier===1) return null;                   // §28: baseline detection must never be tech-gated
+  const p=producerOf(u); if(!ownEnt(owner,p)) return p;
+  if(u.tier>=2 && !oreUnlocked[owner]) return 'ore';
+  if(u.tier>=3 && !ownEnt(owner,'Tech Center')) return 'Tech Center';
+  return null;
+}
+// central build entry — player buttons, the CPU, harnesses and mirrors all come
+// through here. Auto-chains one missing prerequisite per call.
+function tryBuild(owner,name,depth=0){
+  const why=lockReason(owner,name);
+  if(why==='ore') return false;                             // only real mining unlocks the gate
+  if(why){ if(queuedAnywhere(owner,why) || depth>3) return false;
+    return tryBuild(owner,why,depth+1); }                   // chase the FULL chain (Gyro→Airstrip→Motor Pool)
+  const u=byName[name]; if(credits[owner]<u.cost) return false;
+  const prodEnt = (PROD[name]||u.class==='Structure'||isGath(name)||(u.detector&&u.tier===1)) ? (owner==='me'?hqMe:hqCpu)
+                : ownEnt(owner,producerOf(u));
+  if(!prodEnt) return false;
+  credits[owner]-=u.cost; prodEnt.queue.push({name, left:bt(u)}); return true;
+}
+function queueBuild(owner,_hq,name){ return tryBuild(owner,name); }   // legacy signature (harnesses/mirrors)
+
 // ---- build menu (player) ----
 const BUILDABLE = {
-  Directorate:['Lumber Harvester','Mining Vehicle','Rifleman Squad','Missile Trooper','Recon Spotter','Warden AA Halftrack','Vanguard MBT','Lancer Tank Destroyer','Howitzer','Falcon Gunship','Sentry Turret'],
-  Covenant:['Timber Technical','Scrap Hauler','Raider Squad','Saboteur','Recon Hound','Rocket Technical','Scorch Buggy','Marauder Scrap Tank','Ambush Tank','Interceptor Gyro','Sensor Spike'],
-  Array:['Harvest Drone','Extractor Walker','Sentinel Trooper','Disruptor','Probe Skimmer','Arc Walker','Aegis Tank','Nullifier','Prism Artillery','Phase Interceptor','Pylon Turret'],
+  Directorate:['Lumber Harvester','Mining Vehicle','Barracks','Motor Pool','Airstrip','Tech Center','Rifleman Squad','Missile Trooper','Recon Spotter','Warden AA Halftrack','Vanguard MBT','Lancer Tank Destroyer','Howitzer','Falcon Gunship','Sentry Turret'],
+  Covenant:['Timber Technical','Scrap Hauler','Barracks','Motor Pool','Airstrip','Tech Center','Raider Squad','Saboteur','Recon Hound','Rocket Technical','Scorch Buggy','Marauder Scrap Tank','Ambush Tank','Interceptor Gyro','Sensor Spike'],
+  Array:['Harvest Drone','Extractor Walker','Barracks','Motor Pool','Airstrip','Tech Center','Sentinel Trooper','Disruptor','Probe Skimmer','Arc Walker','Aegis Tank','Nullifier','Prism Artillery','Phase Interceptor','Pylon Turret'],
 };
 const buildDiv=document.getElementById('build');
 function renderBuild(){ buildDiv.innerHTML='';
   for(const name of BUILDABLE[ME]){ const u=byName[name]; const b=document.createElement('button');
-    b.className='bbtn'; const locked=u.tier>=2 && !oreUnlocked.me;
-    b.innerHTML=`<span>${name}${locked?' 🔒':''}</span><span class="c">${u.cost}</span>`;
-    b.disabled = credits.me<u.cost || locked;
-    b.title = locked?`Requires ore: build an ore gatherer (${GATH[ME].ore}) and send it to an ore node — mining unlocks tier-2+`:`Build ${name} (${u.build||20}s)`;
-    b.onclick=()=>queueBuild('me',hqMe,name); buildDiv.appendChild(b); } }
-function queueBuild(owner,hq,name){ const u=byName[name]; if(credits[owner]<u.cost) return;
-  if(u.tier>=2 && !oreUnlocked[owner]) return;
-  credits[owner]-=u.cost; hq.queue.push({name, left:bt(u)}); }
+    b.className='bbtn'; const why=lockReason('me',name);
+    b.innerHTML=`<span>${name}${why?' 🔒':''}</span><span class="c">${u.cost}</span>`;
+    b.disabled = credits.me<u.cost || why==='ore';
+    b.title = why==='ore' ? `Requires ore: build an ore gatherer (${GATH[ME].ore}) and send it to an ore node — mining unlocks tier-2+`
+            : why ? `Requires ${why} — clicking will queue the ${why} first (${PROD[why].cost} cr)`
+            : `Build ${name} (${u.build||20}s)${PROD[name]?' — production building':''}`;
+    b.onclick=()=>tryBuild('me',name); buildDiv.appendChild(b); } }
 
 // ---- selection & orders ----
 let sel=[], drag=null, hover=null;
@@ -470,7 +524,7 @@ function harvest(e){
 function updateEnt(e){
   // shield regen: after a short lull since the last hit, refill toward shieldMax
   if(e.shieldMax){ if(e.shieldHit>0) e.shieldHit-=DT; else if(e.shield<e.shieldMax) e.shield=Math.min(e.shieldMax, e.shield+e.shieldMax*0.06*DT); }
-  if(e.cls==='HQ'){ if(e.queue.length){ e.queue[0].left-=DT;
+  if(e.queue && e.queue.length){ e.queue[0].left-=DT;      // any producer (HQ or building) runs its own queue (§19)
     if(e.queue[0].left<=0){ const b=e.queue.shift();
       let px=e.rally.x+(Math.random()-0.5)*3, py=e.rally.y+(Math.random()-0.5)*3;
       if(byName[b.name].mobile===false){                    // structures claim ground: spiral to a clear, passable spot
@@ -479,7 +533,8 @@ function updateEnt(e){
           if(!ents.some(o=>o.u.mobile===false&&Math.hypot(o.x-tx,o.y-ty)<RAD('Structure')*2.2)){ px=tx; py=ty; break; } } }
       const g=spawn(e.owner,b.name,px,py);
       if(e.owner==='me') sfx('build');
-      if(isGath(b.name)){ g.order='harvest'; g.node=nearestNode(g, isOreGath(b.name)?'ore':'wood'); } } } return; }
+      if(isGath(b.name)){ g.order='harvest'; g.node=nearestNode(g, isOreGath(b.name)?'ore':'wood'); } } }
+  if(e.cls==='HQ') return;
   // static structures (mobile:false): pinned to their build spot; only defend/detect
   if(e.u.mobile===false){ if(pdps(e.u)>0) combat(e); return; }
   if(e.order==='harvest'){ harvest(e); return; }
@@ -513,7 +568,7 @@ let cpuTimer=0, cpuAttack=false;
 function cpuThink(){
   const d = DIFFS[DIFF];
   const myArmy = ents.filter(e=>e.owner==='me'&&pdps(e.u)>0);
-  const cpuGath = ents.filter(e=>e.owner==='cpu'&&pdps(e.u)<=0&&e.cls!=='HQ').length;
+  const cpuGath = ents.filter(e=>e.owner==='cpu'&&isGath(e.name)).length;   // real gatherers only (buildings are pdps-0 too)
   const oreG=GATH[CPU].ore;
   const oreComing = oreUnlocked.cpu || hqCpu.queue.some(q=>q.name===oreG)
     || ents.some(e=>e.owner==='cpu'&&e.name===oreG);
@@ -562,8 +617,7 @@ function cpuThink(){
   else if(threat){ // defenders rally home and auto-acquire the intruders
     for(const e of cpuArmy){ if(e.order==='idle'&&!e.tgt){ e.order='attack'; e.tx=hqCpu.x; e.ty=hqCpu.y; } } }
 }
-function tryCpuBuild(name){ const u=byName[name]; if(!u||credits.cpu<u.cost) return false;
-  if(u.tier>=2&&!oreUnlocked.cpu) return false; credits.cpu-=u.cost; hqCpu.queue.push({name,left:bt(u)}); return true; }
+function tryCpuBuild(name){ return !!byName[name] && tryBuild('cpu',name); }   // same hierarchy/auto-chain as the player
 
 // ---- loop ----
 function endGame(winner){ if(over) return; over=winner;
@@ -814,11 +868,14 @@ function render(){ resizeIfNeeded(); FRAME++;
   let rate=0; for(const e of ents) if(e.owner==='me'&&e.order==='harvest'&&e.node&&Math.hypot(e.node.x-e.x,e.node.y-e.y)<1.5) rate+=e.node.rate;
   document.getElementById('rate').textContent='+'+rate+'/s';
   // build queue status
-  const q=hqMe?hqMe.queue:[]; const qEl=document.getElementById('queue');
-  if(q.length){ const cur=q[0], tot=bt(byName[cur.name]), prog=Math.max(0,Math.min(1,1-cur.left/tot));
-    qEl.innerHTML='<b>Building:</b> '+cur.name+(q.length>1?' <span style="color:#93a1b3">(+'+(q.length-1)+' queued)</span>':'')
+  // production readout: one line per busy producer (HQ + every building, §19)
+  const qEl=document.getElementById('queue'); let qhtml='';
+  for(const p of ents){ if(p.owner!=='me'||!p.queue||!p.queue.length) continue;
+    const cur=p.queue[0], tot=bt(byName[cur.name]), prog=Math.max(0,Math.min(1,1-cur.left/tot));
+    qhtml+='<b>'+(p.cls==='HQ'?'HQ':p.name)+':</b> '+cur.name
+      +(p.queue.length>1?' <span style="color:#93a1b3">(+'+(p.queue.length-1)+')</span>':'')
       +'<div class="qbar"><span style="width:'+Math.round(prog*100)+'%"></span></div>'; }
-  else qEl.textContent='Idle — pick a unit above.';
+  if(qhtml) qEl.innerHTML=qhtml; else qEl.textContent='Idle — pick a unit above.';
   renderComp();
   renderBuild();
 }
@@ -851,6 +908,13 @@ function drawEnt(e){ const base=e.owner==='me'?'#63a6e6':'#8bbf5a', dark=shade(b
     ctx.fillStyle=base; ctx.fillRect(-r*0.75,-r*0.75,1.5*r,1.5*r); ctx.fillStyle=cl; ctx.fillRect(-r*0.75,-r*0.75,1.5*r,r*0.4);
     ctx.fillStyle='#0006'; for(let i=-1;i<2;i++)ctx.fillRect(i*r*0.5-r*0.15,-r*0.2,r*0.3,r*0.9);
     ctx.fillStyle='#fff'; ctx.font='bold '+(r*0.55)+'px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('HQ',0,r*0.55); }
+  else if(e.u.prod){ const w=r*1.7, h=r*1.25;               // production buildings: wide hall + team roof stripe + type glyph
+    ctx.fillStyle=cd; ctx.fillRect(-w,-h,w*2,h*2); ctx.strokeRect(-w,-h,w*2,h*2);
+    ctx.fillStyle=col; ctx.fillRect(-w,-h,w*2,h*0.55);       // roof stripe (team color)
+    ctx.fillStyle='#11151a'; ctx.fillRect(-w*0.35,h*0.15,w*0.7,h*0.85);   // bay door
+    ctx.fillStyle=cl; ctx.fillRect(-w+w*0.12,-h+h*0.12,w*0.35,h*0.3);     // skylight
+    ctx.fillStyle='#e7edf5'; ctx.font='bold '+(r*0.9)+'px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(e.name==='Barracks'?'B':e.name==='Motor Pool'?'M':e.name==='Airstrip'?'A':'T', 0, -h*0.15); }
   else if(e.cls==='Structure'){ ctx.rotate(0);
     ctx.fillStyle=cd; ctx.beginPath(); ctx.moveTo(-r,r); ctx.lineTo(-r*0.8,-r*0.6); ctx.lineTo(r*0.8,-r*0.6); ctx.lineTo(r,r); ctx.closePath(); outline();
     ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,-r*0.5,r*0.55,0,7); outline();
