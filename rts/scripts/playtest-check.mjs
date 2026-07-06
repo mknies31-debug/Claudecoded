@@ -215,6 +215,30 @@ const SCENARIOS = {
       +`@50 tiles=${revealFar} (want true/false) · cloaked-alone 15s → owner=${relay2.owner} prog=${relay2.prog.toFixed(1)} (want null/0)`};
   },
 
+  // 8 — REAL browser events must never freeze the sim. Encodes the P0 where the
+  // mousemove handler wrote hover coords into `over` (the game-over flag): one
+  // hover froze tick() forever and made endGame a no-op. Drives the actual
+  // captured canvas handlers, not tick()-only.
+  'hover-freeze'(){
+    seedRandom(80);
+    const api=freshEngine();
+    api.setMap('Twin Ridge'); api.setFac('Directorate','Covenant'); api.start();
+    for(let k=0;k<90;k++) api.tick();
+    const t0=api.simSecs;
+    // fire real mouse events across the canvas mid-game
+    for(let i=0;i<10;i++){ api.fire('cv','mousemove',{offsetX:100+i*60,offsetY:80+i*40}); api.tick(); }
+    for(let k=0;k<90;k++) api.tick();
+    const advanced = api.simSecs > t0+2.9;                 // sim kept running through hover
+    const notOver = !api.over;                             // hover must not fake a game-over
+    // and the game can still END after hovering: overwhelm the CPU HQ
+    for(let i=0;i<10;i++) api.spawn('me','Howitzer', api.hqCpu.x+6, api.hqCpu.y+6);
+    let ended=false; for(let k=0;k<120*30 && !ended;k++){ api.tick(); if(api.over) ended=true;
+      if(k%30===0) for(const e of api.ents) if(e.owner==='me'&&e.name==='Howitzer'&&e.order!=='attack'){ e.order='attack'; e.tx=api.hqCpu.x; e.ty=api.hqCpu.y; } }
+    const pass = advanced && notOver && ended && api.over==='me';
+    return {pass, detail:`sim advanced through 10 real mousemoves (${t0.toFixed(1)}s → ${api.simSecs.toFixed(1)}s, want +3s) · `
+      +`over-flag clean=${notOver} · endGame still fires after hover=${ended} (outcome=${api.over})`};
+  },
+
   // 7 — 6 cross-faction both-sides-driven matches across the 3 maps all conclude, no draws.
   'match-sweep'(){
     const CAP_TICKS=900*30;
