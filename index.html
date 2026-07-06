@@ -324,6 +324,33 @@
   .briefbar{display:flex;gap:10px;margin-top:12px}
   .briefbar .rgen{margin-top:0}
 
+  /* ===== primary action: Add Customer (FAB) + wizard ===== */
+  .addfab{position:fixed;right:28px;bottom:104px;z-index:45;font-family:'Orbitron';font-weight:700;font-size:16px;letter-spacing:1.5px;
+    padding:18px 26px;border:none;border-radius:16px;cursor:pointer;color:#04140a;
+    background:linear-gradient(135deg,#5cf79f,#1f9d5e);
+    box-shadow:0 0 0 2px rgba(92,247,159,.45),0 12px 30px -6px rgba(0,0,0,.6),0 0 26px rgba(56,240,138,.5);
+    transition:transform .16s,filter .16s;animation:addpulse 2.6s ease-in-out infinite}
+  .addfab:hover{transform:translateY(-2px) scale(1.03);filter:brightness(1.08)}
+  .addfab:active{transform:scale(.98)}
+  @keyframes addpulse{0%,100%{box-shadow:0 0 0 2px rgba(92,247,159,.45),0 12px 30px -6px rgba(0,0,0,.6),0 0 22px rgba(56,240,138,.45)}
+    50%{box-shadow:0 0 0 3px rgba(92,247,159,.65),0 12px 30px -6px rgba(0,0,0,.6),0 0 42px rgba(56,240,138,.75)}}
+  @media(max-width:560px){ .addfab{right:16px;bottom:92px;font-size:14px;padding:15px 20px} }
+  body.hivis .addfab{font-size:19px;padding:22px 30px}
+  .awrap{display:flex;flex-direction:column;gap:12px}
+  .aq{font-size:19px;font-weight:700;color:var(--text);margin:2px 0 2px;line-height:1.35}
+  .aopt{display:flex;flex-wrap:wrap;gap:12px}
+  .acard{flex:1 1 240px;text-align:left;border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;background:rgba(47,230,255,.03);transition:.15s;color:var(--text)}
+  .acard:hover{border-color:var(--line-strong);background:rgba(47,230,255,.08);transform:translateY(-1px)}
+  .acard .ai{font-size:26px;display:block;margin-bottom:6px}
+  .acard .at{font-family:'Orbitron';font-size:14px;letter-spacing:.5px;color:var(--cyan)}
+  .acard .as{font-size:13px;color:var(--dim);margin-top:5px;line-height:1.45;display:block}
+  .abig{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .abig button{font-family:'Orbitron';font-size:15px;letter-spacing:.5px;padding:24px 12px;border-radius:14px;border:1px solid var(--line-strong);background:rgba(47,230,255,.06);color:var(--text);cursor:pointer;transition:.15s}
+  .abig button:hover{background:rgba(47,230,255,.15);transform:translateY(-1px)}
+  .aback{align-self:flex-start;background:none;border:none;color:var(--dim);font-family:var(--mono);font-size:13px;cursor:pointer;padding:4px 0}
+  .aback:hover{color:var(--text)}
+  body.hivis .aq{font-size:23px} body.hivis .acard .at{font-size:17px} body.hivis .abig button{font-size:18px}
+
   /* ===== customer intake ===== */
   .ifiles{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
   .ifile{font-family:var(--mono);font-size:12px;color:var(--cyan);border:1px solid var(--line);border-radius:7px;padding:6px 10px;display:flex;gap:8px;align-items:center}
@@ -723,6 +750,21 @@
     </div>
     <input id="cmd" type="text" placeholder="Ask CARVIS anything — search customers, ask a question, or type a command…" autocomplete="off">
     <button class="send" id="send">➤</button>
+  </div>
+
+  <!-- PRIMARY ACTION: Add Customer -->
+  <button class="addfab" id="addCustomerFab" title="Add a customer">＋ ADD CUSTOMER</button>
+</div>
+
+<!-- ============ ADD CUSTOMER (primary intake wizard) ============ -->
+<div class="overlay" id="addOverlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:600px">
+    <div class="mh">
+      <div class="av">＋</div>
+      <div><div class="mt">ADD CUSTOMER</div><div class="ms" id="addSub">Choose how you want to add</div></div>
+      <button class="x" id="addClose">✕</button>
+    </div>
+    <div class="mb" id="addBody"></div>
   </div>
 </div>
 
@@ -1482,6 +1524,7 @@ function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classLis
 function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
+  if(low==='add'||low==='add customer'||low==='new customer'||low==='new'){ openAdd(); $('#cmd').value=''; return; }
   if(low==='intake'||low==='upload'||low==='import'||low==='import customers'){ openIntake(); $('#cmd').value=''; return; }
   if(low==='playbook'||low==='sop'||low==='sops'||low==='scripts'||low==='plays'){ openSops(); $('#cmd').value=''; return; }
   if(low==='measure'||low==='log'||low==='funnel'||low==='metrics'){ openMeasure(); $('#cmd').value=''; return; }
@@ -2193,7 +2236,15 @@ function readFileBlock(file){
 function renderIntakeFiles(){
   $('#intakeFileList').innerHTML=intakeFiles.map((f,i)=>`<span class="ifile">${esc(f.name)} <b>${(f.size/1024).toFixed(0)}KB</b> <span class="js-ifile-del" data-i="${i}" style="cursor:pointer;color:var(--red)">✕</span></span>`).join('');
 }
-function openIntake(){ $('#intakeStat').textContent=''; $('#intakeStat').className='ostat'; $('#intakeResults').innerHTML=''; $('#intakeOverlay').classList.add('show'); }
+function openIntake(opts){ opts=opts||{};
+  intakeFiles=[]; try{ renderIntakeFiles(); }catch(e){}
+  const p=$('#intakePaste'); if(p) p.value='';
+  const c=$('#intakeCmd'); if(c) c.value=opts.cmd||'';
+  $('#intakeStat').textContent=''; $('#intakeStat').className='ostat'; $('#intakeResults').innerHTML='';
+  $('#intakeOverlay').classList.add('show');
+  if(opts.focus==='files') setTimeout(()=>{ try{ $('#intakeFiles').click(); }catch(e){} },120);
+  else setTimeout(()=>{ try{ (opts.focus==='paste'?$('#intakePaste'):$('#intakeCmd')).focus(); }catch(e){} },80);
+}
 function closeIntake(){ $('#intakeOverlay').classList.remove('show'); }
 function parseIntakeJSON(text){
   if(!text) return null;
@@ -2259,40 +2310,124 @@ function renderIntakeResults(d){
 }
 const dealKey=dl=>((dl.stock||'').toLowerCase().trim()) || (((dl.vehicle||'')+'|'+(dl.dealDate||dl.deal_date||'')).toLowerCase().trim());
 function normDeals(list){ return (Array.isArray(list)?list:[]).map(dl=>({stock:dl.stock||'', vehicle:dl.vehicle||'', vin:dl.vin||'', dealDate:dl.deal_date||dl.dealDate||'', notes:dl.notes||''})).filter(dl=>dl.stock||dl.vehicle||dl.vin||dl.dealDate); }
+// Create or merge one customer record (shared by Intake + manual Add Customer).
+function upsertCustomer(r){
+  const name=(r.full_name||r.name||((r.first_name||'')+' '+(r.last_name||'')).trim()).trim();
+  if(!name) return {created:false, addedDeals:0};
+  const email=(r.email||'').trim(), phone=(r.phone||'').trim();
+  const status=(r.status==='prospect')?'prospect':'sold';
+  const deals=normDeals(r.deals);
+  const existing=CONTACTS.find(c=> (email && (c.email||'').toLowerCase()===email.toLowerCase()) || (phone && (c.phone||'')===phone && (c.name||'').toLowerCase()===name.toLowerCase()));
+  if(existing){
+    existing.deals=existing.deals||[]; let added=0;
+    deals.forEach(dl=>{ if(!existing.deals.some(x=>dealKey(x)===dealKey(dl))){ existing.deals.push(dl); added++; } });
+    if(status==='sold') existing.status='sold';
+    existing.status=existing.status||status; existing.type=existing.status;
+    ['email','phone','address','city','state','zip','firstName','lastName'].forEach(f=>{ const src=f==='firstName'?r.first_name:f==='lastName'?r.last_name:r[f]; if(!existing[f]&&src) existing[f]=src; });
+    existing.vehicle=(existing.deals[existing.deals.length-1]||{}).vehicle||existing.vehicle||'';
+    if(r.notes && !existing.notes) existing.notes=r.notes;
+    return {created:false, addedDeals:added};
+  }
+  CONTACTS.push({ id:Date.now()+Math.floor(Math.random()*1e5), name, firstName:r.first_name||'', lastName:r.last_name||'', email, phone,
+    address:r.address||'', city:r.city||'', state:r.state||'', zip:r.zip||'',
+    status, type:status, deals, vehicle:(deals[deals.length-1]||{}).vehicle||'', notes:r.notes||'', source:r.source||'intake', group:INTAKE_GROUP });
+  return {created:true, addedDeals:deals.length};
+}
 function createIntakeSelected(){
   if(!intakeData) return;
   const picks=$$('.i-pick').filter(x=>x.checked).map(x=>+x.dataset.i);
   const rows=(intakeData.ready||[]).filter((_,i)=>picks.includes(i));
   if(!rows.length){ toast('Select at least one record'); return; }
   let created=0, merged=0, addedDeals=0;
-  rows.forEach((r,k)=>{
-    const name=(r.full_name||((r.first_name||'')+' '+(r.last_name||'')).trim()).trim(); if(!name) return;
-    const email=(r.email||'').trim(), phone=(r.phone||'').trim();
-    const status=(r.status==='prospect')?'prospect':'sold';
-    const deals=normDeals(r.deals);
-    const existing=CONTACTS.find(c=> (email && (c.email||'').toLowerCase()===email.toLowerCase()) || (phone && (c.phone||'')===phone && (c.name||'').toLowerCase()===name.toLowerCase()));
-    if(existing){
-      existing.deals=existing.deals||[];
-      deals.forEach(dl=>{ if(!existing.deals.some(x=>dealKey(x)===dealKey(dl))){ existing.deals.push(dl); addedDeals++; } });
-      if(status==='sold') existing.status='sold';
-      existing.status=existing.status||status; existing.type=existing.status;
-      // backfill blank contact fields from the new record (never overwrite)
-      ['email','phone','address','city','state','zip','firstName','lastName'].forEach(f=>{ const src=f==='firstName'?r.first_name:f==='lastName'?r.last_name:r[f]; if(!existing[f]&&src) existing[f]=src; });
-      existing.vehicle=(existing.deals[existing.deals.length-1]||{}).vehicle||existing.vehicle||'';
-      merged++;
-    } else {
-      CONTACTS.push({ id:Date.now()+k, name, firstName:r.first_name||'', lastName:r.last_name||'', email, phone,
-        address:r.address||'', city:r.city||'', state:r.state||'', zip:r.zip||'',
-        status, type:status, deals, vehicle:(deals[deals.length-1]||{}).vehicle||'', notes:r.notes||'', source:'intake', group:INTAKE_GROUP });
-      created++;
-    }
-  });
+  rows.forEach(r=>{ const res=upsertCustomer(r); if(res.created) created++; else merged++; addedDeals+=res.addedDeals; });
   if(created||addedDeals) saveContacts();
   try{ refreshContactDropdown(); }catch(e){}
   blip(960,0.07,'sine',0.13);
   toast(`Created ${created} customer${created!==1?'s':''}${merged?` · updated ${merged} on file (+${addedDeals} deal${addedDeals!==1?'s':''})`:''}`);
   intakeData.ready=(intakeData.ready||[]).filter((_,i)=>!picks.includes(i));
   renderIntakeResults(intakeData);
+}
+/* ---------- Add Customer — primary CTA wizard (progressive disclosure) ---------- */
+let addFlow={};
+function openAdd(){ addFlow={}; $('#addOverlay').classList.add('show'); renderAddStep('method'); }
+function closeAdd(){ $('#addOverlay').classList.remove('show'); }
+function addCommand(){
+  if(addFlow.count==='one') return 'This is ONE customer. Classify as sold or prospect from the details.';
+  if(addFlow.sameCat==='yes' && addFlow.category) return `These are all ${addFlow.category==='sold'?'sold customers':'prospects'}.`;
+  return 'Multiple customers — classify EACH individually as sold or prospect.';
+}
+function renderAddStep(step){
+  addFlow.step=step; const b=$('#addBody'), sub=$('#addSub');
+  if(step==='method'){ sub.textContent='Choose how you want to add';
+    b.innerHTML=`<div class="awrap"><div class="aopt">
+      <button class="acard" data-m="manual"><span class="ai">⌨</span><span class="at">Manual Entry</span><span class="as">Type the customer's details yourself.</span></button>
+      <button class="acard" data-m="describe"><span class="ai">✍</span><span class="at">Describe It</span><span class="as">Write it in plain English — CARVIS pulls out the record.</span></button>
+      <button class="acard" data-m="ai"><span class="ai">◉</span><span class="at">Need AI Help</span><span class="as">Talk it through with CARVIS and it builds the record.</span></button>
+      <button class="acard" data-m="upload"><span class="ai">⬆</span><span class="at">Upload File or Photo</span><span class="as">Spreadsheet, export, screenshot, or a photo of a sheet.</span></button>
+    </div></div>`;
+  } else if(step==='count'){ sub.textContent='Step 1';
+    b.innerHTML=`<div class="awrap"><button class="aback" data-back="method">← back</button>
+      <div class="aq">Are you adding one customer or multiple customers?</div>
+      <div class="abig"><button data-count="one">One customer</button><button data-count="multiple">Multiple customers</button></div></div>`;
+  } else if(step==='samecat'){ sub.textContent='Step 2';
+    b.innerHTML=`<div class="awrap"><button class="aback" data-back="count">← back</button>
+      <div class="aq">Are all customers in the same category?</div>
+      <div class="abig"><button data-same="yes">Yes</button><button data-same="no">No</button></div></div>`;
+  } else if(step==='whichcat'){ sub.textContent='Category';
+    b.innerHTML=`<div class="awrap"><button class="aback" data-back="samecat">← back</button>
+      <div class="aq">Which category are they all?</div>
+      <div class="abig"><button data-cat="sold">Sold customers</button><button data-cat="prospect">Prospects</button></div></div>`;
+  } else if(step==='manual'){ renderManualForm(); }
+}
+function launchAdd(){
+  if(addFlow.method==='manual'){ renderAddStep('manual'); return; }
+  const cmd=addCommand(); closeAdd();
+  if(addFlow.method==='describe') openIntake({cmd, focus:'paste'});
+  else if(addFlow.method==='upload') openIntake({cmd, focus:'files'});
+  else if(addFlow.method==='ai') openAI(`I want to add ${addFlow.count==='multiple'?'several customers':'a customer'} to CARVIS.${addFlow.category?' They are '+(addFlow.category==='sold'?'sold customers':'prospects')+'.':''} Ask me for whatever you need, then give me the clean record(s) to confirm. Here's what I have so far: `, {send:false});
+}
+function renderManualForm(){
+  const b=$('#addBody'); const multi=addFlow.count==='multiple';
+  $('#addSub').textContent = multi?'Manual entry — add each customer':'Manual entry';
+  const back = addFlow.count==='one'?'count':(addFlow.sameCat==='yes'?'whichcat':(addFlow.sameCat==='no'?'samecat':'count'));
+  const isPro = addFlow.category==='prospect';
+  b.innerHTML=`<div class="awrap"><button class="aback" data-back="${back}">← back</button>
+    <div class="seg" id="mcStatus"><button data-s="sold" class="${isPro?'':'on'}">SOLD</button><button data-s="prospect" class="${isPro?'on':''}">PROSPECT</button></div>
+    <div class="numgrid">
+      <input id="mcName" class="rin" style="margin-top:0" placeholder="Full name *">
+      <input id="mcPhone" class="rin" style="margin-top:0" inputmode="tel" placeholder="Phone">
+      <input id="mcEmail" class="rin" style="margin-top:0" placeholder="Email">
+      <input id="mcCity" class="rin" style="margin-top:0" placeholder="City, ST">
+    </div>
+    <span class="olabel">Deal (for sold customers)</span>
+    <div class="numgrid">
+      <input id="mcVeh" class="rin" style="margin-top:0" placeholder="Vehicle — e.g. 2019 F-150">
+      <input id="mcStock" class="rin" style="margin-top:0" placeholder="Stock #">
+      <input id="mcVin" class="rin" style="margin-top:0" placeholder="VIN">
+      <input id="mcDate" class="rin" style="margin-top:0" type="month" title="Deal month">
+    </div>
+    <textarea id="mcNotes" class="rta" rows="2" style="margin-top:10px" placeholder="Notes (optional)"></textarea>
+    <div class="orow">
+      <button class="rgen" id="mcSave" style="flex:1;margin-top:0">＋ ${multi?'SAVE &amp; ADD ANOTHER':'SAVE CUSTOMER'}</button>
+      ${multi?'<button class="hadd" id="mcDone" style="flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--dim)">DONE</button>':''}
+    </div>
+    <div class="ostat" id="mcStat"></div></div>`;
+  setTimeout(()=>{ try{ $('#mcName').focus(); }catch(e){} },60);
+}
+function saveManual(again){
+  const name=$('#mcName').value.trim();
+  if(!name){ $('#mcStat').className='ostat err'; $('#mcStat').textContent='Add a name first'; $('#mcName').focus(); return; }
+  const onBtn=$('#mcStatus button.on'); const status=onBtn?onBtn.dataset.s:'sold';
+  const cityRaw=$('#mcCity').value.split(',');
+  const deal={ stock:$('#mcStock').value.trim(), vehicle:$('#mcVeh').value.trim(), vin:$('#mcVin').value.trim(), deal_date:$('#mcDate').value.trim(), notes:'' };
+  const rec={ full_name:name, phone:$('#mcPhone').value.trim(), email:$('#mcEmail').value.trim(),
+    city:(cityRaw[0]||'').trim(), state:(cityRaw[1]||'').trim(),
+    status, deals:(deal.stock||deal.vehicle||deal.vin||deal.deal_date)?[deal]:[], notes:$('#mcNotes').value.trim(), source:'manual' };
+  const res=upsertCustomer(rec); saveContacts(); try{ refreshContactDropdown(); }catch(e){}
+  blip(950,0.06,'sine',0.13); toast(res.created?'Customer added ✓':'Updated existing customer ✓');
+  if(again){ ['mcName','mcPhone','mcEmail','mcCity','mcVeh','mcStock','mcVin','mcDate','mcNotes'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+    $('#mcStat').className='ostat ok'; $('#mcStat').textContent='Saved — add the next one.'; $('#mcName').focus(); }
+  else closeAdd();
 }
 function closeAI(){ $('#aiOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
 // Build a compact snapshot of the operator's real CARVIS data so Ask CARVIS can
@@ -2474,6 +2609,15 @@ function init(){
     const bot=e.target.closest('#aiLog .aim.bot'); if(bot && !bot.classList.contains('thinking')){ navigator.clipboard?.writeText(bot.textContent||'').catch(()=>{}); blip(980,0.05,'triangle',0.12); toast('Copied'); return; }
     // Playbook actions
     if(e.target.closest('#sopSeed')){ seedStarters(); return; }
+    // Add Customer wizard
+    const acard=e.target.closest('.acard'); if(acard){ addFlow.method=acard.dataset.m; renderAddStep('count'); return; }
+    const abk=e.target.closest('.aback'); if(abk){ renderAddStep(abk.dataset.back); return; }
+    const acnt=e.target.closest('[data-count]'); if(acnt){ addFlow.count=acnt.dataset.count; if(acnt.dataset.count==='one'){ addFlow.sameCat=null; addFlow.category=null; launchAdd(); } else renderAddStep('samecat'); return; }
+    const asm=e.target.closest('[data-same]'); if(asm){ addFlow.sameCat=asm.dataset.same; if(asm.dataset.same==='yes') renderAddStep('whichcat'); else { addFlow.category=null; launchAdd(); } return; }
+    const acat=e.target.closest('[data-cat]'); if(acat){ addFlow.category=acat.dataset.cat; launchAdd(); return; }
+    const mcs=e.target.closest('#mcStatus button'); if(mcs){ $$('#mcStatus button').forEach(x=>x.classList.toggle('on',x===mcs)); return; }
+    if(e.target.closest('#mcSave')){ saveManual(addFlow.count==='multiple'); return; }
+    if(e.target.closest('#mcDone')){ closeAdd(); return; }
     // Customer Intake actions
     if(e.target.closest('#iCreate')){ createIntakeSelected(); return; }
     const ifd=e.target.closest('.js-ifile-del'); if(ifd){ intakeFiles.splice(+ifd.dataset.i,1); renderIntakeFiles(); return; }
@@ -2500,11 +2644,12 @@ function init(){
     if(e.target.closest('#measClose')||e.target===$('#measOverlay')) closeMeasure();
     if(e.target.closest('#sopClose')||e.target===$('#sopOverlay')) closeSops();
     if(e.target.closest('#intakeClose')||e.target===$('#intakeOverlay')) closeIntake();
+    if(e.target.closest('#addClose')||e.target===$('#addOverlay')) closeAdd();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
     const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); closeMeasure(); closeSops(); closeIntake(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); closeBrief(); closeMeasure(); closeSops(); closeIntake(); closeAdd(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });
@@ -2537,6 +2682,9 @@ function init(){
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
   $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  // Add Customer — primary CTA
+  $('#addCustomerFab').addEventListener('click', ()=>{ blip(880,0.06,'sine',0.13); openAdd(); });
+  $('#addClose').addEventListener('click', closeAdd);
   // customer intake
   $('#intakeBtn').addEventListener('click', ()=>{ blip(800,0.06,'sine',0.12); openIntake(); });
   $('#intakeClose').addEventListener('click', closeIntake);
