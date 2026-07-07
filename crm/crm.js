@@ -255,15 +255,16 @@ function renderAdd(prefill = {}) {
     ? '<div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">✎ Editing this customer — their timeline, stage, and queued texts stay put. Change what you need and save.</div>'
     : (filled ? '<div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">✓ Pulled this in for you — check it over, fix anything, then add. Name and phone are the only musts.</div>' : '');
   document.getElementById('crmPaneAdd').innerHTML = `
-    ${editing ? '' : `<div class="crm-intake-launch">
-      <button class="crm-btn gold" id="crmVoiceBtn" type="button">🎙 Voice intake</button>
-      <button class="crm-btn" id="crmPhotoBtn" type="button">📷 From a photo</button>
-      <button class="crm-btn" id="crmFileBtn" type="button">📄 From a file / PDF</button>
-      <button class="crm-btn" id="crmImportBtn" type="button">⇪ Import list (CSV)</button>
+    ${editing ? '' : `<div class="crm-capture-label">Add a customer by:</div>
+    <div class="crm-intake-launch">
+      <button class="crm-btn cap gold" id="crmVoiceBtn" type="button">🎙 Voice</button>
+      <button class="crm-btn cap" id="crmPhotoBtn" type="button">📷 Photo</button>
+      <button class="crm-btn cap" id="crmFileBtn" type="button">📄 File / PDF</button>
+      <button class="crm-btn cap" id="crmImportBtn" type="button">⇪ Import CSV</button>
       <input type="file" id="crmPhotoInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="crmFileInput" accept="image/*,application/pdf,.pdf" hidden>
       <input type="file" id="crmImportInput" accept=".csv,text/csv,text/plain" hidden>
-      <span class="crm-launch-or">or type it in</span>
+      <span class="crm-launch-or">…or just type it in below</span>
     </div>`}
     ${banner}
     <form id="crmAddForm" autocomplete="off">
