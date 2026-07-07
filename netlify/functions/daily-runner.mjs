@@ -55,7 +55,7 @@ export default async (req, context) => {
     // Only write when the cycle actually changed something. A daily no-op write
     // of the whole snapshot is pure downside — it can clobber a phone edit made
     // while the job runs, for zero benefit.
-    const changed = report.advanced || report.emailsSent || report.emailsFailed || report.textsQueued || report.logsPruned;
+    const changed = report.advanced || report.emailsSent || report.emailsFailed || report.textsQueued || report.tasksQueued || report.emailsHeld || report.logsPruned;
     if (changed) {
       const meta = { ...store.meta, lastRun: new Date().toISOString(), lastReport: report };
       await store.save({ customers, touchLogs, meta });

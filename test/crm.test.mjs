@@ -9,12 +9,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { newCustomer, validateCustomer, KEYS, migrateCustomer, SCHEMA_VERSION } from '../shared/schema.mjs';
-import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isThroughFixedSequence, followupForStage, stageForElapsedDays, localDateStr } from '../shared/sequences.mjs';
+import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isThroughFixedSequence, followupForStage, stageForElapsedDays, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { parseCSV, planImport } from '../shared/import.mjs';
 import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
 import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
-import { runDailyCycle } from '../shared/engine.mjs';
+import { runDailyCycle, toHtml } from '../shared/engine.mjs';
+import { getEmailProvider } from '../netlify/functions/_lib/email-provider.mjs';
 import { INTAKE_STEPS, isSkip, parseFullName, extractPhone, parseSpokenEmail, parseStockNumber, applyAnswer, parseExtraction } from '../shared/intake.mjs';
 
 // ── helpers ───────────────────────────────────────────────────────────────
@@ -449,4 +450,115 @@ test('parseExtraction reads JSON from a photo reply (even fenced/with prose)', (
   assert.equal(d.phone, '(507) 555-0101');
   assert.equal(d.vehicle, 'F-150');
   assert.equal(parseExtraction('no json here'), null);
+});
+
+// ── hardening pass: bugs found by the analysis agents + missing coverage ──────
+
+test('text branch never re-queues a text already logged sent (idempotent)', async () => {
+  // welcome window (email + text); a failing email keeps the window unresolved so
+  // it re-runs — but the text was already fired, so it must NOT be re-queued.
+  const c = newCustomer({ firstName: 'Dale', vehicle: 'F-150', email: 'd@x.com', phone: '5075550101', purchaseDate: daysAgo(2) });
+  const mock = new MockProvider(); mock.fail = true;
+  const r1 = await runDailyCycle({ customers: [c], touchLogs: [], today: daysAgo(0), provider: mock, approved: true });
+  assert.equal(r1.customers[0].pendingTexts.length, 1);
+  // user fires the text: gone from the queue, now a 'sent' text log exists
+  const cust = { ...r1.customers[0], pendingTexts: [] };
+  const logs = [...r1.touchLogs, { customerId: cust.id, channel: 'text', sequenceKey: 'welcome', status: 'sent', sentAt: daysAgo(0) + 'T12:00:00Z' }];
+  const r2 = await runDailyCycle({ customers: [cust], touchLogs: logs, today: daysAgo(0), provider: mock, approved: true });
+  assert.equal(r2.report.textsQueued, 0, 'not re-queued after it was sent');
+  assert.equal(r2.customers[0].pendingTexts.length, 0);
+});
+
+test('hydrated copy that breaks a guardrail is held, not sent, even when approved', async () => {
+  // customer data injects a banned token ($) → the email lint fails on the
+  // hydrated body; the window holds and does NOT advance.
+  const c = newCustomer({ firstName: 'Dale', vehicle: '$5000 Special', email: 'd@x.com', purchaseDate: daysAgo(2) });
+  const mock = new MockProvider();
+  const { customers, touchLogs, report } = await runDailyCycle({ customers: [c], touchLogs: [], today: daysAgo(0), provider: mock, approved: true });
+  assert.equal(mock.sent.length, 0, 'never ship copy that breaks a rule');
+  assert.equal(report.emailsHeld, 1);
+  assert.ok(touchLogs.some((l) => l.channel === 'email' && l.status === 'held'));
+  assert.equal(customers[0].stage, 0, 'a held window does not advance');
+});
+
+test('prospect keep-warm keys off the last touch log, not just createdAt', async () => {
+  const c = newCustomer({ firstName: 'Pat', phone: '5075550101', category: 'cold', createdAt: '2026-05-01T00:00:00Z' });
+  const recent = [{ customerId: c.id, channel: 'text', sequenceKey: 'prospect_cold', status: 'sent', sentAt: '2026-06-19T12:00:00Z' }];
+  const r1 = await runDailyCycle({ customers: [c], touchLogs: recent, today: '2026-06-22', provider: new MockProvider(), approved: true });
+  assert.equal(r1.report.tasksQueued, 0, 'touched 3 days ago; cold cadence is 14');
+  const old = [{ customerId: c.id, channel: 'text', sequenceKey: 'prospect_cold', status: 'sent', sentAt: '2026-06-02T12:00:00Z' }];
+  const r2 = await runDailyCycle({ customers: [c], touchLogs: old, today: '2026-06-22', provider: new MockProvider(), approved: true });
+  assert.equal(r2.report.tasksQueued, 1, 'last touched 20 days ago → overdue');
+});
+
+test('a prospect reach-out is not re-queued while one is already pending', async () => {
+  const c = newCustomer({ firstName: 'Pat', phone: '5075550101', category: 'cold', createdAt: '2026-05-01T00:00:00Z', pendingTasks: [{ type: 'reachout', category: 'cold', sequenceKey: 'prospect_cold', label: 'x', script: 'y', createdAt: '2026-06-01' }] });
+  const { report } = await runDailyCycle({ customers: [c], touchLogs: [], today: '2026-06-22', provider: new MockProvider(), approved: true });
+  assert.equal(report.tasksQueued, 0, 'already has a pending reach-out');
+});
+
+test('import: a single Name/Customer column splits via parseFullName', () => {
+  const p = planImport('Customer,Phone\nDale Carlson,5075550101', [], '2026-06-22');
+  assert.equal(p.counts.ready, 1);
+  assert.equal(p.items[0].input.firstName, 'Dale');
+  assert.equal(p.items[0].input.lastName, 'Carlson');
+});
+
+test('import: dedupes duplicate phones WITHIN the same file', () => {
+  const p = planImport('First Name,Phone\nDale,5075550101\nDale Again,5075550101', [], '2026-06-22');
+  assert.equal(p.counts.ready, 1);
+  assert.equal(p.counts.duplicate, 1);
+});
+
+test('import: non-ISO purchase dates (MM/DD/YYYY) still slot into the timeline', () => {
+  // 07/07/2026 → 21 days before 07/28 → past welcome + check-in → stage 2, not 0
+  const p = planImport('First Name,Phone,Purchase Date\nDale,5075550101,07/07/2026', [], '2026-07-28');
+  assert.equal(p.counts.ready, 1);
+  assert.equal(p.items[0].input.stage, 2, 'MM/DD/YYYY must not parse to NaN and land at stage 0');
+});
+
+test('stageForElapsedDays is inclusive at every window boundary', () => {
+  assert.equal(stageForElapsedDays(1), 1);
+  assert.equal(stageForElapsedDays(14), 2);
+  assert.equal(stageForElapsedDays(45), 3);
+  assert.equal(stageForElapsedDays(180), 4);
+  assert.equal(stageForElapsedDays(365), 5);
+  assert.equal(stageForElapsedDays(44), 2); // day before referral is due
+});
+
+test('getEmailProvider selects the provider from env (swap contract)', () => {
+  assert.equal(getEmailProvider({ EMAIL_PROVIDER: 'gmail', GMAIL_USER: 'a', GMAIL_APP_PASSWORD: 'b' }).name, 'gmail');
+  assert.equal(getEmailProvider({ EMAIL_PROVIDER: 'mailerlite' }).name, 'mailerlite');
+  assert.equal(getEmailProvider({ EMAIL_PROVIDER: 'resend' }).name, 'resend');
+  assert.equal(getEmailProvider({}).name, 'resend'); // default
+});
+
+test('toHtml escapes entities and converts newlines', () => {
+  const h = toHtml('a & b <x>\nline2');
+  assert.ok(h.includes('a &amp; b &lt;x&gt;'), 'escapes & < >');
+  assert.ok(h.includes('<br>'), 'newline → <br>');
+});
+
+test('getText/getEmail return empty for an unknown sequence key', () => {
+  assert.equal(getText('nope'), '');
+  assert.deepEqual(getEmail('nope'), { subject: '', body: '' });
+});
+
+test('sequenceByKey resolves recurring follow-up keys and rejects garbage', () => {
+  const s = sequenceByKey('followup_email');
+  assert.equal(s.type, 'email'); assert.deepEqual(s.channels, ['email']); assert.equal(s.recurring, true);
+  assert.equal(sequenceByKey('garbage'), null);
+});
+
+test('migrateCustomer preserves populated stage + queues (data safety)', () => {
+  const old = { id: 'c1', firstName: 'A', phone: '5075550101', stage: 3, pendingTexts: [{ sequenceKey: 'welcome', createdAt: 'x' }], pendingTasks: [{ type: 'gift', sequenceKey: 'followup_gift' }] };
+  const m = migrateCustomer(old);
+  assert.equal(m.stage, 3);
+  assert.equal(m.pendingTexts.length, 1);
+  assert.equal(m.pendingTasks.length, 1);
+});
+
+test('valueViolations catches the same word appearing more than once', () => {
+  const hits = valueViolations('price today, price tomorrow');
+  assert.equal(hits.filter((h) => h === 'price').length, 2, 'global scan, not just the first match');
 });

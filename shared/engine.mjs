@@ -141,7 +141,11 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
 
     // ── Text branch (NEVER sent programmatically — only queued) ──────────────
     if (seq.channels.includes('text')) {
-      const already = c.pendingTexts.some((p) => p.sequenceKey === seq.key);
+      // Idempotent on BOTH the pending queue AND the sent log: if the window
+      // re-runs (e.g. its email failed and stage didn't advance) after the user
+      // already fired the text, don't re-queue it.
+      const alreadySentText = logs.some((l) => l.customerId === c.id && l.channel === 'text' && l.sequenceKey === seq.key && l.status === 'sent');
+      const already = alreadySentText || c.pendingTexts.some((p) => p.sequenceKey === seq.key);
       if (!already) {
         c.pendingTexts.push({ sequenceKey: seq.key, createdAt: new Date().toISOString() });
         report.textsQueued++;

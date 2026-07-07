@@ -89,7 +89,6 @@ export function followupForStage(stage) {
     channels: [meta.channel],
     type,
     recurring: true,
-    recurringIndex: i,
   };
 }
 
@@ -152,8 +151,8 @@ function toUTCDate(d) {
 
 /**
  * The follow-up never truly "completes" now — after the five fixed windows it
- * rolls into the recurring 90-day cadence forever. Kept as a helper for "has
- * finished the structured first year" (used for display), NOT "no more touches".
+ * rolls into the recurring 90-day cadence forever. This helper answers "has the
+ * customer finished the structured first year?", NOT "no more touches ever".
  */
 export function isThroughFixedSequence(customer) {
   return (customer.stage || 0) >= SEQUENCES.length;

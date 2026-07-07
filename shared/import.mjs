@@ -9,7 +9,7 @@
 //   - a purchase-date column slots an old customer into the RIGHT stage so they
 //     don't get blasted with the "welcome" sequence years after the sale.
 
-import { validateCustomer, digits } from './schema.mjs';
+import { validateCustomer, digits, toDateStr } from './schema.mjs';
 import { daysSincePurchase, stageForElapsedDays } from './sequences.mjs';
 import { parseFullName, extractPhone } from './intake.mjs';
 
@@ -64,7 +64,10 @@ export function rowToInput(cells, fields) {
   return {
     firstName, lastName, phone,
     email: get('email'), vehicle: get('vehicle'), address: get('address'),
-    notes: get('notes'), purchaseDate: get('purchaseDate'),
+    // Normalize the date NOW (toDateStr tolerates MM/DD/YYYY, ISO, etc.) so the
+    // stage-slotting below and daysSincePurchase get a clean YYYY-MM-DD, not a
+    // raw spreadsheet string that would parse to NaN and mis-slot the customer.
+    notes: get('notes'), purchaseDate: toDateStr(get('purchaseDate')),
   };
 }
 
