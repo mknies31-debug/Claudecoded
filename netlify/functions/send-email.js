@@ -19,6 +19,15 @@ const FROM_FALLBACK = 'CARVIS <onboarding@resend.dev>'; // test-only sender
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return resp(405, { error: 'Method Not Allowed' });
 
+  // Optional shared secret — without it this is an open relay from Mick's
+  // verified domain for anyone who finds the URL. Enforced when CARVIS_TOKEN
+  // is set in Netlify env vars; the client sends it from ⇅ SYNC → Access token.
+  const expected = process.env.CARVIS_TOKEN;
+  if (expected) {
+    const got = (event.headers && (event.headers['x-carvis-token'] || event.headers['X-Carvis-Token'])) || '';
+    if (got !== expected) return resp(401, { error: 'This CARVIS is locked. Enter the access token in ⇅ SYNC → Access token (same value as the CARVIS_TOKEN env var on Netlify).' });
+  }
+
   const key = process.env.RESEND_API_KEY;
   if (!key) return resp(500, { error: 'RESEND_API_KEY is not set. Add it in Netlify → Site settings → Environment variables.' });
 

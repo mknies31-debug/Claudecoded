@@ -34,7 +34,7 @@
   body{
     background:radial-gradient(circle at 50% 38%, #0a1b2c 0%, var(--bg) 68%);
     color:var(--text);font-family:'Atkinson Hyperlegible',system-ui,sans-serif;font-size:18px;line-height:1.5;
-    font-weight:400;height:100vh;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;
+    font-weight:400;height:100vh;height:100dvh;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;
   }
   /* HUD backdrops — kept faint so they never fight text contrast */
   body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -170,7 +170,7 @@
   .di .veh{font-size:15px;color:var(--dim);margin-top:3px;font-family:var(--mono);letter-spacing:.3px}
   .di .acts{display:flex;gap:7px;margin-top:10px}
   .di .act{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Orbitron';font-size:14px;letter-spacing:1.5px;
-    padding:8px 0;border-radius:8px;border:1px solid var(--line);color:var(--dim);transition:.18s;cursor:pointer}
+    white-space:nowrap;padding:8px 0;border-radius:8px;border:1px solid var(--line);color:var(--dim);transition:.18s;cursor:pointer}
   .di .act:hover{color:var(--text);border-color:var(--line-strong)}
   .di .act.go{background:rgba(47,230,255,.12);border-color:var(--cyan-dim);color:var(--cyan)}
   .di .act.go:hover{background:rgba(47,230,255,.2)}
@@ -186,6 +186,8 @@
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin-right:4px}
   .chip{font-family:'Orbitron';font-size:14px;letter-spacing:1px;color:var(--dim);border:1px solid var(--line);padding:8px 11px;border-radius:7px;cursor:pointer;transition:.18s;text-transform:uppercase}
   .chip:hover{color:var(--cyan);border-color:var(--cyan)}
+  .chip.go{color:var(--gold);border-color:rgba(255,182,72,.4)}
+  .chip.go:hover{border-color:var(--gold)}
   .mic{width:50px;height:50px;flex:0 0 auto;border-radius:12px;border:1.5px solid var(--cyan);background:rgba(47,230,255,.08);color:var(--cyan);
     font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
   .mic:hover{background:rgba(47,230,255,.16)}
@@ -258,7 +260,25 @@
   .toast .tc{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
 
   @media(max-width:1100px){ .main{display:block;overflow-y:auto} .col{min-height:auto;margin-bottom:16px} .stage{justify-content:flex-start;padding:10px 0} .reactor-wrap{width:300px;height:300px;margin:0 auto} }
-  @media(max-width:560px){ .top{flex-wrap:wrap;gap:10px;padding:12px 16px} .sess{display:none} .main{padding:14px} .cmd{padding:12px 14px 16px} .chips{display:none} .hero .v{font-size:43px} }
+  @media(max-width:560px){
+    .top{flex-wrap:wrap;gap:10px;padding:12px 16px} .sess{display:none} .main{padding:14px}
+    .hero .v{font-size:43px}
+    /* Command bar fits a phone: labeled chips scroll on their own row on top,
+       only mic + input + send stay inline; the redundant icon buttons hide. */
+    .cmd{flex-wrap:wrap;padding:10px 12px 14px;gap:8px}
+    #replyBtn,#outreachBtn,#carBtn,#statsBtn{display:none}
+    .chips{order:-1;width:100%;display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+      gap:7px;margin:0;padding-bottom:2px;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{flex:0 0 auto;font-size:13px;padding:9px 12px}
+    .cmd input{font-size:17px;padding:12px 14px;min-width:0}
+    .mic,.send{width:46px;height:46px}
+    /* directive action row: keep 4 buttons on one line, thumb-friendly height */
+    .di .act{font-size:12px;letter-spacing:.5px;padding:11px 0;gap:3px}
+    /* separate the destructive prospect-delete from the ✓/✉ actions */
+    .hot-acts button{width:36px;height:36px}
+    .hot-acts .js-hot-del{margin-left:4px}
+  }
 
   /* ===== fun & cool layer ===== */
   .cglow{position:fixed;width:520px;height:520px;border-radius:50%;left:50%;top:42%;z-index:1;pointer-events:none;
@@ -283,6 +303,8 @@
   .rgen{width:100%;margin-top:12px;font-family:'Orbitron';font-size:15px;letter-spacing:2px;padding:13px;border-radius:11px;
     background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:#02141a;cursor:pointer;transition:.2s}
   .rgen:hover{filter:brightness(1.1)}
+  .rgen.pin{background:rgba(56,240,138,.12);border:1px solid var(--green);color:var(--green);margin-top:10px}
+  .rgen.pin:hover{background:rgba(56,240,138,.2)}
   .rintent{margin:15px 0 2px;font-family:var(--mono);font-size:14px;letter-spacing:1px;color:var(--gold);display:flex;align-items:center;gap:8px}
   .rintent .pd{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
 
@@ -306,6 +328,10 @@
   .aim.you{align-self:flex-end;background:rgba(92,240,255,.12);border:1px solid var(--line)}
   .aim.bot{align-self:flex-start;background:rgba(6,14,24,.95);border:1px solid var(--line);border-left:3px solid var(--cyan)}
   .aim.bot.thinking{color:var(--dim);font-style:italic}
+  .aim.bot{position:relative;padding-top:26px}
+  .aicopy{position:absolute;top:6px;right:8px;font-family:'Orbitron';font-size:12px;letter-spacing:1px;color:var(--dim);
+    border:1px solid var(--line);background:rgba(2,10,18,.6);padding:3px 9px;border-radius:6px;cursor:pointer;transition:.15s}
+  .aicopy:hover{color:var(--cyan);border-color:var(--cyan)}
   .airow{display:flex;gap:10px;align-items:flex-end}
   .airow .rta{margin-top:0}
   body.hivis .aim{font-size:21px}
@@ -410,6 +436,16 @@
     font-family:'Atkinson Hyperlegible';font-size:17px;padding:9px 11px;outline:none;margin-bottom:7px;transition:.2s}
   .hin:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(47,230,255,.1)}
   .hin::placeholder{color:var(--dim)}
+  .hot-two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .hot-labeled label{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.3px}
+  .hot-labeled .hin{margin-bottom:0}
+  .hsel{appearance:none;-webkit-appearance:none;cursor:pointer}
+  .hot-two .hin{margin-bottom:7px}
+  .hnm .qb{font-family:'Orbitron';font-size:11px;letter-spacing:.5px;padding:1px 6px;border-radius:20px;margin-left:6px;vertical-align:1px}
+  .hnm .qb.due{background:rgba(255,77,94,.18);color:var(--red)}
+  .hnm .qb.appt{background:rgba(56,240,138,.16);color:var(--green)}
+  .hnm .qb.soon{background:rgba(255,182,72,.16);color:var(--gold)}
+  .hot-acts button.js-hot-touch:hover{color:var(--green);border-color:rgba(56,240,138,.4)}
   .hot-row{display:flex;gap:8px;align-items:center}
   .heatpick{display:flex;gap:5px;flex:1}
   .heatpick button{flex:1;font-family:'Orbitron';font-size:14px;letter-spacing:.5px;padding:8px 4px;border-radius:7px;
@@ -538,7 +574,7 @@
           <div class="readouts">
             <div class="ro"><div class="v" id="roSold">0</div><div class="l">Sold MTD</div></div>
             <div class="ro"><div class="v" id="roBought">0</div><div class="l">Bought MTD</div></div>
-            <div class="ro"><div class="v" id="roLeads">0</div><div class="l">Pipeline</div></div>
+            <div class="ro"><div class="v" id="roLeads">0</div><div class="l">Prospects</div></div>
             <div class="ro"><div class="v" id="roInv">0</div><div class="l">Inventory</div></div>
           </div>
         </div>
@@ -551,8 +587,23 @@
         <div class="ph"><span class="hbar"></span><h3>Hot Prospects</h3><span class="meta" id="hotMeta">0</span></div>
         <div class="pbody">
           <div class="hot-add">
-            <input id="hotName" class="hin" placeholder="Name — most important contact">
-            <input id="hotNote" class="hin" placeholder="Vehicle / why they matter (optional)">
+            <input id="hotName" class="hin" placeholder="Name">
+            <div class="hot-two">
+              <input id="hotPhone" class="hin" placeholder="Phone (optional)" inputmode="tel" autocomplete="off">
+              <input id="hotVeh" class="hin" placeholder="Vehicle (optional)">
+            </div>
+            <div class="hot-two hot-labeled">
+              <label>Source<select id="hotSrc" class="hin hsel">
+                <option value="">—</option>
+                <option value="fb">FB Marketplace</option>
+                <option value="ref">Referral</option>
+                <option value="text">Text / Call</option>
+                <option value="app">NorthStar App</option>
+                <option value="mc">ManyChat</option>
+              </select></label>
+              <label>Follow up on<input id="hotNext" class="hin" type="date"></label>
+            </div>
+            <input id="hotNote" class="hin" placeholder="Note — why they matter (optional)">
             <div class="hot-row">
               <div class="heatpick" id="hotHeat">
                 <button data-h="hot" class="on">🔥 HOT</button>
@@ -624,13 +675,13 @@
     <button class="mic" id="carBtn" title="Find a car / ask about inventory" style="font-size:18px">🚗</button>
     <button class="mic" id="statsBtn" title="Enter monthly sales numbers (backfill any month)" style="font-size:17px">📊</button>
     <div class="chips">
+      <div class="chip go" data-cmd="sold">＋1 Sold</div>
+      <div class="chip go" data-cmd="bought">＋1 Bought</div>
       <div class="chip" data-cmd="ask">◉ Ask CARVIS</div>
-      <div class="chip" data-cmd="numbers">📊 Numbers</div>
-      <div class="chip" data-cmd="findcar">🚗 Find a car</div>
       <div class="chip" data-cmd="reply">✉ Buyer reply</div>
+      <div class="chip" data-cmd="findcar">🚗 Find a car</div>
       <div class="chip" data-cmd="outreach">📧 Outreach</div>
-      <div class="chip" data-cmd="directives">Directives</div>
-      <div class="chip" data-cmd="market">Market</div>
+      <div class="chip" data-cmd="numbers">📊 Numbers</div>
     </div>
     <input id="cmd" type="text" placeholder="Command CARVIS — type a name to draft, or ask…" autocomplete="off">
     <button class="send" id="send">➤</button>
@@ -648,7 +699,7 @@
     <div class="mb">
       <div class="seg" id="mSeg"><button class="on" data-ch="text">TEXT</button><button data-ch="email">EMAIL</button></div>
       <div id="mDrafts"></div>
-      <div class="mnote"><span>✦</span><span>Three options, every time — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>, in Mick's voice. <span class="soon">CARVIS generates these live once talkback ships;</span> templated previews for now.</span></div>
+      <div class="mnote"><span>✦</span><span>Three options, every time — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>, in Mick's voice, straight from your script playbook. <span class="soon">Want a draft tailored to this exact lead? Hit ◉ Ask CARVIS and paste the context.</span></span></div>
     </div>
   </div>
 </div>
@@ -663,11 +714,15 @@
     </div>
     <div class="mb">
       <textarea id="rMsg" class="rta" rows="3" placeholder="Paste the buyer's message…  e.g. “Is this still available? What's your best price?”"></textarea>
-      <input id="rVeh" class="rin" type="text" placeholder="Vehicle (optional) — e.g. 2019 F-150 XLT">
+      <div class="hot-two">
+        <input id="rName" class="rin" type="text" placeholder="Buyer name (optional)">
+        <input id="rVeh" class="rin" type="text" placeholder="Vehicle (optional)">
+      </div>
       <button class="rgen" id="rGen">◉ GENERATE REPLIES</button>
       <div id="rIntent"></div>
+      <div id="rPinWrap"></div>
       <div id="rDrafts"></div>
-      <div class="mnote"><span>✦</span><span>Three options in your voice — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>. <span class="soon">Templated for your common Marketplace asks — for a fully-contextual live reply, hit ◉ Ask CARVIS.</span> CARVIS never touches your Messenger — you copy the one you like and paste it.</span></div>
+      <div class="mnote"><span>✦</span><span>Three options in your voice — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>. <span class="soon">For a fully-contextual live reply, hit ◉ Ask CARVIS.</span> CARVIS never touches your Messenger — copy the one you like and paste it. Add a name and tap PIN so the lead lands in your prospects.</span></div>
     </div>
   </div>
 </div>
@@ -705,6 +760,11 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       <input class="rin" id="oSubj" style="margin-top:0" placeholder="Subject">
       <span class="olabel">Message</span>
       <textarea class="rta" id="oBody" rows="7"></textarea>
+      <button class="omanage" id="oSettingsToggle" type="button">⚙ Settings — your Google review link</button>
+      <div class="omg hidden" id="oSettings">
+        <input class="rin" id="oReviewLink" style="margin-top:0" placeholder="https://g.page/r/... (your Google review link)">
+        <button class="rgen" id="oReviewSave" style="margin-top:8px">Save review link</button>
+      </div>
       <button class="rgen" id="oSend">◉ SEND EMAIL</button>
       <div class="ostat" id="oStat"></div>
       <div class="mnote"><span>✦</span><span>CARVIS sends on your behalf; replies land in your inbox. A North Star footer + opt-out line is added automatically. <span class="soon">Goes live once RESEND_API_KEY + your sending domain are set in Netlify.</span></span></div>
@@ -730,7 +790,7 @@ Janelle Aas, janelle@email.com, referral"></textarea>
           <button class="omanage" id="vDraft" type="button" style="margin:0">✉ Draft a reply about this car</button>
           <a class="omanage" id="vLink" target="_blank" rel="noopener" style="margin:0">↗ View listing</a>
         </div>
-        <div class="mnote"><span>✦</span><span>Answers come straight from inventory data. <span class="soon">Open-ended back-and-forth arrives with talkback;</span> for the full writeup use the listing link.</span></div>
+        <div class="mnote"><span>✦</span><span>Answers come straight from inventory data. <span class="soon">For anything the spec card can't answer, hit ◉ Ask CARVIS</span> — or use the listing link for the full writeup.</span></div>
       </div>
     </div>
   </div>
@@ -761,8 +821,17 @@ Janelle Aas, janelle@email.com, referral"></textarea>
         <button class="rgen" id="cloudPushBtn" style="margin-top:0;flex:1">⬆ Push now</button>
         <button class="rgen" id="cloudPullBtn" style="margin-top:0;flex:1;background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205">⬇ Pull now</button>
       </div>
+      <button class="omanage" id="cloudRestoreBtn" type="button" style="margin-top:10px">⟲ Restore a daily backup (last 14 days)</button>
       <div class="ostat" id="cloudStat" style="margin-top:10px"></div>
       <div class="mnote"><span>✦</span><span>Anyone with your key can read your data — keep it private and make it long. <span class="soon">Needs the sync function deployed on Netlify (it self-enables on first use).</span></span></div>
+
+      <span class="olabel" style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px;display:block">🔒 Access token — locks your CARVIS to just you</span>
+      <p style="font-size:16px;line-height:1.55;color:var(--text)">Optional but recommended. Set <b>CARVIS_TOKEN</b> in Netlify → Environment variables, then paste the same value here on each of your devices. Once set, no stranger who finds the URL can send email, use the AI, or read your data.</p>
+      <div class="orow" style="margin-top:10px">
+        <input class="rin" id="accessToken" type="password" placeholder="access token (matches CARVIS_TOKEN)" style="margin-top:0;flex:2" autocomplete="off">
+        <button class="hadd" id="accessTokenSave" style="flex:0 0 auto">SAVE</button>
+      </div>
+      <div class="ostat" id="tokenStat" style="margin-top:10px"></div>
     </div>
   </div>
 </div>
@@ -772,7 +841,7 @@ Janelle Aas, janelle@email.com, referral"></textarea>
   <div class="modal" role="dialog" aria-modal="true">
     <div class="mh">
       <div class="av">◉</div>
-      <div><div class="mt">ASK CARVIS</div><div class="ms">Live answers · powered by Fable 5</div></div>
+      <div><div class="mt">ASK CARVIS</div><div class="ms">Live answers · Claude</div></div>
       <button class="x" id="aiClose">✕</button>
     </div>
     <div class="mb">
@@ -836,6 +905,39 @@ Janelle Aas, janelle@email.com, referral"></textarea>
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
+/* ---------- durable storage ----------
+   Every business write goes through lset(): it verifies the write, stamps a
+   carvis_lastmod timestamp (so cloud sync can tell which side is newer), and
+   surfaces a failure instead of letting the UI claim success on a dropped
+   write (private mode / quota). Returns true only if the data is really saved. */
+let storageWarned = false;
+function lset(k, v){
+  try{
+    localStorage.setItem(k, v);
+    if(k !== 'carvis_lastmod') localStorage.setItem('carvis_lastmod', new Date().toISOString());
+    return true;
+  }catch(e){
+    if(!storageWarned){ storageWarned = true; try{ toast('⚠ Storage full — that did NOT save. Export a backup (⇅ SYNC) and clear space.'); }catch(_){} }
+    return false;
+  }
+}
+const localTs = () => { try{ return localStorage.getItem('carvis_lastmod') || ''; }catch(e){ return ''; } };
+
+/* Access token (optional): if the site sets CARVIS_TOKEN, every function call
+   must carry it. Stored locally, never synced (like the sync key). */
+const getToken = () => { try{ return (localStorage.getItem('carvis_token') || '').trim(); }catch(e){ return ''; } };
+// fetch wrapper: injects the access token and enforces a timeout so a hung
+// request on weak cell signal can't wedge a feature forever.
+function apiFetch(url, opts, timeoutMs){
+  opts = opts || {};
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), timeoutMs || 30000);
+  const headers = Object.assign({}, opts.headers || {});
+  const tok = getToken(); if(tok) headers['X-Carvis-Token'] = tok;
+  return fetch(url, Object.assign({}, opts, { headers, signal: ctl.signal }))
+    .finally(()=>clearTimeout(t));
+}
+
 const SRC = { fb:'FB MKTPLACE', ref:'REFERRAL', app:'NORTHSTAR APP', text:'SHORTCODE', mc:'MANYCHAT' };
 const DATA = {
   // Sales are COUNTS Mick enters per month in the NUMBERS panel — never
@@ -877,8 +979,8 @@ const DATA = {
   market:[],   // start empty — no assumed market figures
   leads:[],    // start empty — no assumed directives/leads
 };
-const initials = n => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-const phoneFmt = p => `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
+const initials = n => (n||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const phoneFmt = p => { const d=String(p||'').replace(/\D/g,''); return d.length===10 ? `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}` : (p||''); };
 
 /* ---------- monthly numbers (real, user-entered, start at 0) ----------
    Mick types his actual totals per month in the NUMBERS panel; nothing is
@@ -889,9 +991,9 @@ const monthKey = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.get
 function prettyMonth(key){ const [y,m]=key.split('-'); return new Date(+y,+m-1,1).toLocaleString('en-US',{month:'long',year:'numeric'}); }
 function shortMonth(d){ return d.toLocaleString('en-US',{month:'short'}).toUpperCase(); }
 function loadMonths(){ try{ const m=JSON.parse(localStorage.getItem(MONTHS_KEY)||'{}'); return (m&&typeof m==='object'&&!Array.isArray(m))?m:{}; }catch(e){ return {}; } }
-function saveMonths(m){ try{ localStorage.setItem(MONTHS_KEY, JSON.stringify(m)); }catch(e){} scheduleCloudPush(); }
+function saveMonths(m){ const ok=lset(MONTHS_KEY, JSON.stringify(m)); if(ok) scheduleCloudPush(); return ok; }
 function loadGoals(){ try{ const g=JSON.parse(localStorage.getItem(GOALS_KEY)||'{}')||{}; return {soldGoal:+g.soldGoal||0, buyGoal:+g.buyGoal||0, dealGoal:+g.dealGoal||0}; }catch(e){ return {soldGoal:0,buyGoal:0,dealGoal:0}; } }
-function saveGoals(g){ try{ localStorage.setItem(GOALS_KEY, JSON.stringify(g)); }catch(e){} scheduleCloudPush(); }
+function saveGoals(g){ const ok=lset(GOALS_KEY, JSON.stringify(g)); if(ok) scheduleCloudPush(); return ok; }
 function monthData(key){ const m=loadMonths()[key]||{}; return {sold:+m.sold||0, bought:+m.bought||0, deals:+m.deals||0, closeRate:+m.closeRate||0}; }
 let STATS={sold:0,bought:0,deals:0,closeRate:0,soldGoal:0,buyGoal:0,dealGoal:0};
 function refreshStats(){ STATS={...monthData(monthKey()), ...loadGoals()}; return STATS; }
@@ -921,40 +1023,53 @@ function renderStats(){
 
 /* ---------- BOOT ---------- */
 const BOOT_LINES = [
-  {t:'> BOOTING CARVIS v2 ...', d:90},
-  {t:'> LINK: NORTH STAR COMMAND ......... <span class="ok">OK</span>', d:140},
-  {t:'> SYNC: PIPELINE .................. <span class="ok">OK</span>', d:130},
-  {t:'> SYNC: INVENTORY ................. <span class="ok">OK</span>', d:120},
-  {t:'> LINK: FABLE 5 LIVE BRAIN ......... <span class="ok">ONLINE</span>', d:140},
-  {t:'> MODULE: TALKBACK / VOICE ......... <span class="ok">ONLINE</span>', d:150},
-  {t:'> ALL CORE SYSTEMS NOMINAL', d:160},
-  {t:'> <span class="ok">GOOD MORNING, MICK.</span>', d:260},
+  {t:'> WAKING CARVIS ...', d:90},
+  {t:'> NORTH STAR COMMAND', d:130},
+  {t:'> LOADING YOUR PROSPECTS &amp; NUMBERS', d:130},
+  {t:'> DAILY DRIVERS READY', d:120},
+  {t:'> LET\'S SELL SOME CARS.', d:150},
+  {t:'> <span class="ok">GOOD MORNING, MICK.</span>', d:240},
 ];
+let bootDone=false, skipBoot=false;
+function finishBoot(){
+  if(bootDone) return; bootDone=true;
+  const b=$('#boot'); if(b) b.classList.add('gone'); $('#app').classList.add('live');
+  const sg=$('#surge'); if(sg){ sg.classList.add('go'); setTimeout(()=>sg.classList.remove('go'),900); }
+  try{ localStorage.setItem('carvis_bootday', localDay()); }catch(e){}
+  startHud();
+}
 function boot(){
   const b=$('#boot'); b.classList.add('powering');
   $('#wakeBlock').classList.add('hidden'); $('#wakeBtn').classList.add('hidden');
   const log=$('#bootlog'); log.classList.remove('hidden');
   let i=0, html='';
   (function next(){
-    if(i>=BOOT_LINES.length){
-      setTimeout(()=>{ b.classList.add('gone'); $('#app').classList.add('live');
-        const sg=$('#surge'); if(sg){ sg.classList.add('go'); setTimeout(()=>sg.classList.remove('go'),900); }
-        startHud(); }, 480);
-      return;
-    }
+    if(skipBoot){ log.innerHTML=BOOT_LINES.map(l=>l.t).join('<br>'); setTimeout(finishBoot,120); return; }
+    if(i>=BOOT_LINES.length){ setTimeout(finishBoot, 420); return; }
     html += BOOT_LINES[i].t + '<br>';
     log.innerHTML = html + '<span class="cur"></span>';
     blip(430+i*55,0.05,'square',0.1);
     i++; setTimeout(next, BOOT_LINES[i-1].d);
   })();
 }
+// Same-day repeat visit: skip the wake ceremony, go straight to the dashboard.
+function fastBoot(){ sessStart=new Date(); try{ audioInit(); }catch(e){} finishBoot(); }
+const bootedToday = () => { try{ return localStorage.getItem('carvis_bootday')===localDay(); }catch(e){ return false; } };
 
 /* ---------- HUD render ---------- */
+// Honest status — reflects real client-side state, not hardcoded "ONLINE".
 function renderSystem(){
-  $('#sysBody').innerHTML = DATA.system.map(s=>`
-    <div class="sys-row"><span class="sd ${s.status}"></span><span class="nm">${s.nm}</span><span class="st ${s.status}">${s.status.toUpperCase()}</span></div>`).join('');
-  $('#sysMeta').textContent = DATA.system.length+' MODULES';
-  // readout tiles (Sold/Bought/Pipeline/Inventory) are filled by renderStats()
+  const rows=[
+    {nm:'FOLLOW-UP ENGINE', status:'online', st:'ACTIVE'},
+    {nm:'CLOUD SYNC', status:getSyncKey()?'online':'standby', st:getSyncKey()?'ON':'OFF'},
+    {nm:'ACCESS LOCK', status:getToken()?'online':'standby', st:getToken()?'SET':'OPEN'},
+    {nm:'INVENTORY', status: INVENTORY.length ? (inventoryStale()?'standby':'online') : 'standby',
+      st: INVENTORY.length ? (inventoryStale()?'STALE':INVENTORY.length+' CARS') : 'NOT LOADED'},
+  ];
+  $('#sysBody').innerHTML = rows.map(s=>`
+    <div class="sys-row"><span class="sd ${s.status}"></span><span class="nm">${s.nm}</span><span class="st ${s.status}">${s.st}</span></div>`).join('');
+  $('#sysMeta').textContent = rows.length+' MODULES';
+  // readout tiles (Sold/Bought/Prospects/Inventory) are filled by renderStats()
 }
 function renderMarket(){
   const vf=document.querySelector('.verify');
@@ -977,26 +1092,75 @@ function renderGauges(){
       <div class="gl">${g.label}</div>
     </div>`).join('');
 }
+// Whole days between an ISO YYYY-MM-DD day and today, in LOCAL time.
+function daysSince(day){ if(!day) return 999; const then=new Date(day+'T00:00:00'), now=new Date(localDay()+'T00:00:00'); return Math.round((now-then)/86400000); }
+// Turn a stored prospect into the lead shape the draft engine expects, deciding
+// which script set fits: appointment → confirm, quiet 3d+ → ghost recovery, else opener.
+function prospectToLead(p){
+  const q = daysSince(p.lastTouch);
+  return { id:p.id, name:p.name, vehicle:(p.vehicle||p.note||'').trim(), src:p.src||'', phone:p.phone||'',
+           quiet:(!p.appt && q>=3)?q:0, appt:p.appt||'', note:p.note||'' };
+}
+// A prospect is "due today" if it has an appointment on/before today, a follow-up
+// date that has arrived, or it has gone quiet 3+ days with nothing scheduled.
+function isDue(p){
+  const today=localDay();
+  if(p.appt && String(p.appt).slice(0,10) <= today) return true;
+  if(p.next && p.next <= today) return true;
+  if(!p.appt && !p.next && daysSince(p.lastTouch) >= 3) return true;
+  return false;
+}
+function computeDirectives(){
+  const today=localDay();
+  return HOT.filter(isDue).map(p=>{
+    const l=prospectToLead(p);
+    l.appt = p.appt || ''; l.next = p.next || '';
+    l.overdue = p.next ? Math.max(0, daysSince(p.next)) : 0;
+    l.quietDays = daysSince(p.lastTouch);
+    return l;
+  }).sort((a,b)=>{
+    // appointments first, then most-overdue follow-ups, then longest-quiet
+    if(!!a.appt !== !!b.appt) return a.appt ? -1 : 1;
+    return (b.overdue-a.overdue) || (b.quietDays-a.quietDays);
+  });
+}
 function renderDirectives(){
-  const due = DATA.leads.slice().sort((a,b)=>(b.quiet||0)-(a.quiet||0));
+  const due = computeDirectives();
+  DATA.leads = due;   // keep runCmd/openDraft in sync with what's shown
   if(!due.length){
-    $('#dirBody').innerHTML = '<div class="hot-empty">No directives yet.<br>Pin Hot Prospects or import contacts to build your day.</div>';
-    $('#dirMeta').textContent='—'; return;
+    $('#dirBody').innerHTML = '<div class="hot-empty">Nothing due right now.<br>Pin a prospect (with a follow-up date) and it shows up here when it\'s time.</div>';
+    $('#dirMeta').textContent='0 TODAY'; return;
   }
   $('#dirBody').innerHTML = due.map(l=>{
-    const tag = l.quiet?`<span class="tag quiet">QUIET ${l.quiet}D</span>`:`<span class="tag appt">APPT ${l.appt}</span>`;
-    const ac = l.quiet?'var(--red)':'var(--green)';
+    const tag = l.appt ? `<span class="tag appt">APPT ${esc(String(l.appt))}</span>`
+      : l.next ? `<span class="tag quiet">FOLLOW-UP${l.overdue>0?' · '+l.overdue+'d late':' · today'}</span>`
+      : `<span class="tag quiet">QUIET ${l.quietDays}D</span>`;
+    const ac = l.appt ? 'var(--green)' : 'var(--red)';
+    const meta = [l.vehicle, SRC[l.src], l.phone?phoneFmt(l.phone):''].filter(Boolean).join(' · ') || 'no details yet';
+    const call = l.phone ? `<a class="act" href="tel:${esc(l.phone)}">CALL</a>` : '';
+    const cal = l.appt ? `<a class="act" href="${gcalLink(l)}" target="_blank" rel="noopener">＋ CAL</a>` : `<button class="act js-appt" data-id="${l.id}">SET APPT</button>`;
     return `<div class="di" data-id="${l.id}" style="--ac:${ac}">
-      <div class="dtop"><span class="nm">${l.name}</span>${tag}</div>
-      <div class="veh">${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}</div>
+      <div class="dtop"><span class="nm">${esc(l.name)}</span>${tag}</div>
+      <div class="veh">${esc(meta)}</div>
       <div class="acts">
-        <a class="act" href="tel:${l.phone}">CALL</a>
+        ${call}
         <button class="act go js-draft" data-id="${l.id}">DRAFT</button>
-        <button class="act js-done" data-id="${l.id}">DONE</button>
+        ${cal}
+        <button class="act js-done" data-id="${l.id}">DID IT</button>
       </div>
     </div>`;
   }).join('');
   $('#dirMeta').textContent = due.length+' TODAY';
+}
+// All-day Google Calendar link for an appointment (pure client-side reminder).
+function gcalLink(l){
+  const m=(String(l.appt).match(/\d{4}-\d{2}-\d{2}/)||[localDay()])[0];
+  const day=m.replace(/-/g,'');
+  const nd=new Date(m+'T00:00:00'); nd.setDate(nd.getDate()+1);  // proper next-day (handles month/year rollover)
+  const next=localDay(nd).replace(/-/g,'');
+  const title=encodeURIComponent(`CARVIS: ${l.name}${l.vehicle?' — '+l.vehicle:''}`);
+  const details=encodeURIComponent(`Appointment: ${l.appt}\n${l.phone?('Phone: '+phoneFmt(l.phone)):''}`);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${day}/${next}&details=${details}`;
 }
 function renderTicker(){
   const s=STATS;
@@ -1059,22 +1223,26 @@ function leadDraftSet(l){
 }
 let mLead=null, mCh='text';
 function openDraft(id){
-  const l=DATA.leads.find(x=>x.id===id); if(!l) return;
+  const p=HOT.find(x=>x.id===id); if(!p) return;
+  const l=prospectToLead(p);
   mLead=l; mCh='text';
   $('#mAv').textContent=initials(l.name);
   $('#mName').textContent=`DRAFT · ${l.name}`;
-  $('#mSub').textContent=`${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}`;
+  $('#mSub').textContent=[l.vehicle, SRC[l.src], l.phone?phoneFmt(l.phone):''].filter(Boolean).join(' · ') || 'tap COPY, paste into your text';
   $$('#mSeg button').forEach(b=>b.classList.toggle('on',b.dataset.ch==='text'));
   renderDrafts(); $('#overlay').classList.add('show');
 }
+let COPYBANK = [];   // draft bodies referenced by index — never injected as HTML/attrs
 function renderDrafts(){
   const set = leadDraftSet(mLead);
+  COPYBANK = [];
   $('#mDrafts').innerHTML = set.map((d,i)=>{
     const body = mCh==='email' ? d.body+'\n\n— Mick, North Star Car Guy' : d.body;
+    const ci = COPYBANK.push(body)-1;
     return `<div class="draft ${['a','b','c'][i]}">
-      <div class="dh"><span class="lab">${d.lab}</span><span class="tg">${d.tag} · ${d.code}</span>
-        <button class="cp js-copy" data-txt="${body.replace(/"/g,'&quot;')}">COPY</button></div>
-      <p>${body.replace(/\n/g,'<br>')}</p>
+      <div class="dh"><span class="lab">${esc(d.lab)}</span><span class="tg">${esc(d.tag)} · ${esc(d.code)}</span>
+        <button class="cp js-copy" data-ci="${ci}">COPY</button></div>
+      <p>${esc(body).replace(/\n/g,'<br>')}</p>
     </div>`;
   }).join('');
 }
@@ -1090,7 +1258,7 @@ function detectIntent(t){
   t=(t||'').toLowerCase();
   if(/(see it|look at|test ?drive|come (by|look|see|in|check)|when can|stop by|check it out|swing by|set up a time|today|tomorrow|this (week|weekend)|meet)/.test(t)) return 'schedule';
   if(/(price|best|lowest|firm|obo|how much|cost|negotiab|come down|cash|deal|drop|out the door|take \$|\$)/.test(t)) return 'price';
-  if(/(trade|trade-in|my (car|truck|vehicle|ride)|take my|on trade)/.test(t)) return 'trade';
+  if(/(trade|trade-in|my (car|truck|vehicle|ride|[a-z]?\d{2,3}\b|f-?\d{2,3}|silverado|sierra|ram|tacoma|tundra|equinox)|take my|on trade|worth|value|apprais|give me for|get for|owe on|payoff)/.test(t)) return 'trade';
   if(/(mile|mileage|condition|accident|carfax|title|clean|rust|tire|owner|engine|transmission|mpg|year|vin|history|run|drive)/.test(t)) return 'info';
   if(/(where|location|located|address|how far|direction|what town|city|zip)/.test(t)) return 'location';
   if(/(still (there|available|have|for sale|got)|available|you still|is this|interested|sold)/.test(t)) return 'availability';
@@ -1138,14 +1306,40 @@ const REPLY={
     {lab:'OPTION C',tag:'NEPQ',code:';mpB1',body:c=>`Appreciate it! Quick one — what made ${RV(c)} catch your eye? Helps me point you the right direction.`},
   ],
 };
-function openReply(){ $('#rMsg').value=''; $('#rIntent').innerHTML=''; $('#rDrafts').innerHTML=''; $('#rOverlay').classList.add('show'); setTimeout(()=>{ try{ $('#rMsg').focus(); }catch(e){} },60); }
+function openReply(){ ['rMsg','rName','rVeh'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; }); $('#rIntent').innerHTML=''; $('#rDrafts').innerHTML=''; const pw=$('#rPinWrap'); if(pw) pw.innerHTML=''; lastReply=null; $('#rOverlay').classList.add('show'); setTimeout(()=>{ try{ $('#rMsg').focus(); }catch(e){} },60); }
 function closeReply(){ $('#rOverlay').classList.remove('show'); }
+let lastReply=null;
 function genReplies(){
   const msg=$('#rMsg').value.trim(); if(!msg){ toast("Paste the buyer's message first"); return; }
   const ctx={veh:$('#rVeh').value.trim()}; const key=detectIntent(msg);
-  $('#rIntent').innerHTML=`<span class="pd"></span>CARVIS read this as — ${INTENT_LABEL[key]}`;
-  $('#rDrafts').innerHTML=REPLY[key].map((d,i)=>`<div class="draft ${['a','b','c'][i]}"><div class="dh"><span class="lab">${d.lab}</span><span class="tg">${d.tag} · ${d.code}</span><button class="cp js-copy" data-txt="${d.body(ctx).replace(/"/g,'&quot;')}">COPY</button></div><p>${d.body(ctx)}</p></div>`).join('');
+  lastReply={ name:($('#rName')?$('#rName').value.trim():''), veh:ctx.veh, intent:key };
+  $('#rIntent').innerHTML=`<span class="pd"></span>CARVIS read this as — ${esc(INTENT_LABEL[key])}`;
+  COPYBANK=[];
+  $('#rDrafts').innerHTML=REPLY[key].map((d,i)=>{
+    const body=d.body(ctx); const ci=COPYBANK.push(body)-1;
+    return `<div class="draft ${['a','b','c'][i]}"><div class="dh"><span class="lab">${esc(d.lab)}</span><span class="tg">${esc(d.tag)} · ${esc(d.code)}</span><button class="cp js-copy" data-ci="${ci}">COPY</button></div><p>${esc(body).replace(/\n/g,'<br>')}</p></div>`;
+  }).join('');
+  // offer to capture this buyer as a prospect so the conversation isn't lost
+  $('#rPinWrap').innerHTML = `<button class="rgen pin js-pin">＋ PIN AS PROSPECT${lastReply.name?' ('+esc(lastReply.name)+')':''}</button>`;
   blip(760,0.06,'sine',0.13);
+}
+// Capture the buyer just replied to as a prospect (dedupes on name+vehicle so
+// the same person inquiring twice doesn't become two pins).
+function pinFromReply(){
+  if(!lastReply) return;
+  const name=(lastReply.name||'').trim();
+  if(!name){ toast('Add the buyer\'s name above, then pin'); const rn=$('#rName'); if(rn) rn.focus(); return; }
+  const veh=lastReply.veh||'';
+  const heat = lastReply.intent==='schedule'?'hot' : (lastReply.intent==='price'||lastReply.intent==='trade')?'warm':'cool';
+  // Seed a near-term follow-up so a just-engaged buyer actually enters Directives
+  // (a hot/warm lead shouldn't wait 3 quiet days to resurface).
+  const nextTouch = heat==='cool' ? '' : localDay(new Date(Date.now()+86400000));
+  const dup=HOT.find(p=> p.name.toLowerCase()===name.toLowerCase() && (p.vehicle||'').toLowerCase()===veh.toLowerCase());
+  if(dup){ Object.assign(dup,{vehicle:veh||dup.vehicle, src:dup.src||'fb', lastTouch:localDay(), next:dup.next||nextTouch}); toast('Already pinned — updated'); }
+  else { HOT.push({id:Date.now(), name, phone:'', vehicle:veh, src:'fb', note:INTENT_LABEL[lastReply.intent]||'', heat, stage:'new', lastTouch:localDay(), next:nextTouch}); toast('Pinned as prospect ✓'); }
+  saveHot(); renderHot(); renderDirectives();
+  $('#rPinWrap').innerHTML='';
+  blip(920,0.06,'sine',0.12);
 }
 
 /* ---------- outreach email (referral / sold-customer) ----------
@@ -1157,13 +1351,25 @@ const SAMPLE_CONTACTS=[];   // no assumed contacts — Mick imports his own
 // Real contacts persist in localStorage; start empty until Mick imports his own.
 function loadContacts(){ try{ const s=JSON.parse(localStorage.getItem('carvis_contacts')||'null'); if(Array.isArray(s)) return s; }catch(e){} return []; }
 let CONTACTS=loadContacts();
-function saveContacts(){ try{ localStorage.setItem('carvis_contacts',JSON.stringify(CONTACTS)); }catch(e){} scheduleCloudPush(); }
-function addContacts(list){ let n=0; list.forEach(c=>{ if(!c.email) return; if(CONTACTS.some(x=>(x.email||'').toLowerCase()===c.email.toLowerCase())) return; CONTACTS.push(c); n++; }); if(n) saveContacts(); return n; }
+function saveContacts(){ const ok=lset('carvis_contacts',JSON.stringify(CONTACTS)); if(ok) scheduleCloudPush(); return ok; }
+function addContacts(list){ let n=0; (list||[]).forEach(c=>{ if(!c||!c.email) return; const email=String(c.email).trim(); if(!email) return; if(CONTACTS.some(x=>(x.email||'').toLowerCase()===email.toLowerCase())) return; CONTACTS.push({name:String(c.name||'').trim()||email.split('@')[0], email, vehicle:String(c.vehicle||'').trim(), type:c.type==='referral'?'referral':'sold'}); n++; }); if(n) saveContacts(); return n; }
+// Split one CSV line honoring double-quoted fields (so "Knies, Mick" stays one
+// field instead of splitting on the comma inside the name).
+function csvSplit(line){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){ const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){ cur+='"'; i++; } else q=false; } else cur+=ch; }
+    else { if(ch==='"') q=true; else if(ch===','){ out.push(cur); cur=''; } else cur+=ch; }
+  }
+  out.push(cur); return out.map(s=>s.trim());
+}
 function parseImport(text){
-  return text.split(/\n+/).map(line=>{
-    const parts=line.split(',').map(s=>s.trim()).filter(Boolean); if(!parts.length) return null;
+  return text.split(/\r?\n/).map(line=>{
+    if(!line.trim()) return null;
+    const parts=csvSplit(line).filter(x=>x!==''); if(!parts.length) return null;
     const email=parts.find(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)); if(!email) return null;
-    const type=/referral/i.test(line)?'referral':'sold';
+    const typeCell=parts.find(x=>/^(sold|referral)$/i.test(x));
+    const type=(typeCell&&/referral/i.test(typeCell))?'referral':'sold';
     const name=(parts[0]&&parts[0]!==email)?parts[0]:email.split('@')[0];
     const vehicle=parts.find(x=>x!==name&&x!==email&&!/^(sold|referral)$/i.test(x))||'';
     return {name,email,vehicle,type};
@@ -1171,7 +1377,7 @@ function parseImport(text){
 }
 function refreshContactDropdown(){
   $('#oContact').innerHTML = CONTACTS.length
-    ? CONTACTS.map((c,i)=>`<option value="${i}">${c.name} — ${c.type==='sold'?'sold · '+(c.vehicle||'—'):'referral'}</option>`).join('')
+    ? CONTACTS.map((c,i)=>`<option value="${i}">${esc(c.name)} — ${c.type==='sold'?'sold · '+esc(c.vehicle||'—'):'referral'}${c.lastEmailed?' · emailed '+esc(c.lastEmailed):''}</option>`).join('')
     : '<option value="">No contacts yet — use “Manage contacts” below to import</option>';
 }
 function importText(text){
@@ -1193,15 +1399,21 @@ function exportContacts(){
   setTimeout(()=>URL.revokeObjectURL(url),500);
   toast(`Exported ${CONTACTS.length} contacts`); blip(900,0.07,'triangle',0.13);
 }
+// Mick's Google review link — set once in the Outreach modal (stored locally),
+// injected into the review template so no customer ever gets "[your review link]".
+const getReviewLink = () => { try{ return (localStorage.getItem('carvis_reviewlink')||'').trim(); }catch(e){ return ''; } };
+const reviewLine = () => getReviewLink() || '[set your review link in ⚙ below]';
+const firstName = c => first2(c.name) && first2(c.name)!=='there' ? first2(c.name) : '';
+const greet = c => firstName(c) ? 'Hey '+firstName(c)+',' : 'Hey there,';
 const MAILTPL={
-  review:{ subject:c=>`Hope the ${c.vehicle} is treating you well`,
-    body:c=>`Hey ${first2(c.name)},\n\nHope the ${c.vehicle} is treating you well. If you've got 60 seconds, a quick Google review means a lot and helps other folks find someone they can trust:\n[your review link]\n\nAnd if anyone in your circle is car shopping — just send them my way. I'll take care of them the same way I took care of you.\n\nThanks again,\nMick — North Star Car Guy` },
-  referral:{ subject:c=>`Know anyone car shopping, ${first2(c.name)}?`,
-    body:c=>`Hey ${first2(c.name)},\n\nQuick one — anyone in your circle thinking about a different vehicle? I've got 500 across all brands, new and used, and I'll treat them right: no pressure, just straight answers.\n\nSend them my way and I'll take good care of them.\n\nMick — North Star Car Guy` },
-  checkin:{ subject:c=>`Checking in on the ${c.vehicle}`,
-    body:c=>`Hey ${first2(c.name)},\n\nJust checking in — how's the ${c.vehicle} running for you? Anything come up that I can help with?\n\nIf you ever need anything down the road, I'm one message away.\n\nMick — North Star Car Guy` },
+  review:{ subject:c=>c.vehicle?`Hope the ${c.vehicle} is treating you well`:`Hope the new ride is treating you well`,
+    body:c=>`${greet(c)}\n\nHope ${c.vehicle?`the ${c.vehicle}`:'the new ride'} is treating you well. If you've got 60 seconds, a quick Google review means a lot and helps other folks find someone they can trust:\n${reviewLine()}\n\nAnd if anyone in your circle is car shopping — just send them my way. I'll take care of them the same way I took care of you.\n\nThanks again,` },
+  referral:{ subject:c=>firstName(c)?`Know anyone car shopping, ${firstName(c)}?`:`Know anyone car shopping?`,
+    body:c=>`${greet(c)}\n\nQuick one — anyone in your circle thinking about a different vehicle? I've got a full lot to pick from and I do the homework on every one, so they get straight answers and no pressure.\n\nSend them my way and I'll take good care of them.` },
+  checkin:{ subject:c=>c.vehicle?`Checking in on the ${c.vehicle}`:`Just checking in`,
+    body:c=>`${greet(c)}\n\nJust checking in — how's ${c.vehicle?`the ${c.vehicle}`:'everything'} running for you? Anything come up that I can help with?\n\nIf you ever need anything down the road, I'm one message away.` },
 };
-const MAIL_FOOTER='\n\n— North Star Car Guy · Mosaic Auto Group, Zumbrota, MN · Reply "STOP" to opt out.';
+const MAIL_FOOTER='\n\nMick — North Star Car Guy · Mosaic Auto Group, Zumbrota, MN\nDon\'t want these? Just reply "unsubscribe" and I\'ll take you off the list.';
 function curContact(){ return CONTACTS[+($('#oContact').value||0)]||CONTACTS[0]||null; }
 function openOutreach(){
   refreshContactDropdown();
@@ -1214,20 +1426,27 @@ function openOutreach(){
 function closeOutreach(){ $('#oOverlay').classList.remove('show'); }
 function fillContact(){ const c=curContact(); $('#oName').value=c?c.name:''; $('#oTo').value=c?c.email:''; const on=$('#oTpl button.on'); applyTemplate(on?on.dataset.tpl:'review'); }
 function applyTemplate(key){ const t=MAILTPL[key]||MAILTPL.review; const cc=curContact()||{}; const c={name:$('#oName').value||cc.name||'there', vehicle:cc.vehicle||''}; $('#oSubj').value=t.subject(c); $('#oBody').value=t.body(c); }
+// Stamp the contact so Mick can see who was last emailed and when (prevents
+// double-sending the same referral/review ask).
+function recordOutreach(email){
+  const c=CONTACTS.find(x=>(x.email||'').toLowerCase()===String(email).toLowerCase());
+  if(c){ c.lastEmailed=localDay(); saveContacts(); }
+}
 async function sendOutreach(){
   const to=$('#oTo').value.trim(), toName=$('#oName').value.trim(), subject=$('#oSubj').value.trim();
   const body=$('#oBody').value.trim(), st=$('#oStat');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){ st.className='ostat err'; st.textContent='Enter a valid email address.'; return; }
   if(!subject||!body){ st.className='ostat err'; st.textContent='Subject and message are required.'; return; }
+  if(/\[.*review link.*\]|\[set your review link/i.test(body)){ st.className='ostat err'; st.textContent='Add your Google review link (⚙ Settings below) before sending.'; return; }
   const full=body+MAIL_FOOTER;
   st.className='ostat send'; st.textContent='◉ Sending…'; blip(680,0.06,'sine',0.12);
   try{
-    const r=await fetch('/.netlify/functions/send-email',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({to,toName,subject,html:full.replace(/\n/g,'<br>'),text:full})});
+    const r=await apiFetch('/.netlify/functions/send-email',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to,toName,subject,html:full.replace(/\n/g,'<br>'),text:full})}, 20000);
     const d=await r.json().catch(()=>({}));
-    if(r.ok&&d.ok){ st.className='ostat ok'; st.textContent='✓ Sent to '+to; toast('Email sent'); blip(960,0.08,'triangle',0.14); }
+    if(r.ok&&d.ok){ st.className='ostat ok'; st.textContent='✓ Sent to '+to; toast('Email sent'); recordOutreach(to); blip(960,0.08,'triangle',0.14); }
     else { st.className='ostat err'; st.textContent='✕ '+(d.error||('HTTP '+r.status)); }
-  }catch(e){ st.className='ostat err'; st.textContent='✕ Network error — deploy the function (or run netlify dev). '+e.message; }
+  }catch(e){ st.className='ostat err'; st.textContent = e.name==='AbortError' ? '✕ Send timed out — try again.' : ('✕ Network error — deploy the function (or run netlify dev). '+e.message); }
 }
 
 /* ---------- vehicle lookup + local Q&A ----------
@@ -1238,13 +1457,18 @@ async function sendOutreach(){
    falls back to these samples until the crawl runs. */
 const vmoney = n => '$'+(+n||0).toLocaleString();
 const MAKES=['ford','chevrolet','chevy','gmc','ram','dodge','jeep','chrysler','toyota','honda','kia','hyundai','nissan','subaru','mazda','buick','cadillac','lincoln','volkswagen','vw','tesla','lexus','acura','volvo','audi','bmw'];
-let INVENTORY=[], vCur=null, vMatches=[];
+let INVENTORY=[], INVENTORY_UPDATED='', vCur=null, vMatches=[];
 // Real inventory only (inventory.json, scraped from mosaicautos.com).
 // No sample fallback — if it can't load, car lookups simply report no match.
+// 'no-cache' (not 'no-store') so the browser can revalidate with a 304 instead
+// of re-downloading the whole file every open.
 async function loadInventory(){
-  try{ const r=await fetch('inventory.json',{cache:'no-store'}); if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.vehicles)&&d.vehicles.length) INVENTORY=d.vehicles; } }catch(e){}
-  try{ renderStats(); }catch(e){}   // refresh the Inventory readout once loaded
+  try{ const r=await fetch('inventory.json',{cache:'no-cache'}); if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.vehicles)&&d.vehicles.length){ INVENTORY=d.vehicles; INVENTORY_UPDATED=d.updated||''; } } }catch(e){}
+  try{ renderStats(); renderSystem(); }catch(e){}   // refresh Inventory readout + status once loaded
 }
+// How stale is the crawl? Used to stop CARVIS promising a car is available from
+// month-old data (a buyer driving 90 minutes to a sold car torches trust).
+function inventoryStale(){ if(!INVENTORY_UPDATED) return true; return daysSince(String(INVENTORY_UPDATED).slice(0,10)) > 2; }
 const vTitle=v=>`${v.year||''} ${v.make||''} ${v.model||''} ${v.trim||''}`.replace(/\s+/g,' ').trim();
 function isCarQuery(q){
   const l=q.toLowerCase();
@@ -1265,18 +1489,20 @@ function closeVehicle(){ $('#vOverlay').classList.remove('show'); }
 function renderVehicleList(list){
   vCur=null; $('#vName').textContent=`${list.length} matches`; $('#vSub').textContent='Tap one to pull it up';
   $('#vDetail').innerHTML=''; $('#vQAWrap').classList.add('hidden');
-  $('#vList').innerHTML=list.map((v,i)=>`<div class="vpick js-vpick" data-i="${i}"><div class="pn"><div class="pt">${vTitle(v)}</div><div class="ps">${(v.miles||0).toLocaleString()} mi · ${v.stock||('VIN '+v.vin.slice(-6))}</div></div><div class="pp">${v.price?vmoney(v.price):'—'}</div></div>`).join('');
+  $('#vList').innerHTML=list.map((v,i)=>`<div class="vpick js-vpick" data-i="${i}"><div class="pn"><div class="pt">${esc(vTitle(v))}</div><div class="ps">${(v.miles||0).toLocaleString()} mi · ${esc(v.stock||(v.vin?'VIN '+String(v.vin).slice(-6):'—'))}</div></div><div class="pp">${v.price?vmoney(v.price):'—'}</div></div>`).join('');
 }
+const safeUrl = u => /^https?:\/\//i.test(String(u||'')) ? String(u) : '';
 function showVehicle(v){
   vCur=v; $('#vList').innerHTML='';
   $('#vName').textContent=vTitle(v);
   $('#vSub').textContent=`${(v.condition||'').toUpperCase()} · ${v.store||'Mosaic Auto Group'} · ${v.stock?('Stock '+v.stock):('VIN '+(v.vin||'').slice(-6))}`;
   const specs=[['Mileage',v.miles?(v.miles.toLocaleString()+' mi'):''],['Exterior',v.color],['Drivetrain',v.drivetrain],['Transmission',v.transmission],['Engine',v.engine],['MPG',v.mpg],['Body',v.body],['Condition',v.condition]].filter(s=>s[1]);
-  $('#vDetail').innerHTML=`${v.image?`<img class="vphoto" src="${v.image}" alt="" onerror="this.remove()">`:''}
+  const img=safeUrl(v.image);
+  $('#vDetail').innerHTML=`${img?`<img class="vphoto" src="${esc(img)}" alt="" onerror="this.remove()">`:''}
     <div class="vprice">${v.price?vmoney(v.price):'Call for price'}${v.msrp&&v.msrp>v.price?`<small>MSRP ${vmoney(v.msrp)} · ${vmoney(v.msrp-v.price)} off</small>`:''}</div>
-    <div class="vspecs">${specs.map(s=>`<div class="vspec"><div class="k">${s[0]}</div><div class="v2">${s[1]}</div></div>`).join('')}</div>`;
+    <div class="vspecs">${specs.map(s=>`<div class="vspec"><div class="k">${esc(s[0])}</div><div class="v2">${esc(String(s[1]))}</div></div>`).join('')}</div>`;
   $('#vQAWrap').classList.remove('hidden'); $('#vA').textContent=''; $('#vQ').value='';
-  const link=$('#vLink'); if(v.url){ link.style.display=''; link.href=v.url; } else link.style.display='none';
+  const link=$('#vLink'); const u=safeUrl(v.url); if(u){ link.style.display=''; link.href=u; } else link.style.display='none';
 }
 function estPayment(price){ const r=0.079/12, n=72; return Math.round((price*r/(1-Math.pow(1+r,-n)))/5)*5; }
 function vAnswer(v,q){
@@ -1293,7 +1519,9 @@ function vAnswer(v,q){
   if(/transmission|automatic|manual|\btrans\b|speed/.test(l)) return v.transmission?`${v.transmission}.`:'Transmission not loaded.';
   if(/engine|motor|cylinder|liter|diesel|v8|v6/.test(l)) return v.engine?`${v.engine}.`:'Engine not loaded.';
   if(/where|location|store|lot|address|come see|test drive/.test(l)) return `${v.store||'Mosaic Auto Group'} — Zumbrota, MN.${v.url?` Listing: ${v.url}`:''}`;
-  if(/available|still|in stock|sold/.test(l)) return `Yes — the ${T} is in stock${v.store?` at ${v.store}`:''}.`;
+  if(/available|still|in stock|sold/.test(l)) return inventoryStale()
+    ? `It was listed${INVENTORY_UPDATED?' as of '+INVENTORY_UPDATED:''} — check the lot before you promise it, that data may be stale.`
+    : `Listed as available${v.store?` at ${v.store}`:''} as of ${INVENTORY_UPDATED}. Worth a quick confirm before a customer drives out.`;
   if(/year|make|model|what is|which|trim|spec/.test(l)) return `It's a ${T}${v.condition?` (${v.condition})`:''}${v.color?`, ${v.color}`:''}.`;
   if(/link|listing|url|page|photos?|pics?|pictures?|see it/.test(l)) return v.url?`Here's the full listing: ${v.url}`:'No listing link loaded.';
   return `I've got the specs on the ${T} right here — price, miles, drivetrain, MPG, color. For the full writeup here's the listing${v.url?': '+v.url:''}, or want me to draft a buyer reply about it?`;
@@ -1309,16 +1537,19 @@ function runCmd(raw){
   const low=q.toLowerCase();
   if(low==='ask'||low==='carvis'||low==='ai'){ openAI(); $('#cmd').value=''; return; }
   if(low==='numbers'||low==='stats'||low==='month'||low==='totals'){ openNumbers(); return; }
+  if(/^(\+?1 )?sold( one| a car| it)?$/.test(low)){ quickLog('sold'); $('#cmd').value=''; return; }
+  if(/^(\+?1 )?bought( one| a car| it)?$/.test(low)){ quickLog('bought'); $('#cmd').value=''; return; }
   if(low==='reply'||low==='buyer reply'){ openReply(); return; }
   if(low==='outreach'||low==='email'){ openOutreach(); return; }
   if(low==='findcar'){ $('#cmd').focus(); toast('Ask about a car — type a year, make/model, or stock # (e.g. "2017 F350")'); return; }
   if(low.startsWith('draft')||low.startsWith('text')||low.startsWith('message')){
-    const name=low.replace(/^(draft|text|message)\s*/,'');
-    const l=DATA.leads.find(x=>x.name.toLowerCase().includes(name));
-    if(l){ openDraft(l.id); $('#cmd').value=''; return; }
+    const name=low.replace(/^(draft|text|message)\s*/,'').trim();
+    const p=name && HOT.find(x=>x.name.toLowerCase().includes(name));
+    if(p){ openDraft(p.id); $('#cmd').value=''; return; }
+    if(name){ toast(`No prospect named "${name}" — pin them first`); $('#cmd').value=''; return; }
   }
-  const l=DATA.leads.find(x=>low.includes(x.name.split(' ')[0].toLowerCase()));
-  if(l){ openDraft(l.id); $('#cmd').value=''; return; }
+  const pn=HOT.find(x=>low.includes(x.name.split(' ')[0].toLowerCase()));
+  if(pn){ openDraft(pn.id); $('#cmd').value=''; return; }
   { const looksMsg=/\?/.test(q)||q.split(/\s+/).length>6; const ms=findVehicles(q);
     if(ms.length && !looksMsg && (isCarQuery(q)||q.split(/\s+/).length<=4)){ openVehicle(ms); $('#cmd').value=''; return; }
     if(isCarQuery(q) && !looksMsg && INVENTORY.length){ toast(`No match for "${q}" in inventory`); $('#cmd').value=''; return; } }
@@ -1354,6 +1585,7 @@ function startHum(){
   o.type='sine'; o.frequency.value=56; f.type='lowpass'; f.frequency.value=180; g.gain.value=0.045;
   o.connect(f); f.connect(g); g.connect(masterGain); o.start(); humOsc=o;
 }
+function stopHum(){ if(humOsc){ try{ humOsc.stop(); }catch(e){} humOsc=null; } }
 
 /* ---------- node-sphere reactor core ---------- */
 function initNodes(){
@@ -1363,8 +1595,14 @@ function initNodes(){
   size(); window.addEventListener('resize',size);
   const N=42, pts=[];
   for(let i=0;i<N;i++){ const y=1-(i/(N-1))*2, rad=Math.sqrt(Math.max(1-y*y,0)), th=i*2.399963; pts.push({x:Math.cos(th)*rad,y,z:Math.sin(th)*rad,ph:i*0.7}); }
-  let ang=0;
-  (function frame(){
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let ang=0, last=0;
+  (function frame(t){
+    // Pause when the tab is hidden (battery) and cap at ~30fps (halves CPU vs
+    // the uncapped loop). Honor reduced-motion by drawing a single still frame.
+    if(document.hidden){ requestAnimationFrame(frame); return; }
+    if(t && last && t-last < 33){ requestAnimationFrame(frame); return; }
+    last = t||0;
     const w=cv.width,h=cv.height,cx=w/2,cy=h/2,R=Math.min(w,h)*0.40; ctx.clearRect(0,0,w,h); ang+=0.0045;
     const ca=Math.cos(ang),sa=Math.sin(ang);
     const col=$('#reactor').classList.contains('listening')?'56,240,138':'47,230,255';
@@ -1374,7 +1612,7 @@ function initNodes(){
     const tm=performance.now()/600;
     pr.forEach(q=>{ const depth=(q.z+1)/2, pulse=0.5+0.5*Math.sin(tm+q.ph), r=(1.1+depth*2)*DPR, al=0.22+depth*0.75*pulse;
       ctx.fillStyle=`rgba(${col},${al})`; ctx.beginPath(); ctx.arc(q.sx,q.sy,r,0,6.2832); ctx.fill(); });
-    requestAnimationFrame(frame);
+    if(!reduce) requestAnimationFrame(frame);
   })();
 }
 
@@ -1529,10 +1767,21 @@ function drawSpark(){
    Daily checklist; checked state persists per-day in localStorage so it resets
    each morning. Tasks map to the six habits: Clarity, Energy, Necessity,
    Productivity, Influence, Courage. */
-const TASK_KEY = () => 'carvis_tasks_'+new Date().toISOString().slice(0,10);
+// LOCAL date, not UTC — a UTC key rolled the checklist over at ~6 PM Minnesota.
+const localDay = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const TASK_KEY = () => 'carvis_tasks_'+localDay();
 function loadTaskState(){ try{ return JSON.parse(localStorage.getItem(TASK_KEY())||'{}')||{}; }catch(e){ return {}; } }
 let taskState=loadTaskState();
-function saveTaskState(){ try{ localStorage.setItem(TASK_KEY(), JSON.stringify(taskState)); }catch(e){} scheduleCloudPush(); }
+function saveTaskState(){ const ok=lset(TASK_KEY(), JSON.stringify(taskState)); if(ok) scheduleCloudPush(); pruneTaskKeys(); return ok; }
+// Old per-day habit keys accumulate forever and ride every cloud push — keep ~14 days.
+function pruneTaskKeys(){
+  try{
+    const cutoff = localDay(new Date(Date.now()-14*86400000));
+    const kill=[];
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('carvis_tasks_')&&k.slice(13)<cutoff) kill.push(k); }
+    kill.forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
+  }catch(e){}
+}
 function renderTasks(){
   const done=DATA.tasks.filter(t=>taskState[t.id]).length;
   $('#hpMeta').textContent=`${done}/${DATA.tasks.length}`;
@@ -1596,16 +1845,28 @@ const HEAT = {
 let hotHeat='hot';
 function loadHot(){ try{ const s=JSON.parse(localStorage.getItem('carvis_hot')||'[]'); return Array.isArray(s)?s:[]; }catch(e){ return []; } }
 let HOT=loadHot();
-function saveHot(){ try{ localStorage.setItem('carvis_hot',JSON.stringify(HOT)); }catch(e){} scheduleCloudPush(); }
+function saveHot(){ const ok=lset('carvis_hot',JSON.stringify(HOT)); if(ok) scheduleCloudPush(); return ok; }
+function dueBadge(p){
+  const today=localDay();
+  if(p.appt && String(p.appt).slice(0,10) <= today) return '<span class="qb appt">APPT</span>';
+  if(p.next && p.next <= today) return '<span class="qb due">DUE</span>';
+  if(p.next && p.next > today) return '<span class="qb soon">'+esc(p.next.slice(5))+'</span>';
+  if(!p.appt && !p.next && daysSince(p.lastTouch) >= 3) return '<span class="qb due">QUIET '+daysSince(p.lastTouch)+'D</span>';
+  return '';
+}
 function renderHot(){
   HOT.sort((a,b)=>((HEAT[a.heat]||HEAT.warm).rank-(HEAT[b.heat]||HEAT.warm).rank)||(b.id-a.id));
   $('#hotMeta').textContent=HOT.length;
-  if(!HOT.length){ $('#hotList').innerHTML='<div class="hot-empty">No hot prospects yet.<br>Add the people you can\'t let slip.</div>'; return; }
+  const rl=$('#roLeads'); if(rl) rl.textContent=HOT.length;   // keep the "Prospects" tile live
+  if(!HOT.length){ $('#hotList').innerHTML='<div class="hot-empty">No prospects yet.<br>Add the people you can\'t let slip — add a phone and a follow-up date so they resurface.</div>'; return; }
   $('#hotList').innerHTML=HOT.map(p=>{ const h=HEAT[p.heat]||HEAT.warm;
+    const meta=[p.vehicle, SRC[p.src], p.phone?phoneFmt(p.phone):''].filter(Boolean).join(' · ');
+    const note = p.note && p.note!==p.vehicle ? p.note : '';
     return `<div class="hot-item" style="--ac:${h.ac}" data-id="${p.id}">
-      <div class="hn"><div class="hnm">${esc(p.name)}</div>${p.note?`<div class="hnt">${esc(p.note)}</div>`:''}<div class="hheat">${h.lbl}</div></div>
+      <div class="hn"><div class="hnm">${esc(p.name)}${dueBadge(p)}</div>${meta?`<div class="hnt">${esc(meta)}</div>`:''}${note?`<div class="hnt">${esc(note)}</div>`:''}<div class="hheat">${h.lbl}</div></div>
       <div class="hot-acts">
-        <button class="js-hot-draft" data-id="${p.id}" title="Draft a reply">✉</button>
+        <button class="js-hot-touch" data-id="${p.id}" title="Mark followed up today">✓</button>
+        <button class="js-hot-draft" data-id="${p.id}" title="Draft a reply from your scripts">✉</button>
         <button class="js-hot-del" data-id="${p.id}" title="Remove">✕</button>
       </div>
     </div>`;
@@ -1613,12 +1874,45 @@ function renderHot(){
 }
 function addHot(){
   const name=$('#hotName').value.trim(); if(!name){ toast('Add a name first'); $('#hotName').focus(); return; }
-  HOT.push({id:Date.now(), name, note:$('#hotNote').value.trim(), heat:hotHeat});
-  saveHot(); renderHot();
-  $('#hotName').value=''; $('#hotNote').value=''; $('#hotName').focus();
-  blip(900,0.06,'sine',0.12); toast('Prospect pinned');
+  const phone=($('#hotPhone').value||'').replace(/\D/g,'');
+  const vehicle=$('#hotVeh').value.trim(), src=$('#hotSrc').value||'', next=$('#hotNext').value||'', note=$('#hotNote').value.trim();
+  // Dedupe: same phone, or same name + vehicle. Update in place instead of a second pin.
+  const dup=HOT.find(p=> (phone&&(p.phone||'').replace(/\D/g,'')===phone) || (p.name.toLowerCase()===name.toLowerCase() && (p.vehicle||'').toLowerCase()===vehicle.toLowerCase()));
+  if(dup){
+    Object.assign(dup,{phone:phone||dup.phone, vehicle:vehicle||dup.vehicle, src:src||dup.src, next:next||dup.next, note:note||dup.note, heat:hotHeat});
+    toast('Already pinned — updated that prospect');
+  } else {
+    HOT.push({id:Date.now(), name, phone, vehicle, src, note, heat:hotHeat, stage:'new', lastTouch:localDay(), next, appt:''});
+    toast('Prospect pinned');
+  }
+  const ok=saveHot(); renderHot(); renderDirectives();
+  ['hotName','hotPhone','hotVeh','hotNote','hotNext'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+  $('#hotSrc').value=''; $('#hotName').focus();
+  blip(900,0.06,'sine',0.12); if(!ok) toast('⚠ Storage full — not saved');
 }
-function delHot(id){ HOT=HOT.filter(p=>p.id!==id); saveHot(); renderHot(); blip(360,0.06,'sawtooth',0.1); }
+function delHot(id){
+  const p=HOT.find(x=>x.id===id); if(!p) return;
+  if(!confirm(`Remove ${p.name} from your prospects? This can't be undone.`)) return;
+  HOT=HOT.filter(x=>x.id!==id); saveHot(); renderHot(); renderDirectives(); blip(360,0.06,'sawtooth',0.1);
+}
+// "Did it" / touched — record the follow-up so the prospect leaves the due list,
+// and roll a dated follow-up forward so it resurfaces on cadence.
+function markTouched(id, bumpDays){
+  const p=HOT.find(x=>x.id===id); if(!p) return;
+  p.lastTouch=localDay();
+  if(p.appt && String(p.appt).slice(0,10) <= localDay()) p.appt='';      // appointment happened
+  if(p.next && p.next <= localDay()) p.next = bumpDays===0 ? '' : localDay(new Date(Date.now()+(bumpDays||3)*86400000));
+  saveHot(); renderHot(); renderDirectives(); blip(820,0.06,'sine',0.12);
+}
+function setAppt(id){
+  const p=HOT.find(x=>x.id===id); if(!p) return;
+  const v=prompt('Appointment date (YYYY-MM-DD), optional time after it:\ne.g. '+localDay()+' 2:00 PM\n(leave blank to clear)', p.appt||localDay());
+  if(v===null) return;
+  const t=v.trim();
+  if(t===''){ p.appt=''; }
+  else { const m=t.match(/\d{4}-\d{2}-\d{2}/); if(!m){ toast('Use a date like '+localDay()); return; } p.appt=t; p.next=m[0]; }
+  saveHot(); renderHot(); renderDirectives(); toast(p.appt?'Appointment set':'Appointment cleared'); blip(900,0.06,'sine',0.12);
+}
 
 /* ---------- data sync (home ↔ work) ----------
    Two layers, same snapshot:
@@ -1627,18 +1921,20 @@ function delHot(id){ HOT=HOT.filter(p=>p.id!==id); saveHot(); renderHot(); blip(
               after every change and pulls on load, via /.netlify/functions/sync.
    Both move the same carvis_* localStorage keys (the sync key itself is excluded
    so it never leaves the machine it was set on). */
+const NOSYNC = { carvis_synckey:1, carvis_token:1, carvis_bootday:1, carvis_reviewlink:1 };  // per-device values never leave the machine
 function snapshotStore(){
   const s={};
-  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('carvis_')&&k!=='carvis_synckey') s[k]=localStorage.getItem(k); }
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('carvis_')&&!NOSYNC[k]) s[k]=localStorage.getItem(k); }
   return s;
 }
 function applyStore(store){
   let n=0;
-  Object.entries(store||{}).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&k!=='carvis_synckey'&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
+  Object.entries(store||{}).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&!NOSYNC[k]&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
   CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState();
   try{ refreshContactDropdown(); }catch(e){}
   renderHot(); renderTasks();
-  try{ renderStats(); }catch(e){}   // reflect pulled/restored monthly numbers
+  try{ renderDirectives(); }catch(e){}  // pulled/restored prospects must refresh the due-today list too
+  try{ renderStats(); renderSystem(); }catch(e){}   // reflect pulled/restored monthly numbers
   return n;
 }
 function setSyncStat(cls,msg){ const st=$('#syncStat'); if(st){ st.className='ostat '+(cls||''); st.textContent=msg||''; } }
@@ -1658,6 +1954,10 @@ function importAll(text){
   let d; try{ d=JSON.parse(text); }catch(e){ setSyncStat('err','✕ Not a valid CARVIS backup file'); return; }
   if(!d||d._app!=='CARVIS'||!d.store){ setSyncStat('err','✕ No CARVIS data found in that file'); return; }
   const n=applyStore(d.store);
+  // A restore is an intentional "make this the truth" — stamp it fresh and push,
+  // so a later cloud auto-pull doesn't treat it as old and overwrite it.
+  try{ localStorage.setItem('carvis_lastmod', new Date().toISOString()); }catch(e){}
+  scheduleCloudPush();
   setSyncStat('ok',`✓ Restored ${n} data set${n!==1?'s':''}${d._ts?' from '+d._ts.slice(0,10):''}`);
   toast('Backup restored'); blip(960,0.08,'triangle',0.14);
 }
@@ -1667,35 +1967,78 @@ async function cloudPush(opts){
   const key=getSyncKey(); if(!key) return false; const quiet=opts&&opts.quiet;
   if(!quiet) setCloudStat('send','◉ Pushing to cloud…');
   try{
-    const r=await fetch('/.netlify/functions/sync',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({key, payload:{store:snapshotStore(), ts:new Date().toISOString()}})});
+    const r=await apiFetch('/.netlify/functions/sync',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key, payload:{store:snapshotStore(), ts:new Date().toISOString()}})}, 15000);
     const d=await r.json().catch(()=>({}));
     if(r.ok&&d.ok){ pendingPush=false; if(!quiet) setCloudStat('ok','✓ Pushed to cloud · '+new Date().toLocaleTimeString()); return true; }
+    // 409 = cloud copy is newer (another device pushed). Reconcile by pulling.
+    if(r.status===409){ setCloudStat('send','◉ Cloud is newer — pulling latest…'); await cloudPull({quiet:true, force:true}); return false; }
     setCloudStat('err','✕ '+(d.error||('HTTP '+r.status))); return false;
-  }catch(e){ setCloudStat('err','✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
+  }catch(e){ setCloudStat('err', e.name==='AbortError' ? '✕ Cloud push timed out — will retry on next change.' : '✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
 }
 async function cloudPull(opts){
-  const key=getSyncKey(); if(!key) return false; const quiet=opts&&opts.quiet;
+  const key=getSyncKey(); if(!key) return false; const quiet=opts&&opts.quiet, force=opts&&opts.force;
   if(!quiet) setCloudStat('send','◉ Pulling from cloud…');
   try{
-    const r=await fetch('/.netlify/functions/sync?key='+encodeURIComponent(key),{cache:'no-store'});
+    const r=await apiFetch('/.netlify/functions/sync?key='+encodeURIComponent(key),{cache:'no-store'}, 15000);
     const d=await r.json().catch(()=>({}));
     if(!r.ok){ setCloudStat('err','✕ '+(d.error||('HTTP '+r.status))); return false; }
-    if(d.payload&&d.payload.store){ const n=applyStore(d.payload.store);
+    if(d.payload&&d.payload.store){
+      // Don't let an older cloud snapshot silently overwrite newer local edits.
+      // On an auto-pull, if local is newer we push instead of clobbering.
+      if(!force && d.payload.ts && localTs() && d.payload.ts < localTs()){
+        if(quiet){ scheduleCloudPush(); return false; }
+        setCloudStat('','This device has newer changes — push to update the cloud (or use “Restore a backup” to force-pull).'); return false;
+      }
+      const n=applyStore(d.payload.store);
       setCloudStat('ok',`✓ Pulled ${n} data set${n!==1?'s':''}${d.payload.ts?' · '+new Date(d.payload.ts).toLocaleString():''}`);
       if(quiet) toast('Synced from cloud'); return true; }
     if(!quiet) setCloudStat('','Nothing saved under that key yet — push to seed it.'); return false;
-  }catch(e){ if(!quiet) setCloudStat('err','✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
+  }catch(e){ if(!quiet) setCloudStat('err', e.name==='AbortError' ? '✕ Cloud pull timed out — try again.' : '✕ Sync function not reachable — deploy it on Netlify (or run netlify dev).'); return false; }
+}
+// Flush a pending debounced push before the tab goes away (keepalive keeps the
+// request alive through unload; without this a quick "enter number, close tab"
+// lost the edit and a later pull clobbered it).
+function flushPush(){
+  if(!pendingPush || !getSyncKey()) return;
+  pendingPush=false; clearTimeout(pushTimer);
+  const headers={'Content-Type':'application/json'}; const tok=getToken(); if(tok) headers['X-Carvis-Token']=tok;
+  try{ fetch('/.netlify/functions/sync',{method:'POST',headers,keepalive:true,
+    body:JSON.stringify({key:getSyncKey(), payload:{store:snapshotStore(), ts:new Date().toISOString()}})}); }catch(e){}
 }
 let pushTimer=null, pendingPush=false, lastPull=0;
 function scheduleCloudPush(){ if(!getSyncKey()) return; pendingPush=true; clearTimeout(pushTimer); pushTimer=setTimeout(()=>cloudPush({quiet:true}), 1500); }
 function saveSyncKey(){
   const k=($('#syncKey').value||'').trim();
   if(k && k.length<6){ setCloudStat('err','Pick a key of at least 6 characters.'); return; }
-  if(k){ localStorage.setItem('carvis_synckey',k); setCloudStat('ok','Key saved — pulling any existing cloud data…'); cloudPull(); toast('Cloud sync on'); }
+  if(k){ localStorage.setItem('carvis_synckey',k); setCloudStat('ok','Key saved — pulling any existing cloud data…'); cloudPull({force:true}); toast('Cloud sync on'); }
   else { localStorage.removeItem('carvis_synckey'); setCloudStat('','Cloud sync off — key cleared.'); toast('Cloud sync off'); }
+  renderSystem();
 }
-function openSync(){ setSyncStat('',''); setCloudStat('',''); $('#syncKey').value=getSyncKey(); $('#syncOverlay').classList.add('show'); }
+// Restore an earlier daily snapshot from the cloud (server keeps the last 14).
+async function openBackups(){
+  const key=getSyncKey(); if(!key){ setCloudStat('err','Set a sync key first.'); return; }
+  setCloudStat('send','◉ Loading restore points…');
+  try{
+    const r=await apiFetch('/.netlify/functions/sync?list=1&key='+encodeURIComponent(key),{cache:'no-store'},15000);
+    const d=await r.json().catch(()=>({}));
+    const days=(d.backups||[]).map(b=>b.day);
+    if(!days.length){ setCloudStat('','No cloud backups yet — push some data first.'); return; }
+    const pick=prompt('Restore data from which day? This replaces what\'s on this device.\n\nAvailable:\n'+days.join('\n'), days[0]);
+    if(!pick){ setCloudStat('',''); return; }
+    const r2=await apiFetch('/.netlify/functions/sync?backup='+encodeURIComponent(pick)+'&key='+encodeURIComponent(key),{cache:'no-store'},15000);
+    const d2=await r2.json().catch(()=>({}));
+    if(d2.payload&&d2.payload.store){ const n=applyStore(d2.payload.store); try{ localStorage.setItem('carvis_lastmod', new Date().toISOString()); }catch(e){} scheduleCloudPush(); setCloudStat('ok',`✓ Restored ${n} data set${n!==1?'s':''} from ${pick}`); toast('Backup restored'); }
+    else setCloudStat('err','That backup was empty.');
+  }catch(e){ setCloudStat('err', e.name==='AbortError'?'✕ Timed out.':'✕ Sync function not reachable.'); }
+}
+function openSync(){ setSyncStat('',''); setCloudStat('',''); $('#syncKey').value=getSyncKey(); const at=$('#accessToken'); if(at) at.value=getToken(); const ts=$('#tokenStat'); if(ts) ts.textContent=''; $('#syncOverlay').classList.add('show'); }
+function saveAccessToken(){
+  const v=($('#accessToken').value||'').trim();
+  try{ if(v) localStorage.setItem('carvis_token',v); else localStorage.removeItem('carvis_token'); }catch(e){}
+  const ts=$('#tokenStat'); if(ts){ ts.className='ostat ok'; ts.textContent=v?'✓ Token saved on this device':'Token cleared'; }
+  renderSystem(); toast(v?'Access token saved':'Access token cleared');
+}
 function closeSync(){ $('#syncOverlay').classList.remove('show'); }
 
 /* ---------- ask CARVIS — live answers via the Anthropic proxy (Fable 5) ----------
@@ -1707,20 +2050,46 @@ function aiAdd(role,text,extra){
   const d=document.createElement('div');
   d.className='aim '+(role==='user'?'you':'bot')+(extra?' '+extra:'');
   d.textContent=text;
+  // Give bot answers a copy button so Mick isn't long-press-selecting on a phone.
+  if(role==='bot' && !extra){
+    const b=document.createElement('button'); b.className='aicopy'; b.textContent='COPY';
+    b.onclick=()=>{ navigator.clipboard?.writeText(text).catch(()=>{}); b.textContent='✓'; setTimeout(()=>b.textContent='COPY',1500); };
+    d.appendChild(b);
+  }
   const log=$('#aiLog'); log.appendChild(d); log.scrollTop=log.scrollHeight;
   return d;
 }
+// TTS: recite only the lead-in before the three OPTION blocks (so Mick isn't read
+// three full drafts aloud with a customer nearby), chunked by sentence to dodge
+// mobile Chrome's ~15s cutoff, with a small gap after cancel() to avoid silence.
 function speak(text){
   try{
     if(!audioOn || !window.speechSynthesis) return;
+    let say = text;
+    const opt = text.search(/OPTION\s+A/i);
+    if(opt > 0) say = text.slice(0, opt).trim() + ' Three drafts are on screen.';
     speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text); u.rate=1.04; u.pitch=0.92;
-    speechSynthesis.speak(u);
+    const chunks = (say.match(/[^.!?]+[.!?]*/g) || [say]).map(s=>s.trim()).filter(Boolean);
+    setTimeout(()=>{ chunks.forEach(c=>{ const u=new SpeechSynthesisUtterance(c); u.rate=1.04; u.pitch=0.92; speechSynthesis.speak(u); }); }, 120);
   }catch(e){}
+}
+// Compact live context for the AI: today's date + top inventory matches for the
+// question, so it can answer about real cars instead of inventing them.
+function aiContext(q){
+  const lines = ['Today is '+new Date().toDateString()+'.'];
+  try{
+    const ms=findVehicles(q).slice(0,3);
+    if(ms.length){
+      lines.push('Matched inventory'+(inventoryStale()?' (as of '+(INVENTORY_UPDATED||'unknown')+', may be stale — tell Mick to verify)':'')+':');
+      ms.forEach(v=>lines.push('- '+vTitle(v)+(v.price?' · '+vmoney(v.price):'')+(v.miles?' · '+v.miles.toLocaleString()+' mi':'')+(safeUrl(v.url)?' · '+v.url:'')));
+    }
+    const s=STATS; lines.push(`This month: ${s.sold} sold, ${s.bought} bought${s.soldGoal?` (goal ${s.soldGoal})`:''}.`);
+  }catch(e){}
+  return lines.join('\n');
 }
 function openAI(seed){
   $('#aiOverlay').classList.add('show');
-  if(!$('#aiLog').children.length) aiAdd('bot','Ready when you are, Mick. Objections, customer texts, pricing strategy — fire away.');
+  if(!$('#aiLog').children.length) aiAdd('bot','Ready when you are, Mick. Objections, customer texts, pricing strategy — fire away.','intro');
   if(seed){ $('#aiIn').value=seed; askCarvis(); }
   else setTimeout(()=>{ try{ $('#aiIn').focus(); }catch(e){} },60);
 }
@@ -1735,8 +2104,9 @@ async function askCarvis(){
   $('#aiStat').className='ostat'; $('#aiStat').textContent='';
   const r0=$('#reactor'); if(r0) r0.classList.add('listening');
   try{
-    const r=await fetch('/.netlify/functions/carvis',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:AIMSGS})});
+    const r=await apiFetch('/.netlify/functions/carvis',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:AIMSGS, context:aiContext(q)})}, 45000);
+    const served=r.headers.get('x-carvis-model'); if(served){ const ms=$('#aiOverlay .ms'); if(ms) ms.textContent='Live answers · '+served; }
     const d=await r.json().catch(()=>({}));
     th.remove();
     if(!r.ok){
@@ -1745,14 +2115,15 @@ async function askCarvis(){
       aiAdd('bot','✕ '+msg);
       $('#aiStat').className='ostat err'; $('#aiStat').textContent='Live brain error — check ANTHROPIC_API_KEY on Netlify.';
     }else{
-      const text=(d.content||[]).map(b=>b.text||'').join('\n').trim()||'(no answer)';
+      let text=(d.content||[]).map(b=>b.text||'').join('\n').trim()||'(no answer)';
+      if(d.stop_reason==='max_tokens') text+='\n\n…(cut short — ask me to continue)';
       AIMSGS.push({role:'assistant',content:text});
       aiAdd('bot',text); speak(text); blip(940,0.06,'sine',0.12);
     }
   }catch(e){
     th.remove(); AIMSGS.pop();
-    aiAdd('bot',"✕ CARVIS's live brain isn't reachable here — deploy on Netlify with ANTHROPIC_API_KEY set. Until then, the ✉ Buyer Reply button has scripted drafts.");
-    $('#aiStat').className='ostat err'; $('#aiStat').textContent='Offline / not deployed.';
+    if(e.name==='AbortError'){ aiAdd('bot','✕ That took too long — weak signal maybe. Try again.'); $('#aiStat').className='ostat err'; $('#aiStat').textContent='Timed out.'; }
+    else { aiAdd('bot',"✕ CARVIS's live brain isn't reachable here — deploy on Netlify with ANTHROPIC_API_KEY set. Until then, the ✉ Buyer Reply button has scripted drafts."); $('#aiStat').className='ostat err'; $('#aiStat').textContent='Offline / not deployed.'; }
   }
   aiBusy=false; if(r0) r0.classList.remove('listening');
 }
@@ -1772,6 +2143,15 @@ function renderHistory(){
     return `<div class="numrow" data-k="${k}"><span class="nmk">${prettyMonth(k)}</span><span class="nmv">${d.sold} sold · ${d.bought} bought · ${d.deals} deals</span></div>`;
   }).join('');
 }
+// One-tap increment of the current month (vs. opening the modal and retyping a
+// total). Backfill/corrections still live in the Numbers modal.
+function quickLog(field){
+  const key=monthKey(), m=loadMonths(), cur=Object.assign({sold:0,bought:0,deals:0,closeRate:0}, m[key]||{});
+  cur[field]=(+cur[field]||0)+1; m[key]=cur;
+  const ok=saveMonths(m); renderStats();
+  toast(ok?`+1 ${field} — ${cur[field]} this month`:'⚠ Storage full — not saved');
+  blip(940,0.06,'sine',0.12);
+}
 function openNumbers(){
   const mk=monthKey(); $('#numMonth').value=mk; loadMonthIntoForm(mk);
   const g=loadGoals(); $('#goalSold').value=g.soldGoal||''; $('#goalBuy').value=g.buyGoal||''; $('#goalDeal').value=g.dealGoal||'';
@@ -1785,14 +2165,15 @@ function saveMonthFromForm(){
   const m=loadMonths();
   m[key]={ sold:numClamp($('#numSold').value), bought:numClamp($('#numBought').value),
            deals:numClamp($('#numDeals').value), closeRate:numClamp($('#numRate').value,100) };
-  saveMonths(m); renderHistory(); renderStats();
-  $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Saved '+prettyMonth(key);
-  toast('Numbers saved'); blip(900,0.07,'sine',0.12);
+  const ok=saveMonths(m); renderHistory(); renderStats();
+  if(ok){ $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Saved '+prettyMonth(key); toast('Numbers saved'); blip(900,0.07,'sine',0.12); }
+  else { $('#numStat').className='ostat err'; $('#numStat').textContent='✕ Storage full — NOT saved. Export a backup and clear space.'; blip(300,0.1,'sawtooth',0.12); }
 }
 function saveGoalsFromForm(){
-  saveGoals({ soldGoal:numClamp($('#goalSold').value), buyGoal:numClamp($('#goalBuy').value), dealGoal:numClamp($('#goalDeal').value) });
-  renderStats(); $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Goals saved';
-  toast('Goals saved'); blip(820,0.07,'sine',0.12);
+  const ok=saveGoals({ soldGoal:numClamp($('#goalSold').value), buyGoal:numClamp($('#goalBuy').value), dealGoal:numClamp($('#goalDeal').value) });
+  renderStats();
+  if(ok){ $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Goals saved'; toast('Goals saved'); blip(820,0.07,'sine',0.12); }
+  else { $('#numStat').className='ostat err'; $('#numStat').textContent='✕ Storage full — goals NOT saved.'; blip(300,0.1,'sawtooth',0.12); }
 }
 
 /* ---------- wire ---------- */
@@ -1805,21 +2186,25 @@ function init(){
   window.addEventListener('resize', drawChart);
 
   $('#wakeBtn').addEventListener('click', ()=>{ sessStart=new Date(); audioInit(); powerUp(); boot(); });
-  // allow tap-anywhere on standby to wake
-  $('#boot').addEventListener('click', e=>{ if(e.target===$('#boot')&&!$('#boot').classList.contains('powering')){ sessStart=new Date(); audioInit(); powerUp(); boot(); } });
+  // tap standby to wake; tap again mid-boot to fast-forward the ceremony
+  $('#boot').addEventListener('click', e=>{
+    if(bootDone) return;
+    if($('#boot').classList.contains('powering')){ skipBoot=true; return; }
+    if(e.target===$('#boot')){ sessStart=new Date(); audioInit(); powerUp(); boot(); }
+  });
 
   document.addEventListener('click', e=>{
     const tk=e.target.closest('.task'); if(tk){ toggleTask(tk.dataset.id); return; }
     const hdl=e.target.closest('.js-hot-del'); if(hdl){ delHot(+hdl.dataset.id); return; }
-    const hdr=e.target.closest('.js-hot-draft'); if(hdr){ const p=HOT.find(x=>x.id===+hdr.dataset.id); if(p){ openReply(); $('#rVeh').value=p.note||''; } return; }
+    const htc=e.target.closest('.js-hot-touch'); if(htc){ markTouched(+htc.dataset.id); toast('Marked followed up ✓'); return; }
+    const hdr=e.target.closest('.js-hot-draft'); if(hdr){ blip(720,0.06,'sine',0.13); openDraft(+hdr.dataset.id); return; }
+    const pin=e.target.closest('.js-pin'); if(pin){ pinFromReply(); return; }
+    const ap=e.target.closest('.js-appt'); if(ap){ setAppt(+ap.dataset.id); return; }
     const dr=e.target.closest('.js-draft'); if(dr){ blip(720,0.06,'sine',0.13); openDraft(+dr.dataset.id); return; }
-    const dn=e.target.closest('.js-done'); if(dn){ blip(300,0.08,'sawtooth',0.12);
-      const di=dn.closest('.di'); di.style.transition='.25s'; di.style.opacity='0'; di.style.transform='translateX(16px)';
-      setTimeout(()=>{ di.remove(); $('#dirMeta').textContent=$$('.di').length+' TODAY'; },250);
-      toast('Directive cleared'); return;
-    }
+    const dn=e.target.closest('.js-done'); if(dn){ blip(820,0.06,'sine',0.12); markTouched(+dn.dataset.id); toast('Nice — logged and rescheduled'); return; }
     const cp=e.target.closest('.js-copy'); if(cp){ blip(980,0.05,'triangle',0.12);
-      navigator.clipboard?.writeText(cp.dataset.txt).catch(()=>{});
+      const txt=COPYBANK[+cp.dataset.ci]||'';
+      navigator.clipboard?.writeText(txt).catch(()=>{});
       cp.classList.add('done'); cp.textContent='✓ COPIED'; toast('Copied to clipboard');
       setTimeout(()=>{ cp.classList.remove('done'); cp.textContent='COPY'; },1600); return;
     }
@@ -1846,6 +2231,11 @@ function init(){
   $('#oSend').addEventListener('click', sendOutreach);
   $('#oTpl').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; $$('#oTpl button').forEach(x=>x.classList.toggle('on',x===b)); applyTemplate(b.dataset.tpl); });
   $('#oManageToggle').addEventListener('click', ()=>$('#oManage').classList.toggle('hidden'));
+  $('#oSettingsToggle').addEventListener('click', ()=>{ $('#oReviewLink').value=getReviewLink(); $('#oSettings').classList.toggle('hidden'); });
+  $('#oReviewSave').addEventListener('click', ()=>{ const v=($('#oReviewLink').value||'').trim();
+    if(v && !/^https?:\/\//i.test(v)){ toast('Use a full https:// link'); return; }
+    lset('carvis_reviewlink', v); toast(v?'Review link saved':'Review link cleared'); $('#oSettings').classList.add('hidden');
+    const on=$('#oTpl button.on'); applyTemplate(on?on.dataset.tpl:'review'); });
   $('#oImportBtn').addEventListener('click', doImport);
   $('#oExportBtn').addEventListener('click', exportContacts);
   $('#oFile').addEventListener('change', e=>{ importFile(e.target.files[0]); e.target.value=''; });
@@ -1866,7 +2256,10 @@ function init(){
   $('#syncKeySave').addEventListener('click', saveSyncKey);
   $('#syncKey').addEventListener('keydown', e=>{ if(e.key==='Enter') saveSyncKey(); });
   $('#cloudPushBtn').addEventListener('click', ()=>cloudPush());
-  $('#cloudPullBtn').addEventListener('click', ()=>cloudPull());
+  $('#cloudPullBtn').addEventListener('click', ()=>cloudPull({force:true}));
+  $('#cloudRestoreBtn').addEventListener('click', openBackups);
+  $('#accessTokenSave').addEventListener('click', saveAccessToken);
+  $('#accessToken').addEventListener('keydown', e=>{ if(e.key==='Enter') saveAccessToken(); });
   // ask CARVIS (live)
   $('#aiSend').addEventListener('click', askCarvis);
   $('#aiIn').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); askCarvis(); } });
@@ -1881,12 +2274,14 @@ function init(){
   // refresh when returning to an already-open tab: flush our own pending edits
   // first (so we never overwrite them with older cloud data), else pull latest.
   document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='hidden'){ flushPush(); stopHum(); try{ speechSynthesis.cancel(); }catch(e){} return; }
+    if(bootDone && audioOn) startHum();
     if(document.visibilityState!=='visible' || !getSyncKey()) return;
     if(pendingPush){ clearTimeout(pushTimer); cloudPush({quiet:true}); return; }
     if(Date.now()-lastPull < 4000) return; lastPull=Date.now(); cloudPull({quiet:true});
   });
+  window.addEventListener('pagehide', flushPush);
 
-  // mic + voice toggle = cinematic only (talkback deferred)
   // mic — real voice input where the browser supports it (Chrome/Edge);
   // transcript goes straight to the live CARVIS brain, answer is spoken back
   let rec=null;
@@ -1916,6 +2311,8 @@ function init(){
   });
   applyHivis((()=>{ try{ return localStorage.getItem('carvis_hivis')==='1'; }catch(e){ return false; } })());
   initParallax();
+  // Already woke CARVIS earlier today? Skip straight to the dashboard.
+  if(bootedToday()) fastBoot();
 }
 init();
 
