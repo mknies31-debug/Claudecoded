@@ -268,7 +268,7 @@ test('cold lead past cadence gets a keep-warm reach-out, not the buyer sequence'
 test('a hot lead touched inside its cadence is left alone', async () => {
   const c = newCustomer({ firstName: 'Sam', phone: '5075550102', category: 'hot', createdAt: '2026-06-21T00:00:00Z' });
   const { report } = await runDailyCycle({ customers: [c], touchLogs: [], today: '2026-06-22', provider: new MockProvider(), approved: true });
-  assert.equal(report.tasksQueued, 0, 'touched yesterday; hot cadence is 3 days');
+  assert.equal(report.tasksQueued, 0, 'touched yesterday; hot cadence is 2 days');
 });
 
 test('recurring follow-up copy obeys the compliance rules', () => {

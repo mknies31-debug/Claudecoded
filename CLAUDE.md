@@ -89,7 +89,7 @@ Each contact has a `category` (`schema.mjs`): **sold** (a buyer — runs the
 post-purchase referral timeline), **hot** (engaged prospect), or **cold**
 (nurture lead). Defaults to `sold` so an imported book and old records are
 buyers. Prospects (hot/cold) do NOT run the buyer sequence — the engine works
-them on a **keep-warm cadence** (`PROSPECT_INTERVAL` = hot 3 days / cold 21):
+them on a **keep-warm cadence** (`PROSPECT_INTERVAL` = hot 2 days / cold 14):
 if untouched past the interval it queues a `reachout` task with a NEPQ script
 (`PROSPECT_SCRIPTS`) for the user to fire by text. The Pipeline filters by
 category (chips + counts); the dashboard To-Do surfaces the reach-outs.
