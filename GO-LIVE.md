@@ -27,7 +27,7 @@ their variable is present.
 | --- | --- | --- |
 | `CRM_SYNC_KEY` | lets the daily cron find your data | the auto-follow-up loop |
 | `EMAIL_PROVIDER` | `gmail` to send from your Gmail (or `resend` / `mailerlite`) | choosing the sender |
-| `GMAIL_USER` | your Gmail address, `mknies31@gmail.com` | sending via Gmail |
+| `GMAIL_USER` | your Gmail address, `northstarmickknies@gmail.com` | sending via Gmail |
 | `GMAIL_APP_PASSWORD` | the 16-char Google **App Password** (NOT your login password) | sending via Gmail |
 | `MAIL_REPLY_TO` *(optional)* | where replies land (defaults to `GMAIL_USER`) | email |
 | `ANTHROPIC_API_KEY` | photo intake + Ask CARVIS | the 📷 From-a-photo feature |
@@ -35,8 +35,8 @@ their variable is present.
 | `RESEND_API_KEY` / `MAIL_FROM` | only if `EMAIL_PROVIDER=resend` (domain sending) | the Resend path |
 | `MAILERLITE_API_KEY` *(optional)* | only if `EMAIL_PROVIDER=mailerlite` | the MailerLite path |
 
-> **Sending from your Gmail (`mknies31@gmail.com`).** Set `EMAIL_PROVIDER=gmail`,
-> `GMAIL_USER=mknies31@gmail.com`, and `GMAIL_APP_PASSWORD`. Get that password from
+> **Sending from your Gmail (`northstarmickknies@gmail.com`).** Set `EMAIL_PROVIDER=gmail`,
+> `GMAIL_USER=northstarmickknies@gmail.com`, and `GMAIL_APP_PASSWORD`. Get that password from
 > **Google Account → Security → 2-Step Verification (turn on) → App passwords →**
 > generate one for "Mail." Emails then come from your real address, **land in your
 > Sent folder**, and replies hit your normal inbox. No domain needed — you can

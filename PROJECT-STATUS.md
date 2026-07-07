@@ -82,10 +82,10 @@ To change any wording later: edit `shared/templates.mjs`, run `npm test`, redepl
 ---
 
 ## 5. OPEN ITEMS — these need you
-- [ ] **Gmail App Password.** Email now sends **from `mknies31@gmail.com`** (lands
+- [ ] **Gmail App Password.** Email now sends **from `northstarmickknies@gmail.com`** (lands
       in your Sent). Turn on 2-Step Verification, generate an App Password
       (Google Account → Security → App passwords → "Mail"), and set
-      `EMAIL_PROVIDER=gmail`, `GMAIL_USER=mknies31@gmail.com`,
+      `EMAIL_PROVIDER=gmail`, `GMAIL_USER=northstarmickknies@gmail.com`,
       `GMAIL_APP_PASSWORD=<that 16-char code>` in Netlify. (No domain / Resend
       needed.)
 - [ ] **Google review link.** Send me your Google review URL and I'll wire it into

@@ -108,7 +108,7 @@ export class GmailProvider extends EmailProvider {
     super();
     this.user = env.GMAIL_USER || env.MAIL_FROM_EMAIL;
     this.pass = env.GMAIL_APP_PASSWORD;
-    this.fromName = env.MAIL_FROM_NAME || 'Mick Knies';
+    this.fromName = env.MAIL_FROM_NAME || 'Mick — North Star Car Guy';
     this.replyTo = env.MAIL_REPLY_TO || this.user;
   }
   get name() { return 'gmail'; }
