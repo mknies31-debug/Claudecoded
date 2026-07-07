@@ -108,6 +108,18 @@ export const SCRIPTS = {
   gift: "Send {{first_name}} a small gift or a handwritten card. A note that mentions the {{vehicle}} and thanks them for their trust goes a long way. Keep it personal, never promotional.",
 };
 
+// Keep-warm text drafts for prospects (sent by Mick from the dashboard). Compliant
+// (<=3 sentences, no filler, no price talk), NEPQ-style, in Mick's voice.
+export const PROSPECT_SCRIPTS = {
+  hot: "Hey {{first_name}} — Mick here. Been turning over what you're after and I think I can line it up right. What has to be true for this to be an easy yes for you?",
+  cold: "Hey {{first_name}} — Mick here from North Star. No agenda on this one, I just keep a short list of good people to help when the timing's right. When you picture your next vehicle, what matters most to you about it?",
+};
+
+/** Raw (un-hydrated) keep-warm draft for a prospect category (hot/cold). */
+export function getProspectScript(category) {
+  return PROSPECT_SCRIPTS[category] || '';
+}
+
 function safeVariant(v) {
   return VARIANTS.includes(v) ? v : 'direct';
 }

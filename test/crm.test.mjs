@@ -247,6 +247,30 @@ test('engine auto-sends the recurring email touch', async () => {
   assert.ok(mock.sent[0].subject.length > 0);
 });
 
+test('category defaults to sold; hot/cold accepted, junk rejected', () => {
+  assert.equal(newCustomer({ firstName: 'A', phone: '5075550101' }).category, 'sold');
+  assert.equal(newCustomer({ firstName: 'A', phone: '5075550101', category: 'hot' }).category, 'hot');
+  assert.equal(newCustomer({ firstName: 'A', phone: '5075550101', category: 'bogus' }).category, 'sold');
+  assert.equal(migrateCustomer({ id: 'x', firstName: 'A', phone: '5075550101' }).category, 'sold'); // old record → buyer
+});
+
+test('cold lead past cadence gets a keep-warm reach-out, not the buyer sequence', async () => {
+  const c = newCustomer({ firstName: 'Pat', phone: '5075550101', category: 'cold', createdAt: '2026-05-01T00:00:00Z' });
+  const mock = new MockProvider();
+  const { customers, report } = await runDailyCycle({ customers: [c], touchLogs: [], today: '2026-06-22', provider: mock, approved: true });
+  assert.equal(mock.sent.length, 0, 'prospects never get the post-purchase emails');
+  assert.equal(report.tasksQueued, 1);
+  const t = customers[0].pendingTasks[0];
+  assert.equal(t.type, 'reachout'); assert.equal(t.category, 'cold');
+  assert.ok(/North Star/.test(t.script), 'uses the cold script');
+});
+
+test('a hot lead touched inside its cadence is left alone', async () => {
+  const c = newCustomer({ firstName: 'Sam', phone: '5075550102', category: 'hot', createdAt: '2026-06-21T00:00:00Z' });
+  const { report } = await runDailyCycle({ customers: [c], touchLogs: [], today: '2026-06-22', provider: new MockProvider(), approved: true });
+  assert.equal(report.tasksQueued, 0, 'touched yesterday; hot cadence is 3 days');
+});
+
 test('recurring follow-up copy obeys the compliance rules', () => {
   for (const v of VARIANTS) {
     assert.ok(lintCopy(getText('followup_text', v), 'text').ok, `followup text/${v}`);

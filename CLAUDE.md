@@ -84,11 +84,22 @@ Four ways in, all funneling to one review form before save:
 - **The only required fields are NAME and PHONE** (`validateCustomer`). Everything
   else is optional and editable on the review form.
 
+## Categories: Hot / Cold / Sold
+Each contact has a `category` (`schema.mjs`): **sold** (a buyer — runs the
+post-purchase referral timeline), **hot** (engaged prospect), or **cold**
+(nurture lead). Defaults to `sold` so an imported book and old records are
+buyers. Prospects (hot/cold) do NOT run the buyer sequence — the engine works
+them on a **keep-warm cadence** (`PROSPECT_INTERVAL` = hot 3 days / cold 21):
+if untouched past the interval it queues a `reachout` task with a NEPQ script
+(`PROSPECT_SCRIPTS`) for the user to fire by text. The Pipeline filters by
+category (chips + counts); the dashboard To-Do surfaces the reach-outs.
+
 ## The daily loop (cron)
 Once a day the scheduled function:
 1. Loads the blob (no `CRM_SYNC_KEY` → it no-ops and logs how to set it).
 2. Runs `runDailyCycle()` over every customer where `optedOut === false`.
-3. For each customer's next-due window (delta between `purchaseDate` and today):
+3. **Prospects (hot/cold)** get a keep-warm reach-out task if overdue; **buyers
+   (sold)** run the timed window below (delta between `purchaseDate` and today):
    - **Email branch** — render the variant, send via the injected `EmailProvider`,
      append a `touch_log`, advance the customer's `stage`.
      *Held* (not sent) until `meta.templatesApproved === true`.

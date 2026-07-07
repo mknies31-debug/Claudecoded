@@ -60,6 +60,16 @@ body.hivis #crmOverlay .modal { max-width: 880px; }
   border:1px solid var(--line); color:var(--dim); }
 .pill.stage { color:var(--cyan); border-color:var(--line-strong); }
 .pill.opt { color:var(--red); border-color:rgba(255,121,134,.5); }
+.pill.pill-hot { color:#ff9a5c; border-color:rgba(255,154,92,.6); background:rgba(255,154,92,.08); }
+.pill.pill-cold { color:#7db8ff; border-color:rgba(125,184,255,.5); background:rgba(125,184,255,.08); }
+.pill.pill-sold { color:var(--green); border-color:rgba(92,247,159,.45); background:rgba(92,247,159,.07); }
+
+/* Pipeline category filter chips */
+.crm-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.crm-chip { font-family:'Orbitron'; font-size:12px; letter-spacing:1px; text-transform:uppercase;
+  color:var(--dim); border:1px solid var(--line); background:transparent; padding:7px 12px;
+  border-radius:20px; cursor:pointer; transition:.2s; }
+.crm-chip.on { color:var(--cyan); border-color:var(--line-strong); background:rgba(92,240,255,.08); }
 
 /* Variant dropdown */
 .crm-select { background:var(--panel); border:1px solid var(--line); color:var(--text);

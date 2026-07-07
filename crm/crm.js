@@ -5,7 +5,7 @@
 // existing CARVIS sync (snapshotStore picks the keys up automatically). The cron
 // writes the same blob, so what the engine does shows up here on next pull.
 
-import { KEYS, newCustomer, validateCustomer, digits, migrateCustomer } from '../shared/schema.mjs';
+import { KEYS, newCustomer, validateCustomer, digits, migrateCustomer, CATEGORIES, CATEGORY_LABELS } from '../shared/schema.mjs';
 import { currentSequence, isStagnant, daysSincePurchase, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { hydrate } from '../shared/hydrate.mjs';
 import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
@@ -68,6 +68,7 @@ let activeTab = 'dashboard';
 let editingId = null; // when set, the Add pane is editing an existing customer
 let importPlan = null; // when set, the Add pane shows the CSV import review
 let showHistory = false; // when true, the Pipeline shows the restore-a-version panel
+let pipeFilter = 'all'; // Pipeline category filter: all | hot | cold | sold
 
 // ── overlay scaffold (built once, appended to body) ──────────────────────────
 function buildOverlay() {
@@ -197,7 +198,7 @@ function sectionTexts(customers) {
 
 // To-Dos — recurring call / video / gift reminders (the app can't do these for
 // you; it hands you the task + a script and you mark it done).
-const TASK_ICON = { call: '✆', video: '🎥', gift: '🎁' };
+const TASK_ICON = { call: '✆', video: '🎥', gift: '🎁', reachout: '💬' };
 function sectionTasks(customers) {
   const cards = [];
   customers.forEach((c) => {
@@ -205,6 +206,7 @@ function sectionTasks(customers) {
     c.pendingTasks.forEach((tk) => {
       const icon = TASK_ICON[tk.type] || '◷';
       const callHref = tk.type === 'call' && c.phone ? `tel:${digits(c.phone)}` : '';
+      const smsHref = tk.type === 'reachout' && c.phone ? `sms:${digits(c.phone)}?body=${encodeURIComponent(tk.script || '')}` : '';
       cards.push(`<div class="crm-card" data-id="${esc(c.id)}">
         <div class="crm-row between">
           <div class="crm-idrow">${avatarHTML(c)}<div><div class="cname">${icon} ${esc(c.firstName)} ${esc(c.lastName || '')}</div>
@@ -213,14 +215,15 @@ function sectionTasks(customers) {
         <div class="cbody">${esc(tk.script || '')}</div>
         <div class="crm-row">
           ${callHref ? `<a class="crm-btn send sm" href="${callHref}">✆ Call now</a>` : ''}
-          ${tk.script ? `<button class="crm-btn sm" data-act="copy" data-text="${esc(tk.script)}">⎘ Copy script</button>` : ''}
+          ${smsHref ? `<a class="crm-btn send sm" href="${smsHref}">✆ One-tap text</a>` : ''}
+          ${tk.script ? `<button class="crm-btn sm" data-act="copy" data-text="${esc(tk.script)}">⎘ Copy</button>` : ''}
           <button class="crm-btn gold sm" data-act="marktask" data-id="${esc(c.id)}" data-seq="${esc(tk.sequenceKey)}">✓ Mark done</button>
         </div>
       </div>`);
     });
   });
-  const body = cards.length ? cards.join('') : '<div class="crm-empty">No calls, videos, or gifts due. After the first year, the every-90-day touches land here.</div>';
-  return section('◷ To-Do — Calls · Videos · Gifts', cards.length, body);
+  const body = cards.length ? cards.join('') : '<div class="crm-empty">Nothing to work right now. Reach-outs for hot/cold leads and the 90-day touches land here.</div>';
+  return section('◷ To-Do — Reach-outs · Calls · Gifts', cards.length, body);
 }
 
 function sectionStagnant(customers, today) {
@@ -279,6 +282,11 @@ function renderAdd(prefill = {}) {
         </div>
       </div>
       <div class="crm-form-grid">
+        <div class="full"><span class="olabel">Category</span>
+          <select class="rin" name="category">
+            ${CATEGORIES.map((k) => `<option value="${k}" ${(prefill.category || 'sold') === k ? 'selected' : ''}>${esc(CATEGORY_LABELS[k])}</option>`).join('')}
+          </select>
+        </div>
         <div><span class="olabel">First name *</span><input class="rin" name="firstName" placeholder="Dale" value="${v('firstName')}"></div>
         <div><span class="olabel">Last name</span><input class="rin" name="lastName" placeholder="Carlson" value="${v('lastName')}"></div>
         <div><span class="olabel">Phone *</span><input class="rin" name="phone" inputmode="tel" placeholder="507-555-0101" value="${v('phone')}"></div>
@@ -304,18 +312,32 @@ function renderAdd(prefill = {}) {
     </form>`;
 }
 
+function categoryPill(c) {
+  const cat = c.category || 'sold';
+  return `<span class="pill pill-${esc(cat)}">${esc({ hot: 'HOT', cold: 'COLD', sold: 'SOLD' }[cat] || cat)}</span>`;
+}
+
 function renderPipeline() {
-  const customers = getCustomers().slice().sort((a, b) => (a.stage - b.stage) || (Date.parse(b.createdAt) - Date.parse(a.createdAt)));
+  const all = getCustomers().slice().sort((a, b) => (a.stage - b.stage) || (Date.parse(b.createdAt) - Date.parse(a.createdAt)));
   const today = todayStr();
-  let body;
-  if (!customers.length) {
-    body = '<div class="crm-empty">No customers yet. Add one from the ＋ tab — it takes about 20 seconds.</div>';
+  const catOf = (c) => c.category || 'sold';
+  const counts = { all: all.length, hot: 0, cold: 0, sold: 0 };
+  all.forEach((c) => { counts[catOf(c)] = (counts[catOf(c)] || 0) + 1; });
+  const chips = [['all', 'All'], ['hot', 'Hot'], ['cold', 'Cold'], ['sold', 'Sold']]
+    .map(([k, lbl]) => `<button class="crm-chip ${pipeFilter === k ? 'on' : ''}" type="button" data-act="pipefilter" data-cat="${k}">${lbl} ${counts[k] || 0}</button>`).join('');
+  const customers = pipeFilter === 'all' ? all : all.filter((c) => catOf(c) === pipeFilter);
+
+  let list;
+  if (!all.length) {
+    list = '<div class="crm-empty">No customers yet. Add one from the ＋ tab — it takes about 20 seconds.</div>';
+  } else if (!customers.length) {
+    list = `<div class="crm-empty">No ${esc(pipeFilter)} contacts yet.</div>`;
   } else {
-    body = customers.map((c) => {
+    list = customers.map((c) => {
       const frozen = isFrozen(c);
-      const stage = currentSequence(c).label;
-      const stale = isStagnant(c, today);
-      const line1 = [c.vehicle || 'no vehicle on file', `${daysSincePurchase(c, today)} days`].join(' · ');
+      const prospect = catOf(c) === 'hot' || catOf(c) === 'cold';
+      const stale = !prospect && isStagnant(c, today);
+      const line1 = prospect ? (c.vehicle || 'prospect') : [c.vehicle || 'no vehicle on file', `${daysSincePurchase(c, today)} days`].join(' · ');
       const contact = [c.phone, c.email].filter(Boolean).join(' · ');
       const stockLine = c.stockNumber ? `<div class="cmeta">Stock <button class="crm-stock-link" type="button" data-act="stocksearch" data-stock="${esc(c.stockNumber)}" title="Copy stock # and open mosaicautos.com">${esc(c.stockNumber)} ⧉↗</button></div>` : '';
       return `<div class="crm-card ${stale ? 'alert' : ''}" data-id="${esc(c.id)}">
@@ -327,19 +349,21 @@ function renderPipeline() {
           ${c.address ? `<div class="cmeta">${esc(c.address)}</div>` : ''}
           ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}</div></div>
           <div class="crm-row">
-            ${frozen ? '<span class="pill opt">OPTED OUT</span>' : `<span class="pill stage">${esc(stage)}</span>`}
+            ${categoryPill(c)}
+            ${frozen ? '<span class="pill opt">OPTED OUT</span>' : (prospect ? '' : `<span class="pill stage">${esc(currentSequence(c).label)}</span>`)}
             ${stale ? '<span class="pill">stagnant</span>' : ''}
           </div>
         </div>
         <div class="crm-row" style="margin-top:10px">
           <button class="crm-btn sm" data-act="edit" data-id="${esc(c.id)}">✎ Edit</button>
-          <button class="crm-btn ${frozen ? 'gold' : 'ghost-red'} sm" data-act="optout" data-id="${esc(c.id)}">${frozen ? '↺ Re-enable follow-ups' : '⓪ Opt out (stop all)'}</button>
+          <button class="crm-btn ${frozen ? 'gold' : 'ghost-red'} sm" data-act="optout" data-id="${esc(c.id)}">${frozen ? '↺ Re-enable' : '⓪ Opt out'}</button>
           <button class="crm-btn sm" data-act="del" data-id="${esc(c.id)}">✕ Remove</button>
         </div>
       </div>`;
     }).join('');
   }
-  document.getElementById('crmPanePipeline').innerHTML = section('≣ All Customers', customers.length, body) + historyPanel();
+  const body = `<div class="crm-chips">${chips}</div>${list}`;
+  document.getElementById('crmPanePipeline').innerHTML = section('≣ Contacts', customers.length, body) + historyPanel();
 }
 
 function historyPanel() {
@@ -387,6 +411,7 @@ function onOverlayClick(e) {
   if (a === 'edit') { openEditCustomer(act.dataset.id); return; }
   if (a === 'optout') { toggleOptOut(act.dataset.id); render(); return; }
   if (a === 'del') { removeCustomer(act.dataset.id); render(); return; }
+  if (a === 'pipefilter') { pipeFilter = act.dataset.cat || 'all'; render(); return; }
   if (a === 'history-toggle') { showHistory = !showHistory; render(); return; }
   if (a === 'restore-version') { restoreVersion(act.dataset.ts); return; }
 }
@@ -422,7 +447,7 @@ function onOverlaySubmit(e) {
     firstName: g('firstName'), lastName: g('lastName'), vehicle: g('vehicle'), stockNumber: g('stockNumber'),
     phone: g('phone'), email: g('email'), address: g('address'), notes: g('notes'),
     purchaseDate: g('purchaseDate'), referredById: g('referredById') || null,
-    photo: g('photo'),
+    photo: g('photo'), category: g('category') || 'sold',
   };
   const v = validateCustomer(input);
   if (!v.ok) { document.getElementById('crmAddErr').textContent = Object.values(v.errors)[0]; blip(360, 0.06, 'sawtooth', 0.1); return; }
@@ -561,7 +586,7 @@ function openEditCustomer(id) {
   showAddPane({
     firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email,
     vehicle: c.vehicle, stockNumber: c.stockNumber, address: c.address, notes: c.notes,
-    purchaseDate: c.purchaseDate, referredById: c.referredById || '', photo: c.photo || '',
+    purchaseDate: c.purchaseDate, referredById: c.referredById || '', photo: c.photo || '', category: c.category || 'sold',
   });
 }
 

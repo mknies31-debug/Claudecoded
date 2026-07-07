@@ -93,6 +93,11 @@ export function followupForStage(stage) {
   };
 }
 
+// ── Prospect keep-warm cadence (hot / cold leads, not buyers) ────────────────
+// Prospects don't run the post-purchase timeline. Instead the daily loop queues
+// a "reach out" reminder when they've gone untouched this many days.
+export const PROSPECT_INTERVAL = { hot: 3, cold: 21 };
+
 /** The window at a given stage — fixed window or the recurring follow-up. */
 export function windowForStage(stage) {
   const idx = stage || 0;

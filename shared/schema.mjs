@@ -54,6 +54,10 @@ export function newCustomer(input = {}) {
     // evening entry isn't dated to tomorrow (see localDateStr).
     purchaseDate: toDateStr(input.purchaseDate) || localDateStr(),
     stage: Number.isInteger(input.stage) ? input.stage : 0,
+    // Pipeline bucket: 'sold' (a buyer — runs the post-purchase referral timeline),
+    // 'hot' (engaged prospect), or 'cold' (nurture lead). Defaults to sold so an
+    // imported book and old records are treated as buyers.
+    category: CATEGORIES.includes(input.category) ? input.category : 'sold',
     optedOut: input.optedOut === true,
     referredById: input.referredById || null,
     pendingTexts: Array.isArray(input.pendingTexts) ? input.pendingTexts : [],
@@ -63,6 +67,11 @@ export function newCustomer(input = {}) {
     _v: SCHEMA_VERSION,
   };
 }
+
+// Pipeline buckets. 'sold' runs the post-purchase referral timeline; 'hot' and
+// 'cold' are prospects worked on a keep-warm cadence (see engine + sequences).
+export const CATEGORIES = ['hot', 'cold', 'sold'];
+export const CATEGORY_LABELS = { hot: 'Hot Prospect', cold: 'Cold Lead', sold: 'Sold Customer' };
 
 // Bump when the customer shape changes in a way that needs handling on read.
 // migrateCustomer() coerces ANY stored record to the current shape so old data

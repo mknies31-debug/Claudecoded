@@ -5,9 +5,9 @@
 // blob load/save, the test suite wraps it with a mock provider. That injection
 // is what makes "swap the provider" and "prove no regression" both trivial.
 
-import { nextDueSequence } from './sequences.mjs';
+import { nextDueSequence, PROSPECT_INTERVAL } from './sequences.mjs';
 import { hydrate } from './hydrate.mjs';
-import { getText, getEmail, getScript, APPROVED as TEMPLATES_APPROVED } from './templates.mjs';
+import { getText, getEmail, getScript, getProspectScript, APPROVED as TEMPLATES_APPROVED } from './templates.mjs';
 import { newTouchLog } from './schema.mjs';
 import { isFrozen, lintCopy } from './compliance.mjs';
 
@@ -54,8 +54,26 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
     notes: [],
   };
 
+  const todayMs = Date.parse(todayStr + 'T00:00:00Z');
+
   for (const c of nextCustomers) {
     if (isFrozen(c)) { report.skippedOptedOut++; continue; }
+
+    // ── Prospect branch (hot / cold leads) — they do NOT run the buyer timeline.
+    // Keep-warm: queue a "reach out" reminder when they've gone untouched past
+    // their cadence, unless one is already pending.
+    const cat = c.category || 'sold';
+    if (cat === 'hot' || cat === 'cold') {
+      const interval = PROSPECT_INTERVAL[cat];
+      const lastTouch = lastTouchMs(c, logs);
+      const daysSince = Math.floor((todayMs - lastTouch) / 86400000);
+      const pending = c.pendingTasks.some((p) => p.type === 'reachout');
+      if (daysSince >= interval && !pending) {
+        c.pendingTasks.push({ type: 'reachout', category: cat, sequenceKey: `prospect_${cat}`, label: cat === 'hot' ? 'Hot prospect — reach out' : 'Cold lead — reach out', script: hydrate(getProspectScript(cat), c), createdAt: new Date().toISOString() });
+        report.tasksQueued++;
+      }
+      continue; // prospects never run the post-purchase sequence
+    }
 
     const due = nextDueSequence(c, today);
     if (!due) continue;
@@ -160,6 +178,17 @@ export async function runDailyCycle({ customers = [], touchLogs = [], today = ne
   report.logsPruned = logs.length - keptLogs.length;
 
   return { customers: nextCustomers, touchLogs: keptLogs, report };
+}
+
+/** Most recent touch for a customer (max log sentAt, else createdAt), in ms. */
+function lastTouchMs(c, logs) {
+  let max = Date.parse(c.createdAt || '') || 0;
+  for (const l of logs) {
+    if (l.customerId !== c.id) continue;
+    const t = Date.parse(l.sentAt || '');
+    if (!isNaN(t) && t > max) max = t;
+  }
+  return max;
 }
 
 /** Minimal, safe plain-text → HTML for the email body (keeps line breaks). */
