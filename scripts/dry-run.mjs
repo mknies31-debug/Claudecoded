@@ -5,6 +5,12 @@
 
 import { runDailyCycle } from '../shared/engine.mjs';
 import { newCustomer } from '../shared/schema.mjs';
+import { APPROVED } from '../shared/templates.mjs';
+
+// Mirror production by default: use the REAL APPROVED flag so the preview matches
+// what the live cron would do. Pass --hold to force the held preview instead.
+const hold = process.argv.includes('--hold');
+const approved = hold ? false : APPROVED;
 
 function daysAgo(n) { const d = new Date(); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); }
 
@@ -15,8 +21,9 @@ const sample = [
   newCustomer({ firstName: 'OptedOut Olive', vehicle: 'Camry', email: 'olive@example.com', purchaseDate: daysAgo(45), optedOut: true }),
 ];
 
-const { report } = await runDailyCycle({ customers: sample, touchLogs: [], today: new Date(), approved: false, dryRun: true });
+const { report } = await runDailyCycle({ customers: sample, touchLogs: [], today: new Date(), approved, dryRun: true });
 
 console.log('North Star Referral CRM — dry run for', report.date);
 console.log(JSON.stringify(report, null, 2));
-console.log('\nNote: templatesApproved is false, so real runs HOLD emails until copy is approved.');
+console.log(`\nApproved = ${approved} (templates.APPROVED = ${APPROVED}${hold ? ', forced hold via --hold' : ''}). ` +
+  (approved ? 'Real runs SEND the auto-emails.' : 'Real runs HOLD emails until copy is approved.'));

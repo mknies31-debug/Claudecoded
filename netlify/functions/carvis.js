@@ -16,9 +16,8 @@ const MODEL_CHAIN = [
   process.env.CARVIS_MODEL,
   'claude-fable-5',
   'claude-opus-4-8',
-  'claude-sonnet-4-6',
-  'claude-3-5-sonnet-latest',
-  'claude-3-5-haiku-latest',
+  'claude-sonnet-5',
+  'claude-haiku-4-5-20251001',
 ].filter((m, i, a) => m && a.indexOf(m) === i);
 const MAX_TOKENS = 1000;
 

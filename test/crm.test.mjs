@@ -15,7 +15,7 @@ import { hydrate, tokensIn } from '../shared/hydrate.mjs';
 import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
 import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
 import { runDailyCycle, toHtml } from '../shared/engine.mjs';
-import { getEmailProvider } from '../netlify/functions/_lib/email-provider.mjs';
+import { getEmailProvider, headerSafe } from '../netlify/functions/_lib/email-provider.mjs';
 import { INTAKE_STEPS, isSkip, parseFullName, extractPhone, parseSpokenEmail, parseStockNumber, applyAnswer, parseExtraction } from '../shared/intake.mjs';
 
 // ── helpers ───────────────────────────────────────────────────────────────
@@ -524,6 +524,13 @@ test('stageForElapsedDays is inclusive at every window boundary', () => {
   assert.equal(stageForElapsedDays(180), 4);
   assert.equal(stageForElapsedDays(365), 5);
   assert.equal(stageForElapsedDays(44), 2); // day before referral is due
+});
+
+test('headerSafe strips CR/LF (blocks email header injection) and caps length', () => {
+  assert.equal(headerSafe('Dale\r\nBcc: evil@x.com'), 'Dale Bcc: evil@x.com'); // newline → space, no new header
+  assert.ok(!headerSafe('a\r\nb').includes('\n'));
+  assert.equal(headerSafe('x'.repeat(500)).length, 200);
+  assert.equal(headerSafe(''), '');
 });
 
 test('getEmailProvider selects the provider from env (swap contract)', () => {

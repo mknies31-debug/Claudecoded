@@ -4,6 +4,11 @@
 // `send({ to, toName, subject, html, text }) -> { ok, id }`, never on a vendor.
 // Swap vendors by changing EMAIL_PROVIDER — no engine or UI change.
 
+// Collapse CR/LF/tabs and cap length — blocks header injection via a display
+// name or subject (defense-in-depth; engine copy is template-derived, but the
+// display name is the customer's own first name).
+export function headerSafe(s, max = 200) { return String(s || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, max); }
+
 /**
  * @typedef {Object} EmailMessage
  * @property {string} to       recipient email
@@ -33,13 +38,14 @@ export class ResendProvider extends EmailProvider {
 
   async send({ to, toName, subject, html, text }) {
     if (!this.key) throw new Error('RESEND_API_KEY is not set');
+    const name = headerSafe(toName, 120).replace(/[<>"]/g, '');
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { authorization: `Bearer ${this.key}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         from: this.from,
-        to: [toName ? `${toName} <${to}>` : to],
-        subject,
+        to: [name ? `${name} <${to}>` : to],
+        subject: headerSafe(subject),
         html: html || undefined,
         text: text || undefined,
         reply_to: this.replyTo,
@@ -123,11 +129,12 @@ export class GmailProvider extends EmailProvider {
       secure: true,
       auth: { user: this.user, pass: this.pass },
     });
+    const name = headerSafe(toName, 120).replace(/[<>"]/g, '');
     const info = await transport.sendMail({
-      from: `${this.fromName} <${this.user}>`,
-      to: toName ? `${toName} <${to}>` : to,
+      from: `${headerSafe(this.fromName, 120)} <${this.user}>`,
+      to: name ? `${name} <${to}>` : to,
       replyTo: this.replyTo,
-      subject,
+      subject: headerSafe(subject),
       text: text || undefined,
       html: html || undefined,
     });

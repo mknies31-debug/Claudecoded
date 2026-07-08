@@ -121,19 +121,27 @@ Right now every message is placeholder text and auto-emails are **held**.
 
 ## 6. Test the daily cron by hand
 The job runs automatically once a day (`0 14 * * *` ≈ 9:00am Central). You don't
-have to wait to test it.
+have to wait to test it — but note **Netlify scheduled functions can't be
+triggered by a plain browser/URL hit in production.** Use one of these:
 
-- [ ] Trigger it with your secret header:
-      `curl -X POST https://YOUR-SITE/.netlify/functions/daily-runner -H "x-cron-key: YOUR_CRON_SECRET"`
+- [ ] **Easiest — Netlify UI:** Netlify → **Functions → `daily-runner` → Run now.**
+      Watch the log and the returned JSON.
+- [ ] **Or the CLI:** `netlify functions:invoke daily-runner` (from the project,
+      after `netlify link`). To reach the manual-trigger path from your own
+      machine, send the secret: add `--payload '{}'` and the `x-cron-key:
+      $CRON_SECRET` header (the scheduled run itself is exempt via `next_run`).
 - [ ] Read the JSON it returns:
-      - `{ "ok": true, "provider": "resend", "wrote": true, "report": {...} }` → it ran.
-      - `{ "ok": false, "error": "unauthorized..." }` → the `x-cron-key` header is missing or doesn't match `CRON_SECRET`.
+      - `{ "ok": true, "provider": "gmail", "wrote": true, "report": {...} }` → it ran.
       - `{ "skipped": true, "reason": "CRM_SYNC_KEY is not set..." }` → fix Step 3.
 - [ ] In the app, open **⇄ REFERRALS → ◉ Daily Ops** and confirm the
       **Emails Sent Today** / **Texts Ready to Send** counts reflect the run.
 
 **Confirm:** the report shows `emailsSent` (once approved) and `textsQueued`
 numbers that make sense for your customers' purchase dates.
+
+> `CRON_SECRET` still guards the function's HTTP path as defense-in-depth (in
+> case a future Netlify plan or a proxy does expose it) — the scheduled run is
+> always exempt, so setting it never blocks the real cron.
 
 ---
 
