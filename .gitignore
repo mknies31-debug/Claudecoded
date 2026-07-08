@@ -4,8 +4,8 @@ node_modules/
 # Local Netlify dev/build artifacts
 .netlify/
 
-# Deploy bundle (generated on demand, not source)
-carvis-netlify.zip
+# Deploy bundles (generated on demand, not source)
+*-netlify.zip
 
 # OS / editor cruft
 .DS_Store
