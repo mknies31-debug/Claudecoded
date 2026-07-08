@@ -1,9 +1,12 @@
-# Ledger Lens — standalone deploy config (separate from CARVIS and VOLT).
+# Foresight — standalone deploy config (its own project).
 #
-# To deploy Ledger Lens as its own site: in Netlify, create a new site from this
-# repo and set "Base directory" = ledger. Netlify then serves ledger/index.html
-# at the site root and bundles the Anthropic proxy from ledger/netlify/functions.
-# No build step.
+# This folder IS the site root. Deploy it directly:
+#   • Drag-and-drop: drop this whole folder onto https://app.netlify.com/drop
+#   • Or "New site from Git": leave Base directory BLANK (do NOT set it to
+#     "ledger" — there is no subfolder here; the files are already at the root).
+#
+# Netlify serves index.html at the root and bundles the Anthropic proxy from
+# netlify/functions/ledger.js. No build step.
 #
 # Before it works: Site settings → Environment variables → add ANTHROPIC_API_KEY.
 

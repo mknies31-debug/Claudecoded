@@ -1,109 +1,130 @@
-// Ledger Lens → Anthropic proxy (Netlify Function).
+// Foresight → Anthropic proxy (Netlify Function).
 //
-// Why this exists: the browser must NOT hold the Anthropic API key, and
-// browsers can't call api.anthropic.com directly anyway (CORS). This function
-// runs server-side, reads the key from ANTHROPIC_API_KEY, and owns the two
-// system prompts (extraction + analysis) so they can't be tampered with from
-// the client. The browser sends only `mode` and the rolling `messages`
-// (including base64 image blocks for extraction).
+// The browser never holds the Anthropic API key (and can't call the API
+// directly anyway — CORS). This function runs server-side, owns the three
+// system prompts, and is the single place the key lives. The client sends only
+// { mode, messages }:
+//   • extract  — image(s) → a clean Markdown transaction table
+//   • analyze  — a transaction table → a savings/optimization plan
+//   • advise   — a financial snapshot → behavior-focused guidance
 //
-// Deploy: in Netlify create a site with Base directory = ledger, then set
-//         ANTHROPIC_API_KEY in Site settings → Environment variables. No build.
+// Two optional guards protect your Anthropic credits on a public deploy:
+//   • Same-origin: if ALLOWED_ORIGIN (or Netlify's URL) is set, a request whose
+//     browser Origin doesn't match is rejected.
+//   • Access code: if ACCESS_CODE is set, the client must send a matching
+//     x-access-code header (localStorage 'foresight.accessCode').
+//
+// Deploy: drop this folder on Netlify, set ANTHROPIC_API_KEY. No build step.
 
-// Model preference, best → most-available. We try them in order and use the
-// first one this Anthropic account accepts, so the app works even if a newer
-// model isn't enabled on the key. Override the top pick with LEDGER_MODEL.
 const MODEL_CHAIN = [
   process.env.LEDGER_MODEL,
   'claude-opus-4-8',
   'claude-sonnet-4-6',
   'claude-3-5-sonnet-latest',
-  'claude-3-5-haiku-latest',
+  'claude-haiku-4-5',
 ].filter((m, i, a) => m && a.indexOf(m) === i);
 
-// PROMPT 1 — Multimodal ingestion & categorization. Verbatim operational spec.
-const EXTRACT_SYSTEM = `You are a highly specialized visual financial parsing agent optimized for zero-trust consumer ledgering. Your operational objective is to analyze the uploaded image(s)—which are mobile screenshots of a bank application, a peer-to-peer payment platform, a digital receipt, or a physical receipt photo—and extract the transactions.
+const CATEGORIES = 'Groceries, Apparel, Electronics, Housing & Utilities, Software & Subscriptions, Transportation, Meals & Dining, Professional Services, Medical, Other, or Income';
 
-Analyze the image systematically. Identify and map ALL transactions into a clean, GitHub-flavored Markdown table with exactly these headers, in this order:
+// PROMPT 1 — Multimodal ingestion. Must match the client's 8-column HEADERS.
+const EXTRACT_SYSTEM = `You are a highly specialized visual financial parsing agent optimized for zero-trust consumer ledgering. Analyze the uploaded image(s) — mobile screenshots of a bank app, a peer-to-peer payment platform, a digital receipt, or a physical receipt photo — and extract the transactions.
 
-| Date | Merchant/Payee | Amount | Currency | Account Type | Payment Method | Category | Recurring Status | BNPL Provider |
+Map ALL transactions into a clean, GitHub-flavored Markdown table with exactly these headers, in this order:
 
-Operational Guidelines for Data Mapping:
-- Date: ISO-8601 format YYYY-MM-DD. If the year is omitted, infer from context or use the current year.
+| Date | Merchant/Payee | Amount | Currency | Payment Method | Category | Recurring Status | BNPL Provider |
+
+Guidelines:
+- Date: ISO-8601 YYYY-MM-DD. If the year is omitted, infer from context or use the current year.
 - Merchant/Payee: the specific entity receiving the funds (e.g., "Venmo to John Doe" → "John Doe").
-- Amount: the exact monetary figure. Outflows are NEGATIVE (e.g., -45.00), inflows are POSITIVE (e.g., 1500.00). Do NOT include currency symbols in this column.
+- Amount: the exact figure. Outflows NEGATIVE (e.g., -45.00), inflows POSITIVE (e.g., 1500.00). No currency symbols in this column.
 - Currency: ISO-4217 three-letter code (USD, CAD, EUR, GBP, ...).
-- Account Type: classify the funding source into EXACTLY one of — Checking, Savings, Investment, Credit Card, Loan, Cash, Digital Wallet, or Other. Infer from the account or card shown: a Visa/Mastercard/Amex/Discover credit card → "Credit Card"; a checking/debit account → "Checking"; a savings/high-yield account → "Savings"; a brokerage or retirement account (Fidelity, Vanguard, Schwab, Robinhood, 401k, IRA) → "Investment"; a mortgage, auto loan, student loan, or personal-loan payment → "Loan"; a Venmo/PayPal/Cash App/Apple Pay/Zelle balance → "Digital Wallet"; a physical cash receipt → "Cash". If it truly cannot be determined, use "Other".
-- Payment Method: the specific bank, credit card, e-wallet, or P2P tool shown (e.g., Chase Checking, Chase Sapphire Visa, Apple Pay, Cash App). This is the exact name; Account Type is the general class.
-- Category: one of — Groceries, Apparel, Electronics, Housing & Utilities, Software & Subscriptions, Transportation, Meals & Dining, Professional Services, Medical, or Income.
-- Recurring Status: "Recurring" or "One-Time". Be proactive about catching recurring charges. Mark "Recurring" when the line is rent/mortgage, a utility (electric, gas, water, internet, phone), insurance, a salary/payroll deposit, a gym/membership, OR a recognizable subscription service — e.g. Netflix, Hulu, Disney+, Max, Spotify, Apple (iCloud/Music/TV+), YouTube Premium, Amazon Prime, Adobe, Microsoft 365, Google One, Dropbox, Notion, ChatGPT/OpenAI, Patreon, Substack, news/media memberships, SaaS tools, and similar. Also treat any charge whose description contains cues like "subscription", "monthly", "annual", "membership", "renewal", "autopay", or "recurring" as "Recurring". When the merchant is clearly a one-off purchase, use "One-Time".
-- BNPL Provider: if the transaction involves Klarna, Sezzle, Afterpay, or Affirm, name the provider. Otherwise leave blank.
+- Payment Method: the bank, card, e-wallet, or P2P tool shown (e.g., Checking, Chase Visa, Apple Pay, Cash App).
+- Category: exactly one of — ${CATEGORIES}.
+- Recurring Status: "Recurring" (subscription, rent, utility, salary, membership, insurance) or "One-Time".
+- BNPL Provider: name Klarna, Sezzle, Afterpay, or Affirm if involved; otherwise leave blank.
 
-Output Constraints:
-- Provide ONLY the Markdown table. No conversational preamble, no introductory sentences, no summary text.
-- If any field is blurred, unreadable, or missing, put "null" in that cell. Do NOT guess or hallucinate data points.`;
+Output ONLY the Markdown table — no preamble, no summary. If a field is unreadable or missing, put "null" in that cell. Never guess or hallucinate data points.`;
 
-// PROMPT 2 — Financial analysis & savings optimization planner. Verbatim spec.
-const ANALYZE_SYSTEM = `You are an elite personal finance strategist and financial forensic analyst. You have been provided with a manual ledger of transaction history (a Markdown table). Perform a comprehensive financial audit, evaluate monthly cash flow, and generate an actionable financial optimization and savings plan.
+// PROMPT 2 — Analysis & savings optimization planner.
+const ANALYZE_SYSTEM = `You are an elite personal finance strategist and financial forensic analyst. You are given a manual ledger of transactions (a Markdown table). Perform a comprehensive audit, evaluate monthly cash flow, and generate an actionable optimization and savings plan.
 
 Objectives:
-1. Identify & Amortize BNPL Commitments
-   - Locate active BNPL plans from Klarna, Sezzle, Afterpay, or Affirm.
-   - Assume standard interest-free "Pay in 4" structures (six-week duration, four bi-weekly payments) unless the ledger specifies otherwise.
-   - Map out the amortization schedule. If the total purchase was C_total over N installments, each installment is C_total / N. Project the exact dates and amounts of future cash outflows over the next 2 months.
-2. Audit Recurring Subscriptions & Bills
-   - Isolate recurring software subscriptions, utility bills, insurance payments, and memberships.
-   - Highlight "subscription creep" or redundancies (multiple entertainment platforms, forgotten SaaS trials, high utility spending).
-3. Outline a Savings Plan
-   - Analyze variable spending across Groceries, Apparel, Meals & Dining, etc.
-   - Recommend realistic, targeted spending reductions based on the trends.
-   - Suggest a structural cash budgeting strategy — an "Escrow Sinking Fund" — to isolate cash for upcoming BNPL installments and fixed bills so they never cause a checking-account cash crunch.
+1. Identify & amortize BNPL commitments (Klarna, Sezzle, Afterpay, Affirm). Assume interest-free "Pay in 4" (six weeks, four bi-weekly payments) unless the ledger says otherwise. If a purchase was C_total over N installments, each installment is C_total / N — project the exact dates and amounts of outflows over the next 2 months.
+2. Audit recurring subscriptions & bills; flag "subscription creep", redundancies, forgotten trials, and high utility spend.
+3. Outline a savings plan: analyze variable spending (Groceries, Apparel, Meals & Dining, ...), recommend realistic targeted reductions, and suggest an "Escrow Sinking Fund" to pre-fund upcoming BNPL installments and fixed bills so they never cause a checking-account crunch.
 
-Structure your response with these clearly defined Markdown sections (use ## headings):
+Structure the response with these Markdown ## sections, in order:
 ## Executive Summary
 ## BNPL Liabilities & Future Outflow Schedule
 ## Recurring Bill Audit
 ## Budgeting Strategy Recommendations
 ## Targeted Expense Optimization Plan
 
-Be specific and numerical. Show payment dates and dollar amounts. Base every figure on the ledger provided — do not invent transactions.`;
+Be specific and numerical — show dates and dollar amounts. Base every figure on the ledger provided; do not invent transactions.`;
+
+// PROMPT 3 — Behavior-focused advisor over a full snapshot.
+const ADVISE_SYSTEM = `You are a sharp, plain-spoken personal financial advisor. You are given a SNAPSHOT of someone's finances: monthly income, budget vs. actual by category, credit cards (limit, current balance/utilization, assigned purpose such as Work/Personal/House, statement due date, monthly cap), savings goals (target, saved, target date, pace), and account balances by type.
+
+Give behavior-focused guidance — what to DO, not a lecture. Cover:
+1. Card strategy: for each purpose (Work / Personal / House), recommend which card to put spend on to keep utilization low (ideally under 30%, better under 10%) and every card payable IN FULL by its due date. Call out any card trending toward a balance that can't be paid off.
+2. Pay-in-full pace: are they on track to pay every card in full this month given income and current spend? If not, name the shortfall and the concrete fix.
+3. Budget drift: which categories are over budget this month, by how much, and the one or two changes with the biggest impact.
+4. Goal pacing: for each goal, whether they're on track / behind / ahead, the monthly contribution needed to hit it on time, and where that money can come from.
+
+Rules: use the numbers in the snapshot — never invent balances, limits, or transactions. Be concrete and prioritized (lead with the highest-impact move). Use short Markdown ## sections and plain language. If the snapshot is missing something you'd need, say so briefly rather than guessing.`;
 
 const MODE_CONFIG = {
   extract: { system: EXTRACT_SYSTEM, max_tokens: 4096 },
   analyze: { system: ANALYZE_SYSTEM, max_tokens: 4096 },
+  advise:  { system: ADVISE_SYSTEM,  max_tokens: 4096 },
 };
 
+const json = (statusCode, obj, extra) => ({
+  statusCode,
+  headers: Object.assign({ 'content-type': 'application/json' }, extra || {}),
+  body: JSON.stringify(obj),
+});
+
+// Compare only the origin (scheme://host:port) of two URLs.
+function originOf(u) { try { return new URL(u).origin; } catch { return ''; } }
+
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+  if (event.httpMethod !== 'POST') return json(405, { error: 'Method Not Allowed' });
+
+  const headers = event.headers || {};
+  const h = (name) => headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()] || '';
+
+  // Guard 1 — same-origin. Only enforced when we know our own origin AND the
+  // request carries an Origin header (native/curl requests have none).
+  const allowed = originOf(process.env.ALLOWED_ORIGIN || process.env.URL || '');
+  const reqOrigin = h('origin');
+  if (allowed && reqOrigin && originOf(reqOrigin) !== allowed) {
+    return json(403, { error: 'Blocked: this request came from a different site.' });
+  }
+
+  // Guard 2 — access code (optional).
+  const code = process.env.ACCESS_CODE;
+  if (code && h('x-access-code') !== code) {
+    return json(401, { error: 'This Foresight is locked. Set the access code in the app: open the site, then in the browser console run  localStorage.setItem(\'foresight.accessCode\',\'YOUR_CODE\')  using the same value as the ACCESS_CODE env var.' });
   }
 
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
-    return {
-      statusCode: 500,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY is not set on the server. In Netlify: Site settings → Environment variables → add ANTHROPIC_API_KEY, then redeploy (Deploys → Trigger deploy → Clear cache and deploy).' }),
-    };
+    return json(500, { error: 'ANTHROPIC_API_KEY is not set on the server. In Netlify: Site settings → Environment variables → add ANTHROPIC_API_KEY, then redeploy (Deploys → Trigger deploy → Clear cache and deploy).' });
   }
 
   let mode, messages;
-  try {
-    ({ mode, messages } = JSON.parse(event.body || '{}'));
-  } catch {
-    return { statusCode: 400, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: 'Invalid JSON body.' }) };
-  }
+  try { ({ mode, messages } = JSON.parse(event.body || '{}')); }
+  catch { return json(400, { error: 'Invalid JSON body.' }); }
 
   const cfg = MODE_CONFIG[mode];
-  if (!cfg) {
-    return { statusCode: 400, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: 'mode must be "extract" or "analyze".' }) };
-  }
+  if (!cfg) return json(400, { error: 'mode must be "extract", "analyze", or "advise".' });
   if (!Array.isArray(messages) || messages.length === 0) {
-    return { statusCode: 400, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: 'messages must be a non-empty array.' }) };
+    return json(400, { error: 'messages must be a non-empty array.' });
   }
 
-  // Detects "this model isn't available on your key" so we can fall back to the
-  // next candidate (vs. an auth/credit error, which would fail on every model).
+  // "Model isn't available on your key" → try the next candidate; auth/credit
+  // errors fail on every model, so stop and surface them.
   const isModelError = (status, text) => {
     if (status !== 400 && status !== 403 && status !== 404) return false;
     return /model/i.test(text) && /(not[_ ]?found|not.*exist|invalid|unknown|permission|access|do(es)? not have)/i.test(text);
@@ -115,28 +136,20 @@ exports.handler = async (event) => {
     try {
       upstream = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-        },
+        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model, max_tokens: cfg.max_tokens, system: cfg.system, messages }),
       });
     } catch (err) {
       lastStatus = 502;
       lastText = JSON.stringify({ error: 'Upstream request to Anthropic failed: ' + String(err && err.message ? err.message : err) });
-      break; // network failure — retrying other models won't help
+      break;
     }
-
     const text = await upstream.text();
     if (upstream.ok) {
-      // Success — pass Anthropic's body through verbatim (client reads .content).
       return { statusCode: 200, headers: { 'content-type': 'application/json', 'x-ledger-model': model }, body: text };
     }
     lastStatus = upstream.status; lastText = text;
-    if (!isModelError(upstream.status, text)) break; // auth/credit/other — surface it
-    // else: try the next model in the chain
+    if (!isModelError(upstream.status, text)) break;
   }
-
   return { statusCode: lastStatus, headers: { 'content-type': 'application/json' }, body: lastText };
 };
