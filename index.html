@@ -823,7 +823,6 @@ Janelle Aas, janelle@email.com, referral"></textarea>
         <div><span class="olabel">Cars sold</span><input type="number" min="0" step="1" inputmode="numeric" id="numSold" class="rin" style="margin-top:0" placeholder="0"></div>
         <div><span class="olabel">Cars bought</span><input type="number" min="0" step="1" inputmode="numeric" id="numBought" class="rin" style="margin-top:0" placeholder="0"></div>
         <div><span class="olabel">Deals closed</span><input type="number" min="0" step="1" inputmode="numeric" id="numDeals" class="rin" style="margin-top:0" placeholder="0"></div>
-        <div><span class="olabel">Close rate %</span><input type="number" min="0" max="100" step="1" inputmode="numeric" id="numRate" class="rin" style="margin-top:0" placeholder="0"></div>
       </div>
       <button class="rgen" id="numSave">◉ SAVE THIS MONTH</button>
       <div class="ostat" id="numStat"></div>
@@ -867,7 +866,7 @@ const DATA = {
     {key:'sold',   label:'CARS SOLD',    color:'var(--gold)'},
     {key:'bought', label:'CARS BOUGHT',  color:'var(--cyan)'},
     {key:'deals',  label:'DEALS CLOSED', color:'var(--green)'},
-    {key:'conv',   label:'CLOSE RATE',   color:'var(--red)'},
+    {key:'yearsold', label:'SOLD THIS YEAR', color:'var(--red)'},
   ],
   // Brendan Burchard's High Performance Habits (HP6) → daily drivers, tailored to the lot.
   tasks:[
@@ -903,7 +902,7 @@ const phoneFmt = p => `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
 
 /* ---------- monthly numbers (real, user-entered, start at 0) ----------
    Mick types his actual totals per month in the NUMBERS panel; nothing is
-   assumed. Stored as { "YYYY-MM": {sold,bought,deals,closeRate} } plus global
+   assumed. Stored as { "YYYY-MM": {sold,bought,deals} } plus global
    goals. Both ride along in cloud sync + file backup (carvis_ keys). */
 const MONTHS_KEY='carvis_months', GOALS_KEY='carvis_goals';
 const monthKey = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
@@ -913,14 +912,18 @@ function loadMonths(){ try{ const m=JSON.parse(localStorage.getItem(MONTHS_KEY)|
 function saveMonths(m){ try{ localStorage.setItem(MONTHS_KEY, JSON.stringify(m)); }catch(e){} scheduleCloudPush(); }
 function loadGoals(){ try{ const g=JSON.parse(localStorage.getItem(GOALS_KEY)||'{}')||{}; return {soldGoal:+g.soldGoal||0, buyGoal:+g.buyGoal||0, dealGoal:+g.dealGoal||0}; }catch(e){ return {soldGoal:0,buyGoal:0,dealGoal:0}; } }
 function saveGoals(g){ try{ localStorage.setItem(GOALS_KEY, JSON.stringify(g)); }catch(e){} scheduleCloudPush(); }
-function monthData(key){ const m=loadMonths()[key]||{}; return {sold:+m.sold||0, bought:+m.bought||0, deals:+m.deals||0, closeRate:+m.closeRate||0}; }
-let STATS={sold:0,bought:0,deals:0,closeRate:0,soldGoal:0,buyGoal:0,dealGoal:0};
+function monthData(key){ const m=loadMonths()[key]||{}; return {sold:+m.sold||0, bought:+m.bought||0, deals:+m.deals||0}; }
+// Total cars sold across every month of the given year (defaults to this year).
+function yearSold(d){ const y=(d||new Date()).getFullYear()+'-'; const m=loadMonths(); let n=0; for(const k in m){ if(k.indexOf(y)===0) n+=(+m[k].sold||0); } return n; }
+let STATS={sold:0,bought:0,deals:0,soldGoal:0,buyGoal:0,dealGoal:0};
 function refreshStats(){ STATS={...monthData(monthKey()), ...loadGoals()}; return STATS; }
 function gaugeVals(key){ const s=STATS;
   if(key==='sold')   return {val:s.sold,   max:s.soldGoal};
   if(key==='bought') return {val:s.bought, max:s.buyGoal};
   if(key==='deals')  return {val:s.deals,  max:s.dealGoal};
-  return {val:s.closeRate, max:100}; }
+  // Year-to-date total; ring tracks an annual pace (monthly goal × 12) if set.
+  if(key==='yearsold') return {val:yearSold(), max:(s.soldGoal||0)*12};
+  return {val:0, max:0}; }
 // Push the current month's saved numbers into every metric on the dashboard.
 function renderStats(){
   refreshStats();
@@ -933,7 +936,7 @@ function renderStats(){
   $$('.gauge').forEach(el=>{ const {val,max}=gaugeVals(el.dataset.key); const R=34,GC=2*Math.PI*R, ratio=max>0?Math.min(val/max,1):0;
     const prog=el.querySelector('.prog2'), gv=el.querySelector('.gv');
     if(prog) prog.style.strokeDashoffset=GC*(1-ratio);
-    if(gv) gv.textContent = el.dataset.key==='conv' ? val+'%' : val; });
+    if(gv) gv.textContent = val; });
   const set=(id,v)=>{ const e=$('#'+id); if(e) e.textContent=v; };
   set('roSold',STATS.sold); set('roBought',STATS.bought);
   set('roLeads', (typeof HOT!=='undefined'?HOT.length:0)); set('roInv', (typeof INVENTORY!=='undefined'?INVENTORY.length:0));
@@ -1022,7 +1025,7 @@ function renderDirectives(){
 function renderTicker(){
   const s=STATS;
   const parts=[`CARS SOLD ${s.sold}/${s.soldGoal}`,`PURCHASED ${s.bought}/${s.buyGoal}`,
-    `DEALS ${s.deals}/${s.dealGoal}`,`CLOSE RATE ${s.closeRate}%`,'NORTH STAR CAR GUY · ZUMBROTA MN'];
+    `DEALS ${s.deals}/${s.dealGoal}`,`SOLD THIS YEAR ${yearSold()}`,'NORTH STAR CAR GUY · ZUMBROTA MN'];
   const line = parts.join('   ◆   ')+'   ◆   ';
   $('#ticker').innerHTML = `<span>${line}${line}</span>`;
 }
@@ -1035,8 +1038,8 @@ function startHud(){
   countTo($('#heroV'), STATS.sold, v=>v);     // animated count-up over the set value
   // gauges — animate the number up to the current month's value
   $$('.gauge').forEach(el=>{
-    const {val}=gaugeVals(el.dataset.key); const gv=el.querySelector('.gv'); const conv=el.dataset.key==='conv';
-    countTo(gv, val, v=> conv ? v+'%' : v);
+    const {val}=gaugeVals(el.dataset.key); const gv=el.querySelector('.gv');
+    countTo(gv, val, v=> v);
   });
   startHum(); initNodes(); buildSpark(); drawChart(); startQuotes();
 }
@@ -1783,7 +1786,6 @@ function loadMonthIntoForm(key){ const m=monthData(key);
   $('#numSold').value   = m.sold   || '';
   $('#numBought').value = m.bought || '';
   $('#numDeals').value  = m.deals  || '';
-  $('#numRate').value   = m.closeRate || '';
 }
 function renderHistory(){
   const host=$('#numHistory'); if(!host) return;
@@ -1805,7 +1807,7 @@ function saveMonthFromForm(){
   const key=$('#numMonth').value || monthKey();
   const m=loadMonths();
   m[key]={ sold:numClamp($('#numSold').value), bought:numClamp($('#numBought').value),
-           deals:numClamp($('#numDeals').value), closeRate:numClamp($('#numRate').value,100) };
+           deals:numClamp($('#numDeals').value) };
   saveMonths(m); renderHistory(); renderStats();
   $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Saved '+prettyMonth(key);
   toast('Numbers saved'); blip(900,0.07,'sine',0.12);
