@@ -525,26 +525,29 @@ function migrate(data){
   if(!data || typeof data!=='object') return null;
   const num=(v,d=0)=>{ const n=parseFloat(v); return isFinite(n)? n : d; };
   const str=(v)=> typeof v==='string' ? v : (v==null ? '' : String(v));
+  // IDs get interpolated into onclick="fn('ID')" — restrict to safe characters
+  // so an imported/hostile backup can't break out of the attribute.
+  const idStr=(v)=> str(v).replace(/[^A-Za-z0-9_-]/g,'');
   // Rebuild each record with only known fields and coerced types, so a
   // malformed or hostile backup can't poison state or smuggle unexpected data.
   const A = Array.isArray(data.accounts)? data.accounts : [];
   data.accounts = A.filter(a=>a&&typeof a==='object').map(a=>{
-    const base={ id:str(a.id)||uid(), name:str(a.name)||'Account', type:str(a.type)||'Other', institution:str(a.institution), opening:num(a.opening) };
+    const base={ id:idStr(a.id)||uid(), name:str(a.name)||'Account', type:str(a.type)||'Other', institution:str(a.institution), opening:num(a.opening) };
     if(base.type==='Credit Card') return { ...base, limit:num(a.limit), dueDay:num(a.dueDay), purpose:str(a.purpose), cap:num(a.cap) };
     return base;
   });
   const T = Array.isArray(data.txns)? data.txns : [];
   data.txns = T.filter(t=>t&&typeof t==='object').map(t=>({
-    id:str(t.id)||uid(), accountId:str(t.accountId), date:str(t.date), payee:str(t.payee),
+    id:idStr(t.id)||uid(), accountId:idStr(t.accountId), date:str(t.date), payee:str(t.payee),
     amount:num(t.amount), currency:str(t.currency)||'USD', method:str(t.method),
     category:str(t.category)||'Other', recurring:!!t.recurring, freq:str(t.freq),
     bnpl:str(t.bnpl), note:str(t.note),
   }));
   const G = Array.isArray(data.goals)? data.goals : [];
   data.goals = G.filter(g=>g&&typeof g==='object').map(g=>({
-    id:str(g.id)||uid(), name:str(g.name)||'Goal', target:num(g.target), targetDate:str(g.targetDate),
+    id:idStr(g.id)||uid(), name:str(g.name)||'Goal', target:num(g.target), targetDate:str(g.targetDate),
     saved:num(g.saved), createdAt:str(g.createdAt)||todayISO(),
-    milestones:(Array.isArray(g.milestones)?g.milestones:[]).filter(m=>m&&typeof m==='object').map(m=>({ id:str(m.id)||uid(), name:str(m.name)||'Milestone', date:str(m.date), amount:num(m.amount) })),
+    milestones:(Array.isArray(g.milestones)?g.milestones:[]).filter(m=>m&&typeof m==='object').map(m=>({ id:idStr(m.id)||uid(), name:str(m.name)||'Milestone', date:str(m.date), amount:num(m.amount) })),
   }));
   const bud=(data.budgets&&typeof data.budgets==='object')? data.budgets : {};
   const cats={}; const rawc=(bud.categories&&typeof bud.categories==='object')? bud.categories : {};
@@ -573,6 +576,15 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 
 /* ---------- money / date helpers ---------- */
 function money(n){ const neg=n<0; return (neg?'-':'')+'$'+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+// Parse an amount cell, understanding accounting-style negatives: "($45.00)" and
+// a trailing/leading minus both mean -45.00; commas and $ are ignored.
+function parseAmount(s){
+  s=String(s==null?'':s).trim();
+  const neg = /^\(.*\)$/.test(s) || /-/.test(s);
+  const n = parseFloat(s.replace(/[^0-9.]/g,''));
+  if(!isFinite(n)) return NaN;
+  return neg ? -Math.abs(n) : n;
+}
 function money0(n){ const neg=n<0; return (neg?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString(); }
 function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
 function parseISO(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||''); if(!m) return null; return new Date(+m[1],+m[2]-1,+m[3]); }
@@ -1182,7 +1194,7 @@ async function runExtract(){
   const btn=document.getElementById('extractBtn'); btn.disabled=true; hideAlert('exAlert');
   document.getElementById('exStatus').innerHTML='<span class="spinner"></span>Reading '+images.length+' image(s)…';
   const content=images.map(img=>({type:'image',source:{type:'base64',media_type:img.mediaType,data:img.base64}}));
-  content.push({type:'text',text:'Extract every transaction visible in the image(s) above into the Markdown table exactly as specified. Output only the table.'});
+  content.push({type:'text',text:'Today\'s date is '+todayISO()+'. If a transaction shows a date with no year, infer the most recent past year relative to today. Extract every transaction visible in the image(s) above into the Markdown table exactly as specified. Output only the table.'});
   try{
     const out=await callLedger('extract',[{role:'user',content}]);
     parsedRows=parseTableRows(out);
@@ -1220,7 +1232,7 @@ function renderImportPreview(){
       <input id="imp_aname" class="in" placeholder="New account name (e.g. Chase Checking)">
     </div>
     <div class="table-scroll" style="margin-top:10px"><table class="tx"><thead><tr><th>Date</th><th>Payee</th><th>Category</th><th class="amt">Amount</th><th>Recurring</th></tr></thead><tbody>
-      ${parsedRows.map(r=>{ const amt=parseFloat((r[2]||'').replace(/[^0-9.\-]/g,'')); const rec=/recurring/i.test(r[6]||'');
+      ${parsedRows.map(r=>{ const amt=parseAmount(r[2]); const rec=/recurring/i.test(r[6]||'');
         return `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(mapCategory(r[5]))}</td><td class="amt ${amt<0?'neg':'pos'}">${isNaN(amt)?'—':money(amt)}</td><td>${rec?'<span class="rec-badge">'+esc(r[6]||'Recurring')+'</span>':''}</td></tr>`;
       }).join('')}
     </tbody></table></div>
@@ -1237,7 +1249,7 @@ function importParsed(){
   }
   let n=0;
   parsedRows.forEach(r=>{
-    const amt=parseFloat((r[2]||'').replace(/[^0-9.\-]/g,'')); if(isNaN(amt)) return;
+    const amt=parseAmount(r[2]); if(isNaN(amt)) return;
     const rec=/recurring/i.test(r[6]||'');
     DB.txns.push({ id:uid(), accountId:accId, date:(/^\d{4}-\d{2}-\d{2}/.test(r[0])?r[0].slice(0,10):todayISO()),
       payee:r[1]||'(unnamed)', amount:amt, currency:(r[3]||'USD'), method:r[4]||'', category:mapCategory(r[5]),

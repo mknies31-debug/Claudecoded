@@ -16,13 +16,19 @@
 //
 // Deploy: drop this folder on Netlify, set ANTHROPIC_API_KEY. No build step.
 
+// Current Claude API model ids, best reasoning → cheapest. The winning model is
+// the first the account accepts; override the top pick with LEDGER_MODEL.
 const MODEL_CHAIN = [
   process.env.LEDGER_MODEL,
   'claude-opus-4-8',
+  'claude-sonnet-5',
   'claude-sonnet-4-6',
-  'claude-3-5-sonnet-latest',
-  'claude-haiku-4-5',
+  'claude-haiku-4-5-20251001',
 ].filter((m, i, a) => m && a.indexOf(m) === i);
+
+// Netlify/Lambda caps the request body around 6 MB; reject oversized payloads
+// (usually too many/too-large base64 images) before spending an upstream call.
+const MAX_BODY_BYTES = 4_500_000;
 
 const CATEGORIES = 'Groceries, Apparel, Electronics, Housing & Utilities, Software & Subscriptions, Transportation, Meals & Dining, Professional Services, Medical, Other, or Income';
 
@@ -108,19 +114,28 @@ exports.handler = async (event) => {
     return json(401, { error: 'This Foresight is locked. Set the access code in the app: open the site, then in the browser console run  localStorage.setItem(\'foresight.accessCode\',\'YOUR_CODE\')  using the same value as the ACCESS_CODE env var.' });
   }
 
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
-    return json(500, { error: 'ANTHROPIC_API_KEY is not set on the server. In Netlify: Site settings → Environment variables → add ANTHROPIC_API_KEY, then redeploy (Deploys → Trigger deploy → Clear cache and deploy).' });
+  // Validate the REQUEST before checking server config, so a bad request gets a
+  // clear 400/413 instead of being masked by a missing-key 500.
+  const raw = event.body || '';
+  const bodyBytes = event.isBase64Encoded ? Math.floor(raw.length * 3 / 4) : Buffer.byteLength(raw, 'utf8');
+  if (bodyBytes > MAX_BODY_BYTES) {
+    return json(413, { error: 'Request is too large. Try fewer images or smaller screenshots.' });
   }
 
   let mode, messages;
-  try { ({ mode, messages } = JSON.parse(event.body || '{}')); }
+  try { ({ mode, messages } = JSON.parse(raw || '{}')); }
   catch { return json(400, { error: 'Invalid JSON body.' }); }
 
   const cfg = MODE_CONFIG[mode];
   if (!cfg) return json(400, { error: 'mode must be "extract", "analyze", or "advise".' });
   if (!Array.isArray(messages) || messages.length === 0) {
     return json(400, { error: 'messages must be a non-empty array.' });
+  }
+
+  // Server config check comes last — the request itself is valid at this point.
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return json(500, { error: 'ANTHROPIC_API_KEY is not set on the server. In Netlify: Site settings → Environment variables → add ANTHROPIC_API_KEY, then redeploy (Deploys → Trigger deploy → Clear cache and deploy).' });
   }
 
   // "Model isn't available on your key" → try the next candidate; auth/credit
