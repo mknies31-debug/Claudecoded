@@ -129,6 +129,43 @@ body.hivis .crm-intake-q { font-size:26px; }
 .crm-banner { font-size:14px; line-height:1.5; color:var(--gold); background:rgba(255,201,102,.08);
   border:1px solid rgba(255,201,102,.3); border-radius:10px; padding:10px 12px; margin-bottom:14px; }
 
+/* ── Goals & Rewards tab (the Level-Up layer) ── */
+.goal-head { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+.goal-head-ring { position:relative; width:64px; height:64px; flex:0 0 auto; }
+.goal-ring { transform:rotate(-90deg); }
+.goal-ring-bg { fill:none; stroke:var(--line); stroke-width:6; }
+.goal-ring-fg { fill:none; stroke:var(--cyan); stroke-width:6; stroke-linecap:round;
+  filter:drop-shadow(0 0 5px var(--cyan)); transition:stroke-dashoffset .5s ease; }
+.goal-head-pct { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:15px; color:var(--cyan); font-weight:700; }
+.goal-earned { color:var(--green); border-color:rgba(92,247,159,.4); background:rgba(92,247,159,.07); }
+.goal-earned ul { margin:6px 0 0; padding-left:18px; }
+.goal-earned li { margin:3px 0; }
+.goal-lane { margin-top:22px; }
+.goal-lane-h { font-family:'Orbitron'; font-size:12px; letter-spacing:3px; text-transform:uppercase;
+  color:var(--gold); margin-bottom:6px; opacity:.9; }
+.goal-card { padding:12px 14px; }
+.goal-card.goal-done { border-color:rgba(92,247,159,.4); background:rgba(92,247,159,.05); }
+.goal-top { display:flex; align-items:center; gap:10px; }
+.goal-obj { flex:1; min-width:0; background:transparent; border:none; border-bottom:1px solid transparent;
+  color:var(--text); font-size:16px; font-weight:600; padding:4px 2px; }
+.goal-obj:focus { outline:none; border-bottom-color:var(--cyan); }
+.goal-done .goal-obj { color:var(--dim); text-decoration:line-through; }
+.goal-x { flex:0 0 auto; color:var(--dim); border-color:var(--line); }
+.goal-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; margin-top:10px; }
+.goal-f { display:flex; flex-direction:column; gap:3px; }
+.goal-f.full { grid-column:1 / -1; }
+.goal-in { font-size:14px; padding:7px 9px; }
+/* the checkbox — a tappable framed check */
+.goal-check { position:relative; flex:0 0 auto; width:26px; height:26px; cursor:pointer; }
+.goal-box { position:absolute; opacity:0; width:26px; height:26px; margin:0; cursor:pointer; }
+.goal-mark { position:absolute; inset:0; border:2px solid var(--line-strong); border-radius:7px;
+  background:var(--panel); transition:.15s; }
+.goal-box:checked + .goal-mark { background:linear-gradient(135deg,var(--green),#2f9c63); border-color:transparent; }
+.goal-box:checked + .goal-mark::after { content:''; position:absolute; left:8px; top:3px; width:6px; height:12px;
+  border:solid #06210f; border-width:0 3px 3px 0; transform:rotate(45deg); }
+.goal-box:focus-visible + .goal-mark { box-shadow:0 0 0 3px rgba(92,240,255,.4); }
+
 /* ── Phone optimization (≤600px): full-screen sheets, fat touch targets,
    single-column forms, and notch-safe padding. Desktop is untouched. ── */
 @media (max-width: 600px) {
@@ -142,6 +179,8 @@ body.hivis .crm-intake-q { font-size:26px; }
 
   /* Capture form goes single-column so fields are full-width and easy to tap */
   .crm-form-grid { grid-template-columns: 1fr; }
+  .goal-grid { grid-template-columns: 1fr; }
+  .goal-check, .goal-box { width: 30px; height: 30px; }
 
   /* Comfortable 44px+ tap targets (Apple/Google guideline) */
   .crm-btn { min-height: 44px; padding: 11px 14px; }

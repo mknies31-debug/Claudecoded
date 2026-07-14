@@ -569,3 +569,65 @@ test('valueViolations catches the same word appearing more than once', () => {
   const hits = valueViolations('price today, price tomorrow');
   assert.equal(hits.filter((h) => h === 'price').length, 2, 'global scan, not just the first match');
 });
+
+// ── Goals & Rewards (the Level-Up layer) ─────────────────────────────────────
+import { seedGoals, sanitizeGoals, toggleGoal, newGoal, computeGoalStats, GROUPS, LANES } from '../shared/goals.mjs';
+
+test('seedGoals produces Mick’s working list, nothing checked', () => {
+  const g = seedGoals();
+  assert.ok(g.length >= 15, 'seeds the full working list');
+  assert.equal(g.every((x) => x.done === false), true, 'starts with every box unchecked');
+  assert.ok(g.some((x) => x.lane === 'professional'));
+  assert.ok(g.some((x) => x.lane === 'personal'));
+  // groups all belong to the declared lane groups (no orphan sections)
+  for (const x of g) assert.ok(GROUPS[x.lane].includes(x.group), `${x.group} is a known ${x.lane} group`);
+  // deterministic ids across two seeds (resume/test safe — no Date.now/random)
+  assert.deepEqual(seedGoals().map((x) => x.id), g.map((x) => x.id));
+});
+
+test('toggleGoal is pure and stamps doneAt only when checked', () => {
+  const g = seedGoals();
+  const id = g[0].id;
+  const on = toggleGoal(g, id, '2026-07-14T12:00:00Z');
+  assert.equal(g[0].done, false, 'original array not mutated');
+  assert.equal(on.find((x) => x.id === id).done, true);
+  assert.equal(on.find((x) => x.id === id).doneAt, '2026-07-14T12:00:00Z');
+  const off = toggleGoal(on, id, '2026-07-14T13:00:00Z');
+  assert.equal(off.find((x) => x.id === id).done, false);
+  assert.equal(off.find((x) => x.id === id).doneAt, null, 'unchecking clears the timestamp');
+});
+
+test('computeGoalStats counts progress and only unlocks rewards once checked', () => {
+  const g = [
+    newGoal({ lane: 'professional', group: 'Now — Next 14 Days', objective: 'A', reward: 'Coffee' }),
+    newGoal({ lane: 'professional', group: 'Now — Next 14 Days', objective: 'B', reward: 'Donut' }),
+    newGoal({ lane: 'personal', group: 'Personal Goals', objective: 'C', reward: 'Sunday off' }),
+  ];
+  let s = computeGoalStats(g);
+  assert.equal(s.total, 3);
+  assert.equal(s.done, 0);
+  assert.equal(s.pct, 0);
+  assert.equal(s.unlockedRewards.length, 0, 'no reward until the box is checked');
+  const checked = toggleGoal(g, g[0].id, 't');
+  s = computeGoalStats(checked);
+  assert.equal(s.done, 1);
+  assert.equal(s.pct, 33);
+  assert.deepEqual(s.unlockedRewards.map((r) => r.reward), ['Coffee']);
+  assert.equal(s.byGroup['professional::Now — Next 14 Days'].done, 1);
+});
+
+test('a checked goal with no reward text does not appear as an unlocked reward', () => {
+  const g = [newGoal({ lane: 'professional', group: 'Next 90 Days', objective: 'streak', done: true, doneAt: 't' })];
+  assert.equal(computeGoalStats(g).unlockedRewards.length, 0);
+});
+
+test('sanitizeGoals drops empty rows and coerces junk safely', () => {
+  const cleaned = sanitizeGoals([
+    { objective: 'Real one', reward: 'x', done: 'yes' }, // truthy-but-not-true done must become false
+    { objective: '', detail: '', reward: '' },           // fully empty → dropped
+    null,
+  ]);
+  assert.equal(cleaned.length, 1);
+  assert.equal(cleaned[0].done, false, 'only strict true counts as done');
+  assert.equal(sanitizeGoals('not an array').length, 0);
+});

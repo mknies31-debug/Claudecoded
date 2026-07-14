@@ -12,6 +12,7 @@ import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates
 import { isFrozen } from '../shared/compliance.mjs';
 import { INTAKE_STEPS, isSkip, applyAnswer, EXTRACTION_PROMPT, parseExtraction } from '../shared/intake.mjs';
 import { planImport, IMPORT_COLUMNS } from '../shared/import.mjs';
+import { GOALS_KEY, LANES, LANE_LABELS, GROUPS, REWARD_LADDER, newGoal, toggleGoal, sanitizeGoals, computeGoalStats, seedGoals } from '../shared/goals.mjs';
 
 // ── tiny local helpers (no dependency on CARVIS lexical scope) ───────────────
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -29,6 +30,16 @@ const getCustomers = () => loadArr(KEYS.customers).map(migrateCustomer).filter(B
 const getLogs = () => loadArr(KEYS.touchLogs);
 function saveCustomers(list) { snapshotHistory(); localStorage.setItem(KEYS.customers, JSON.stringify(list)); pushCloud(); }
 function saveLogs(list) { localStorage.setItem(KEYS.touchLogs, JSON.stringify(list)); pushCloud(); }
+
+// ── Goals & Rewards store (rides the same carvis_ sync + backup) ─────────────
+// First open with no saved list seeds Mick's working list from shared/goals.mjs
+// so the tab is never empty. After that it's whatever he's edited it to.
+function getGoals() {
+  const raw = localStorage.getItem(GOALS_KEY);
+  if (raw == null) { const seed = seedGoals(); saveGoals(seed); return seed; }
+  try { return sanitizeGoals(JSON.parse(raw)); } catch (e) { return []; }
+}
+function saveGoals(list) { try { localStorage.setItem(GOALS_KEY, JSON.stringify(list)); } catch (e) { /* noop */ } pushCloud(); }
 
 // ── automatic local version history (one-tap undo, no manual export needed) ───
 // Before each customer write we stash the PRIOR state under a local-only key
@@ -89,10 +100,12 @@ function buildOverlay() {
           <button class="crm-tab on" data-tab="dashboard">◉ Daily Ops</button>
           <button class="crm-tab" data-tab="add">＋ Add Customer</button>
           <button class="crm-tab" data-tab="pipeline">≣ Pipeline</button>
+          <button class="crm-tab" data-tab="goals">◎ Goals</button>
         </div>
         <div class="crm-pane on" id="crmPaneDashboard"></div>
         <div class="crm-pane" id="crmPaneAdd"></div>
         <div class="crm-pane" id="crmPanePipeline"></div>
+        <div class="crm-pane" id="crmPaneGoals"></div>
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -111,8 +124,10 @@ function render() {
   document.getElementById('crmPaneDashboard').classList.toggle('on', activeTab === 'dashboard');
   document.getElementById('crmPaneAdd').classList.toggle('on', activeTab === 'add');
   document.getElementById('crmPanePipeline').classList.toggle('on', activeTab === 'pipeline');
+  document.getElementById('crmPaneGoals').classList.toggle('on', activeTab === 'goals');
   if (activeTab === 'dashboard') renderDashboard();
   else if (activeTab === 'add') renderAdd();
+  else if (activeTab === 'goals') renderGoals();
   else renderPipeline();
 }
 
@@ -385,6 +400,108 @@ function section(title, count, body) {
   return `<div class="crm-sec"><h4><span class="hbar"></span>${esc(title)}<span class="ct">${count}</span></h4>${body}</div>`;
 }
 
+// ── Goals & Rewards tab ──────────────────────────────────────────────────────
+// The Level-Up layer: Mick's real objectives + rewards, fully editable, with the
+// one rule — no reward until the box is checked. Text edits save on blur (no
+// re-render, so typing keeps focus); checkbox / add / delete / reset re-render.
+function renderGoals() {
+  const goals = getGoals();
+  const stats = computeGoalStats(goals);
+  const C = 2 * Math.PI * 26;
+  const ring = `<svg width="64" height="64" viewBox="0 0 64 64" class="goal-ring">
+      <circle cx="32" cy="32" r="26" class="goal-ring-bg"/>
+      <circle cx="32" cy="32" r="26" class="goal-ring-fg" style="stroke-dasharray:${C};stroke-dashoffset:${C * (1 - stats.pct / 100)}"/></svg>`;
+
+  const head = `<div class="goal-head">
+      <div class="goal-head-ring">${ring}<div class="goal-head-pct">${stats.pct}%</div></div>
+      <div class="goal-head-txt">
+        <div class="cname">${stats.done} of ${stats.total} checked off</div>
+        <div class="cmeta">No reward until the box is checked. That is the whole game.</div>
+      </div>
+    </div>`;
+
+  const rewards = stats.unlockedRewards.length
+    ? `<div class="crm-banner goal-earned">🏆 Earned — you checked the box, take it:<ul>${stats.unlockedRewards.map((r) => `<li><b>${esc(r.reward)}</b>${r.objective ? ` <span class="cmeta">— ${esc(r.objective)}</span>` : ''}</li>`).join('')}</ul></div>`
+    : '';
+
+  const lanes = LANES.map((lane) => {
+    const inLane = goals.filter((g) => g.lane === lane);
+    // Groups in defined order, then any custom groups the user added.
+    const order = (GROUPS[lane] || []).slice();
+    inLane.forEach((g) => { if (!order.includes(g.group)) order.push(g.group); });
+    const groups = order.map((group) => {
+      const rows = inLane.filter((g) => g.group === group);
+      const done = rows.filter((g) => g.done).length;
+      const body = rows.map(goalCard).join('') + `<div class="crm-row" style="margin-top:8px">
+        <button class="crm-btn sm" data-act="goal-add" data-lane="${esc(lane)}" data-group="${esc(group)}" type="button">＋ Add objective</button></div>`;
+      return section(group, `${done}/${rows.length}`, body);
+    }).join('');
+    return `<div class="goal-lane"><div class="goal-lane-h">${esc(LANE_LABELS[lane])}</div>${groups}</div>`;
+  }).join('');
+
+  const ladder = `<div class="crm-sec"><h4><span class="hbar"></span>Rewards Ladder<span class="ct">${REWARD_LADDER.length}</span></h4>
+    ${REWARD_LADDER.map((r) => `<div class="crm-card"><div class="cname">${esc(r.tier)}</div>
+      <div class="cmeta">When: ${esc(r.when)}</div><div class="cmeta">Ideas: ${esc(r.ideas)}</div></div>`).join('')}
+    <div class="crm-empty" style="text-align:left;margin-top:10px">Rules: move a deadline once, fine — twice, split the goal. One big goal at a time per lane. Sunday review, every week, ten minutes.</div>
+    <div class="crm-row" style="margin-top:10px"><button class="crm-btn sm ghost-red" data-act="goals-reset" type="button">↺ Reset to the starting list</button></div>
+  </div>`;
+
+  document.getElementById('crmPaneGoals').innerHTML = head + rewards + lanes + ladder;
+}
+
+function goalCard(g) {
+  const field = (name, val, ph) => `<input class="rin goal-in" data-act="goal-edit" data-id="${esc(g.id)}" data-field="${name}" value="${esc(val)}" placeholder="${esc(ph)}">`;
+  return `<div class="crm-card goal-card ${g.done ? 'goal-done' : ''}" data-id="${esc(g.id)}">
+    <div class="goal-top">
+      <label class="goal-check"><input type="checkbox" class="goal-box" data-act="goal-toggle" data-id="${esc(g.id)}" ${g.done ? 'checked' : ''}><span class="goal-mark"></span></label>
+      <input class="goal-obj" data-act="goal-edit" data-id="${esc(g.id)}" data-field="objective" value="${esc(g.objective)}" placeholder="What are you doing?">
+      <button class="crm-btn sm goal-x" data-act="goal-del" data-id="${esc(g.id)}" type="button" title="Remove">✕</button>
+    </div>
+    <div class="goal-grid">
+      <label class="goal-f"><span class="olabel">Target / Gate</span>${field('detail', g.detail, 'e.g. 100%, 30 days')}</label>
+      <label class="goal-f"><span class="olabel">Deadline</span>${field('deadline', g.deadline, 'a date, or Ongoing')}</label>
+      <label class="goal-f full"><span class="olabel">Reward</span>${field('reward', g.reward, 'what you earn when it is checked')}</label>
+    </div>
+  </div>`;
+}
+
+// ── Goals mutations ──────────────────────────────────────────────────────────
+function toggleGoalDone(id) {
+  const next = toggleGoal(getGoals(), id, new Date().toISOString());
+  saveGoals(next);
+  blip(880, 0.05, 'sine', 0.1);
+  renderGoals();
+}
+function editGoalField(id, field, value) {
+  const allowed = ['objective', 'detail', 'deadline', 'reward'];
+  if (!allowed.includes(field)) return;
+  const list = getGoals();
+  const g = list.find((x) => x.id === id);
+  if (!g) return;
+  g[field] = String(value == null ? '' : value).trim();
+  saveGoals(list); // no re-render: preserves the caret while typing/tabbing
+}
+function addGoal(lane, group) {
+  const list = getGoals();
+  list.push(newGoal({ id: 'goal_' + Date.now().toString(36), lane, group }));
+  saveGoals(list);
+  renderGoals();
+}
+function removeGoal(id) {
+  const list = getGoals();
+  const g = list.find((x) => x.id === id);
+  if (g && (g.objective || g.reward) && !window.confirm('Remove this objective?')) return;
+  saveGoals(list.filter((x) => x.id !== id));
+  renderGoals();
+}
+function resetGoals() {
+  if (!window.confirm('Reset to the starting Goals & Rewards list? Your current edits and check-offs will be replaced.')) return;
+  const seed = seedGoals();
+  saveGoals(seed);
+  toast('Goals reset to the starting list');
+  renderGoals();
+}
+
 // ── events ───────────────────────────────────────────────────────────────────
 function onOverlayClick(e) {
   const tab = e.target.closest('.crm-tab');
@@ -414,11 +531,18 @@ function onOverlayClick(e) {
   if (a === 'pipefilter') { pipeFilter = act.dataset.cat || 'all'; render(); return; }
   if (a === 'history-toggle') { showHistory = !showHistory; render(); return; }
   if (a === 'restore-version') { restoreVersion(act.dataset.ts); return; }
+  if (a === 'goal-add') { addGoal(act.dataset.lane, act.dataset.group); return; }
+  if (a === 'goal-del') { removeGoal(act.dataset.id); return; }
+  if (a === 'goals-reset') { resetGoals(); return; }
 }
 
 function onOverlayChange(e) {
   const sel = e.target.closest('[data-act="variant"]');
   if (sel) { variantChoice.set(sel.dataset.key, sel.value); renderDashboard(); return; }
+  const box = e.target.closest('[data-act="goal-toggle"]');
+  if (box) { toggleGoalDone(box.dataset.id); return; }
+  const gin = e.target.closest('[data-act="goal-edit"]');
+  if (gin) { editGoalField(gin.dataset.id, gin.dataset.field, gin.value); return; } // saves on blur, no re-render → keeps focus
   if ((e.target.id === 'crmPhotoInput' || e.target.id === 'crmFileInput') && e.target.files && e.target.files[0]) {
     const file = e.target.files[0];
     e.target.value = ''; // allow re-picking the same file

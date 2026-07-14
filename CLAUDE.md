@@ -32,10 +32,14 @@ shared/            CLEAN API — isomorphic, dependency-free, browser + node
                      (parseFullName, extractPhone, photo-extraction prompt+parser)
   import.mjs         bulk CSV import — parseCSV, flexible header mapping, dedupe
                      by phone, stage-by-purchase-date planning (planImport)
+  goals.mjs          Goals & Rewards engine (the Level-Up layer) — seed list from
+                     Mick's working file, editable objectives + rewards, progress
+                     math (computeGoalStats). One rule: no reward until checked.
 
 crm/               ROBUST VIEWS — runs in the CARVIS shell (ES module)
   crm.js             mounts the overlay, capture form, dashboard, text queue,
-                     voice intake ("enter customer") + photo capture
+                     voice intake ("enter customer") + photo capture, and the
+                     ◎ Goals tab (edit objectives/rewards, check the box to earn)
   crm.css            CRM-scoped styling on the CARVIS theme tokens
 
 netlify/functions/ ISOLATED SERVICES — secrets + I/O only
