@@ -631,3 +631,39 @@ test('sanitizeGoals drops empty rows and coerces junk safely', () => {
   assert.equal(cleaned[0].done, false, 'only strict true counts as done');
   assert.equal(sanitizeGoals('not an array').length, 0);
 });
+
+// ── Next-step tracker + consent (lean additive fields) ───────────────────────
+import { isActionDue } from '../shared/schema.mjs';
+
+test('newCustomer defaults the next-step + consent fields safely', () => {
+  const c = newCustomer({ firstName: 'A', phone: '5075550101' });
+  assert.equal(c.nextAction, '');
+  assert.equal(c.nextActionDue, '');
+  assert.equal(c.emailConsent, false);
+  assert.equal(c.smsConsent, false);
+  // only strict true counts as consent
+  assert.equal(newCustomer({ emailConsent: 'yes', smsConsent: 1 }).emailConsent, false);
+  assert.equal(newCustomer({ smsConsent: true }).smsConsent, true);
+  // due date is normalized to YYYY-MM-DD like every other date
+  assert.equal(newCustomer({ nextActionDue: '2026-07-20T00:00:00Z' }).nextActionDue, '2026-07-20');
+});
+
+test('isActionDue needs both an action and a due date, and is true only when due', () => {
+  const today = '2026-07-15';
+  assert.equal(isActionDue({ nextAction: 'Call', nextActionDue: '2026-07-15' }, today), true, 'due today');
+  assert.equal(isActionDue({ nextAction: 'Call', nextActionDue: '2026-07-10' }, today), true, 'overdue');
+  assert.equal(isActionDue({ nextAction: 'Call', nextActionDue: '2026-07-20' }, today), false, 'future');
+  assert.equal(isActionDue({ nextAction: 'Call', nextActionDue: '' }, today), false, 'no date');
+  assert.equal(isActionDue({ nextAction: '', nextActionDue: '2026-07-10' }, today), false, 'no action');
+  assert.equal(isActionDue(null, today), false);
+});
+
+test('migrateCustomer back-fills the new fields on an old record', () => {
+  const old = { id: 'c9', firstName: 'B', phone: '5075550102', stage: 2 }; // pre-v2 shape
+  const m = migrateCustomer(old);
+  assert.equal(m.nextAction, '');
+  assert.equal(m.emailConsent, false);
+  assert.equal(m.smsConsent, false);
+  assert.equal(m._v, SCHEMA_VERSION);
+  assert.equal(m.stage, 2); // existing data preserved
+});

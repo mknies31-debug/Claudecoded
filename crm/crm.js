@@ -5,7 +5,7 @@
 // existing CARVIS sync (snapshotStore picks the keys up automatically). The cron
 // writes the same blob, so what the engine does shows up here on next pull.
 
-import { KEYS, newCustomer, validateCustomer, digits, migrateCustomer, CATEGORIES, CATEGORY_LABELS } from '../shared/schema.mjs';
+import { KEYS, newCustomer, validateCustomer, digits, migrateCustomer, CATEGORIES, CATEGORY_LABELS, isActionDue } from '../shared/schema.mjs';
 import { currentSequence, isStagnant, daysSincePurchase, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { hydrate } from '../shared/hydrate.mjs';
 import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
@@ -159,6 +159,7 @@ function renderDashboard() {
       <div class="crm-ro"><div class="v">${textsSentToday.length}</div><div class="l">Texts Sent Today</div></div>
     </div>
     ${sectionHealth()}
+    ${sectionNextActions(customers, today)}
     ${sectionReferral(customers)}
     ${sectionTexts(customers)}
     ${sectionTasks(customers)}
@@ -200,6 +201,31 @@ function sectionHealth() {
       ${stats}${hint}
     </div>`;
   return section('◉ System Health', fmtAgo(lastRun), body);
+}
+
+// Next Actions — the universal to-do. Any contact (buyer or prospect) with a
+// next step whose due date is today or past shows here, soonest first. One tap
+// calls/texts them; ✓ Done clears the step. Set the step on the Add/Edit form.
+function daysWord(dueStr, today) {
+  if (dueStr < today) { const n = Math.round((Date.parse(today) - Date.parse(dueStr)) / 86400000); return `<span class="pill opt">Overdue ${n}d</span>`; }
+  return '<span class="pill stage">Today</span>';
+}
+function sectionNextActions(customers, today) {
+  const due = customers.filter((c) => !isFrozen(c) && isActionDue(c, today)).sort((a, b) => a.nextActionDue.localeCompare(b.nextActionDue));
+  const body = due.length ? due.map((c) => `<div class="crm-card" data-id="${esc(c.id)}">
+      <div class="crm-row between">
+        <div class="crm-idrow">${avatarHTML(c)}<div><div class="cname">${esc(c.firstName)} ${esc(c.lastName || '')}</div>
+        <div class="cmeta">➜ ${esc(c.nextAction)}</div></div></div>
+        ${daysWord(c.nextActionDue, today)}
+      </div>
+      <div class="crm-row" style="margin-top:10px">
+        ${c.phone ? `<a class="crm-btn send sm" href="tel:${esc(digits(c.phone))}">✆ Call</a>` : ''}
+        ${c.phone ? `<a class="crm-btn sm" href="sms:${esc(digits(c.phone))}">✎ Text</a>` : ''}
+        <button class="crm-btn sm" data-act="edit" data-id="${esc(c.id)}">✎ Edit step</button>
+        <button class="crm-btn gold sm" data-act="actiondone" data-id="${esc(c.id)}">✓ Done</button>
+      </div>
+    </div>`).join('') : '<div class="crm-empty">No next steps due. Set a “Next step” + due date on any contact and it lands here when it comes up.</div>';
+  return section('➜ Next Actions — Due', due.length, body);
 }
 
 // Referral loop-close monitor — referredById points at a customer on file.
@@ -366,6 +392,14 @@ function renderAdd(prefill = {}) {
           </select>
         </div>
         <div class="full"><span class="olabel">Other notes</span><textarea class="rin" name="notes" rows="2" placeholder="Trade, family, how they found you…">${v('notes')}</textarea></div>
+        <div><span class="olabel">Next step</span><input class="rin" name="nextAction" placeholder="e.g. Call about trade photos" value="${v('nextAction')}"></div>
+        <div><span class="olabel">Next step due</span><input class="rin" type="date" name="nextActionDue" value="${v('nextActionDue')}"></div>
+        <div class="full"><span class="olabel">Consent <span style="color:var(--dim);text-transform:none;letter-spacing:0">— for the record / future automated sending</span></span>
+          <div class="crm-consent-row">
+            <label class="crm-consent"><input type="checkbox" name="emailConsent" ${prefill.emailConsent ? 'checked' : ''}> Email OK</label>
+            <label class="crm-consent"><input type="checkbox" name="smsConsent" ${prefill.smsConsent ? 'checked' : ''}> Text OK</label>
+          </div>
+        </div>
       </div>
       <div class="crm-err" id="crmAddErr"></div>
       <div class="crm-row">
@@ -411,11 +445,14 @@ function renderPipeline() {
           ${stockLine}
           ${contact ? `<div class="cmeta">${esc(contact)}</div>` : ''}
           ${c.address ? `<div class="cmeta">${esc(c.address)}</div>` : ''}
-          ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}</div></div>
+          ${c.notes ? `<div class="cmeta">✎ ${esc(c.notes)}</div>` : ''}
+          ${c.nextAction ? `<div class="cmeta">➜ ${esc(c.nextAction)}${c.nextActionDue ? ` <span class="pill ${c.nextActionDue <= today ? 'opt' : 'stage'}">${c.nextActionDue <= today ? 'due' : esc(c.nextActionDue)}</span>` : ''}</div>` : ''}</div></div>
           <div class="crm-row">
             ${categoryPill(c)}
             ${frozen ? '<span class="pill opt">OPTED OUT</span>' : (prospect ? '' : `<span class="pill stage">${esc(currentSequence(c).label)}</span>`)}
             ${stale ? '<span class="pill">stagnant</span>' : ''}
+            ${c.emailConsent ? '<span class="pill pill-sold" title="Email consent on file">✉ OK</span>' : ''}
+            ${c.smsConsent ? '<span class="pill pill-sold" title="Text consent on file">✆ OK</span>' : ''}
           </div>
         </div>
         <div class="crm-row" style="margin-top:10px">
@@ -580,6 +617,7 @@ function onOverlayClick(e) {
   if (a === 'pipefilter') { pipeFilter = act.dataset.cat || 'all'; render(); return; }
   if (a === 'history-toggle') { showHistory = !showHistory; render(); return; }
   if (a === 'restore-version') { restoreVersion(act.dataset.ts); return; }
+  if (a === 'actiondone') { clearNextAction(act.dataset.id); render(); return; }
   if (a === 'goal-add') { addGoal(act.dataset.lane, act.dataset.group); return; }
   if (a === 'goal-del') { removeGoal(act.dataset.id); return; }
   if (a === 'goals-reset') { resetGoals(); return; }
@@ -621,6 +659,8 @@ function onOverlaySubmit(e) {
     phone: g('phone'), email: g('email'), address: g('address'), notes: g('notes'),
     purchaseDate: g('purchaseDate'), referredById: g('referredById') || null,
     photo: g('photo'), category: g('category') || 'sold',
+    nextAction: g('nextAction'), nextActionDue: g('nextActionDue'),
+    emailConsent: fd.get('emailConsent') === 'on', smsConsent: fd.get('smsConsent') === 'on',
   };
   const v = validateCustomer(input);
   if (!v.ok) { document.getElementById('crmAddErr').textContent = Object.values(v.errors)[0]; blip(360, 0.06, 'sawtooth', 0.1); return; }
@@ -694,6 +734,18 @@ function markThanked(id) {
   saveCustomers(list); toast('Referral thank-you closed');
 }
 
+// Clear a completed next step. Contact history stays in the touch-log trail;
+// this just takes the item off the To-Do.
+function clearNextAction(id) {
+  const list = getCustomers();
+  const c = list.find((x) => x.id === id);
+  if (!c) return;
+  c.nextAction = ''; c.nextActionDue = '';
+  c.updatedAt = new Date().toISOString();
+  saveCustomers(list);
+  blip(880, 0.05, 'sine', 0.1); toast('Next step cleared');
+}
+
 function toggleOptOut(id) {
   const list = getCustomers();
   const c = list.find((x) => x.id === id);
@@ -760,6 +812,8 @@ function openEditCustomer(id) {
     firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email,
     vehicle: c.vehicle, stockNumber: c.stockNumber, address: c.address, notes: c.notes,
     purchaseDate: c.purchaseDate, referredById: c.referredById || '', photo: c.photo || '', category: c.category || 'sold',
+    nextAction: c.nextAction || '', nextActionDue: c.nextActionDue || '',
+    emailConsent: c.emailConsent === true, smsConsent: c.smsConsent === true,
   });
 }
 

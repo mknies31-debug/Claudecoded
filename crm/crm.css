@@ -129,6 +129,11 @@ body.hivis .crm-intake-q { font-size:26px; }
 .crm-banner { font-size:14px; line-height:1.5; color:var(--gold); background:rgba(255,201,102,.08);
   border:1px solid rgba(255,201,102,.3); border-radius:10px; padding:10px 12px; margin-bottom:14px; }
 
+/* consent checkboxes on the add/edit form */
+.crm-consent-row { display:flex; gap:16px; flex-wrap:wrap; margin-top:2px; }
+.crm-consent { display:flex; align-items:center; gap:7px; font-size:15px; color:var(--text); cursor:pointer; }
+.crm-consent input { width:20px; height:20px; accent-color:var(--green); cursor:pointer; }
+
 /* ── Goals & Rewards tab (the Level-Up layer) ── */
 .goal-head { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
 .goal-head-ring { position:relative; width:64px; height:64px; flex:0 0 auto; }

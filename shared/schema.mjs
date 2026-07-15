@@ -58,6 +58,16 @@ export function newCustomer(input = {}) {
     // 'hot' (engaged prospect), or 'cold' (nurture lead). Defaults to sold so an
     // imported book and old records are treated as buyers.
     category: CATEGORIES.includes(input.category) ? input.category : 'sold',
+    // Universal next-step: what to do next for this contact, and when. A record
+    // with both surfaces on the To-Do (see isActionDue). Last-contact isn't a
+    // field — it's derived from the touch-log audit trail we already keep.
+    nextAction: (input.nextAction || '').trim(),
+    nextActionDue: toDateStr(input.nextActionDue),
+    // Consent flags — tracking only, they do NOT gate today's sends (texts are
+    // hand-fired, emails held), so existing records keep working. They're the
+    // record you'd need the day any automated SMS/email is switched on.
+    emailConsent: input.emailConsent === true,
+    smsConsent: input.smsConsent === true,
     optedOut: input.optedOut === true,
     referredById: input.referredById || null,
     pendingTexts: Array.isArray(input.pendingTexts) ? input.pendingTexts : [],
@@ -73,11 +83,17 @@ export function newCustomer(input = {}) {
 export const CATEGORIES = ['hot', 'cold', 'sold'];
 export const CATEGORY_LABELS = { hot: 'Hot Prospect', cold: 'Cold Lead', sold: 'Sold Customer' };
 
+/** Is this contact's next action due today or overdue? (needs an action + a due date) */
+export function isActionDue(c, todayStr) {
+  if (!c || !c.nextAction || !c.nextActionDue) return false;
+  return c.nextActionDue <= todayStr;
+}
+
 // Bump when the customer shape changes in a way that needs handling on read.
 // migrateCustomer() coerces ANY stored record to the current shape so old data
 // (saved by an earlier version) always upgrades cleanly — no manual fix, no
 // corruption when new fields are added.
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /**
  * Upgrade a stored (possibly old-shaped) customer to the current schema.
