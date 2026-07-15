@@ -13,6 +13,7 @@ import { isFrozen } from '../shared/compliance.mjs';
 import { INTAKE_STEPS, isSkip, applyAnswer, EXTRACTION_PROMPT, parseExtraction } from '../shared/intake.mjs';
 import { planImport, IMPORT_COLUMNS } from '../shared/import.mjs';
 import { GOALS_KEY, LANES, LANE_LABELS, GROUPS, REWARD_LADDER, newGoal, toggleGoal, sanitizeGoals, computeGoalStats, seedGoals } from '../shared/goals.mjs';
+import { computeReferralStats } from '../shared/reporting.mjs';
 
 // ── tiny local helpers (no dependency on CARVIS lexical scope) ───────────────
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -41,8 +42,11 @@ function fmtAgo(iso) {
   if (hrs < 24) return hrs + 'h ago';
   return Math.floor(hrs / 24) + 'd ago';
 }
-function saveCustomers(list) { snapshotHistory(); localStorage.setItem(KEYS.customers, JSON.stringify(list)); pushCloud(); }
-function saveLogs(list) { localStorage.setItem(KEYS.touchLogs, JSON.stringify(list)); pushCloud(); }
+// Let the rest of the app (the index.html dashboard listens) know the store
+// moved — same event the sync hook fires, so one listener covers both paths.
+const announceStore = () => { try { document.dispatchEvent(new CustomEvent('carvis:storeupdated')); } catch (e) { /* noop */ } };
+function saveCustomers(list) { snapshotHistory(); localStorage.setItem(KEYS.customers, JSON.stringify(list)); pushCloud(); announceStore(); }
+function saveLogs(list) { localStorage.setItem(KEYS.touchLogs, JSON.stringify(list)); pushCloud(); announceStore(); }
 
 // ── Goals & Rewards store (rides the same carvis_ sync + backup) ─────────────
 // First open with no saved list seeds Mick's working list from shared/goals.mjs
@@ -93,6 +97,8 @@ let editingId = null; // when set, the Add pane is editing an existing customer
 let importPlan = null; // when set, the Add pane shows the CSV import review
 let showHistory = false; // when true, the Pipeline shows the restore-a-version panel
 let pipeFilter = 'all'; // Pipeline category filter: all | hot | cold | sold
+let captureChoice = null; // Add-tab launcher: which lane's choices are showing — 'photo' | 'file' | null
+let photoQueue = []; // several-photos capture: files still waiting for their turn at the review form
 
 // ── overlay scaffold (built once, appended to body) ──────────────────────────
 function buildOverlay() {
@@ -113,7 +119,7 @@ function buildOverlay() {
           <button class="crm-tab on" data-tab="dashboard">◉ Daily Ops</button>
           <button class="crm-tab" data-tab="add">＋ Add Customer</button>
           <button class="crm-tab" data-tab="pipeline">≣ Pipeline</button>
-          <button class="crm-tab" data-tab="goals">◎ Goals</button>
+          <button class="crm-tab" data-tab="goals" title="Level-Up Goals — objectives and rewards (the Sales Scoreboard with your monthly numbers lives under 📊 on the main screen)">◎ Level-Up</button>
         </div>
         <div class="crm-pane on" id="crmPaneDashboard"></div>
         <div class="crm-pane" id="crmPaneAdd"></div>
@@ -164,8 +170,27 @@ function renderDashboard() {
     ${sectionTexts(customers)}
     ${sectionTasks(customers)}
     ${sectionStagnant(customers, today)}
+    ${sectionScorecard(customers, logs)}
     ${sectionSentList(sentToday, customers)}
   `;
+}
+
+// Referral Scorecard — the ask → in → bought funnel plus who actually sends
+// people. Pure math from shared/reporting.mjs so it can never drift from the
+// engine's idea of the referral window.
+function sectionScorecard(customers, logs) {
+  const s = computeReferralStats(customers, logs);
+  const readouts = `<div class="crm-readouts four">
+      <div class="crm-ro"><div class="v">${s.asked}</div><div class="l">Asked</div></div>
+      <div class="crm-ro"><div class="v">${s.received}</div><div class="l">Referrals In</div></div>
+      <div class="crm-ro"><div class="v">${s.bought}</div><div class="l">Bought</div></div>
+      <div class="crm-ro"><div class="v">${s.conversionPct}%</div><div class="l">Conversion</div></div>
+    </div>`;
+  const sources = s.topSources.length ? `<div class="crm-card"><div class="cname">Top referral sources</div>
+      ${s.topSources.map((t) => `<div class="cmeta">• ${esc(t.name || 'Customer')} — ${t.count} sent, ${t.boughtCount} bought</div>`).join('')}
+    </div>` : '';
+  const nudge = s.received === 0 ? '<div class="crm-empty">Referrals show here once someone you logged as “Referred by” comes in.</div>' : '';
+  return section('⇄ Referral Scorecard', s.received, readouts + sources + nudge);
 }
 
 // System Health — did the daily follow-up engine actually run? Reads the cron's
@@ -349,16 +374,7 @@ function renderAdd(prefill = {}) {
     : (filled ? '<div class="crm-banner" style="color:var(--cyan);border-color:var(--line-strong);background:rgba(92,240,255,.06)">✓ Pulled this in for you — check it over, fix anything, then add. Name and phone are the only musts.</div>' : '');
   document.getElementById('crmPaneAdd').innerHTML = `
     ${editing ? '' : `<div class="crm-capture-label">Add a customer by:</div>
-    <div class="crm-intake-launch">
-      <button class="crm-btn cap gold" id="crmVoiceBtn" type="button">🎙 Voice</button>
-      <button class="crm-btn cap" id="crmPhotoBtn" type="button">📷 Photo</button>
-      <button class="crm-btn cap" id="crmFileBtn" type="button">📄 File / PDF</button>
-      <button class="crm-btn cap" id="crmImportBtn" type="button">⇪ Import CSV</button>
-      <input type="file" id="crmPhotoInput" accept="image/*" capture="environment" hidden>
-      <input type="file" id="crmFileInput" accept="image/*,application/pdf,.pdf" hidden>
-      <input type="file" id="crmImportInput" accept=".csv,text/csv,text/plain" hidden>
-      <span class="crm-launch-or">…or just type it in below</span>
-    </div>`}
+    <div id="crmLaunch">${launcherHTML()}</div>`}
     ${banner}
     <form id="crmAddForm" autocomplete="off">
       <div class="crm-photo-row">
@@ -408,6 +424,42 @@ function renderAdd(prefill = {}) {
       </div>
       <div class="mnote"><span>✦</span><span>Only <b>name</b> and <b>phone</b> are required — skip anything you don't have and fill it in later. Saves locally and rides your existing Data Sync.</span></div>
     </form>`;
+}
+
+// The capture launcher — three lanes in, Photo and File each open a second row
+// of choices when tapped (one contact vs. a batch). The hidden inputs live here
+// too, so refreshing the launcher swaps the whole set together; the delegated
+// change handler on the overlay picks them up regardless.
+function launcherHTML() {
+  const sub = captureChoice === 'photo'
+    ? `<div class="crm-launch-sub">
+        <button class="crm-btn cap sub" id="crmPhotoOneBtn" type="button">One customer</button>
+        <button class="crm-btn cap sub" id="crmPhotoManyBtn" type="button">Several — one per photo</button>
+      </div>`
+    : captureChoice === 'file'
+      ? `<div class="crm-launch-sub">
+        <button class="crm-btn cap sub" id="crmFileOneBtn" type="button">One file — image / PDF</button>
+        <button class="crm-btn cap sub" id="crmImportBtn" type="button">A list — CSV</button>
+      </div>`
+      : '';
+  return `<div class="crm-intake-launch three">
+      <button class="crm-btn cap gold" id="crmVoiceBtn" type="button">🎙 Voice</button>
+      <button class="crm-btn cap ${captureChoice === 'photo' ? 'picked' : ''}" id="crmPhotoBtn" type="button">📷 Photo</button>
+      <button class="crm-btn cap ${captureChoice === 'file' ? 'picked' : ''}" id="crmFileBtn" type="button">📄 File</button>
+      ${sub}
+      <input type="file" id="crmPhotoInput" accept="image/*" capture="environment" hidden>
+      <input type="file" id="crmPhotoMultiInput" accept="image/*" multiple hidden>
+      <input type="file" id="crmFileInput" accept="image/*,application/pdf,.pdf" hidden>
+      <input type="file" id="crmImportInput" accept=".csv,text/csv,text/plain" hidden>
+      <span class="crm-launch-or">…or just type it in below</span>
+    </div>`;
+}
+
+// Swap just the launcher block so anything typed into the form below survives
+// the Photo/File choice toggle.
+function refreshLauncher() {
+  const el = document.getElementById('crmLaunch');
+  if (el) el.innerHTML = launcherHTML();
 }
 
 function categoryPill(c) {
@@ -591,16 +643,19 @@ function resetGoals() {
 // ── events ───────────────────────────────────────────────────────────────────
 function onOverlayClick(e) {
   const tab = e.target.closest('.crm-tab');
-  if (tab) { editingId = null; importPlan = null; showHistory = false; activeTab = tab.dataset.tab; render(); return; }
+  if (tab) { editingId = null; importPlan = null; showHistory = false; captureChoice = null; photoQueue = []; activeTab = tab.dataset.tab; render(); return; }
   if (e.target.closest('#crmVoiceBtn')) { startVoiceIntake(); return; }
-  if (e.target.closest('#crmPhotoBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
-  if (e.target.closest('#crmFileBtn')) { const inp = document.getElementById('crmFileInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmPhotoBtn')) { captureChoice = captureChoice === 'photo' ? null : 'photo'; refreshLauncher(); return; }
+  if (e.target.closest('#crmFileBtn')) { captureChoice = captureChoice === 'file' ? null : 'file'; refreshLauncher(); return; }
+  if (e.target.closest('#crmPhotoOneBtn')) { const inp = document.getElementById('crmPhotoInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmPhotoManyBtn')) { const inp = document.getElementById('crmPhotoMultiInput'); if (inp) inp.click(); return; }
+  if (e.target.closest('#crmFileOneBtn')) { const inp = document.getElementById('crmFileInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmAvatarBtn')) { const inp = document.getElementById('crmAvatarInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmAvatarClear')) { setFormPhoto(''); return; }
   if (e.target.closest('#crmImportBtn')) { const inp = document.getElementById('crmImportInput'); if (inp) inp.click(); return; }
   if (e.target.closest('#crmImportConfirm')) { doImport(); return; }
   if (e.target.closest('#crmImportCancel')) { importPlan = null; renderAdd(); return; }
-  if (e.target.closest('#crmEditCancel')) { editingId = null; activeTab = 'pipeline'; render(); return; }
+  if (e.target.closest('#crmEditCancel')) { editingId = null; if (advancePhotoQueue()) return; activeTab = 'pipeline'; render(); return; }
   const act = e.target.closest('[data-act]');
   if (!act) return;
   const a = act.dataset.act;
@@ -634,6 +689,16 @@ function onOverlayChange(e) {
     const file = e.target.files[0];
     e.target.value = ''; // allow re-picking the same file
     extractFromFile(file);
+  }
+  if (e.target.id === 'crmPhotoMultiInput' && e.target.files && e.target.files.length) {
+    const files = Array.from(e.target.files).filter((f) => /^image\//.test(f.type));
+    e.target.value = '';
+    if (!files.length) { toast('Pick photos — one customer per shot'); return; }
+    // First photo goes straight to extraction; the rest wait their turn and roll
+    // in one at a time as each review form is saved (or cancelled).
+    photoQueue = files.slice(1);
+    if (photoQueue.length) toast(`${files.length} photos — save each one as it comes up`);
+    extractFromFile(files[0], { fromQueue: photoQueue.length > 0 }).then((opened) => { if (!opened) advancePhotoQueue(); });
   }
   if (e.target.id === 'crmImportInput' && e.target.files && e.target.files[0]) {
     const file = e.target.files[0];
@@ -677,7 +742,9 @@ function onOverlaySubmit(e) {
       saveCustomers(list);
       blip(900, 0.06, 'sine', 0.12); toast('Customer updated');
     }
-    editingId = null; activeTab = 'pipeline'; render();
+    editingId = null;
+    if (advancePhotoQueue()) return; // drifted into an edit mid-queue — keep the run going
+    activeTab = 'pipeline'; render();
     return;
   }
 
@@ -694,7 +761,23 @@ function onOverlaySubmit(e) {
   list.push(newCustomer(input));
   saveCustomers(list);
   blip(900, 0.06, 'sine', 0.12); toast('Customer added');
+  if (advancePhotoQueue()) return; // several-photos run: roll straight into the next one
   activeTab = 'dashboard'; render();
+}
+
+// Several-photos capture: pull the next file off the queue and run it through
+// extraction. Returns true when it took over (a photo was waiting), false when
+// the queue is empty and the caller should carry on as normal. Unreadable
+// photos are skipped so one bad shot can't stall the run.
+function advancePhotoQueue() {
+  if (!photoQueue.length) return false;
+  const next = photoQueue.shift();
+  toast(photoQueue.length ? `Next photo — ${photoQueue.length} left after this` : 'Next photo — last one');
+  extractFromFile(next, { fromQueue: true }).then((opened) => {
+    if (opened) return;
+    if (!advancePhotoQueue()) { activeTab = 'dashboard'; if (isOpen()) render(); } // queue ended on a bad photo — land somewhere sane
+  });
+  return true;
 }
 
 // ── mutations ────────────────────────────────────────────────────────────────
@@ -1044,17 +1127,19 @@ function stopIntakeRec() {
 }
 
 // ── photo intake: snap/upload a card or paperwork → extract fields ──────────
-async function extractFromFile(file) {
+// Returns true when it opened the review form, false otherwise — the
+// several-photos queue uses that to skip past a photo it couldn't read.
+async function extractFromFile(file, { fromQueue = false } = {}) {
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   const isImage = /^image\//.test(file.type);
-  if (!isPdf && !isImage) { toast('Use a photo, image, or PDF'); return; }
+  if (!isPdf && !isImage) { toast('Use a photo, image, or PDF'); return false; }
   // Netlify function bodies cap ~6MB and base64 inflates ~33%, so guard the raw size.
-  if (file.size && file.size > 4.5 * 1024 * 1024) { toast('That file is too big — use a photo or a smaller PDF'); return; }
+  if (file.size && file.size > 4.5 * 1024 * 1024) { toast('That file is too big — use a photo or a smaller PDF'); return false; }
   toast(isPdf ? 'Reading the PDF…' : 'Reading the photo…'); blip(620, 0.06, 'sine', 0.12);
   let dataUrl;
-  try { dataUrl = await readFileAsDataURL(file); } catch (e) { toast('Could not read that file'); return; }
+  try { dataUrl = await readFileAsDataURL(file); } catch (e) { toast('Could not read that file'); return false; }
   const m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
-  if (!m) { toast('Unsupported file format'); return; }
+  if (!m) { toast('Unsupported file format'); return false; }
   const [, mediaType, b64] = m;
   const block = isPdf
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }
@@ -1068,15 +1153,18 @@ async function extractFromFile(file) {
       ] }] }),
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) { toast('Read failed — set ANTHROPIC_API_KEY, or type it in'); return; }
+    if (!r.ok) { toast('Read failed — set ANTHROPIC_API_KEY, or type it in'); return false; }
     const text = Array.isArray(d.content) ? d.content.map((p) => p.text || '').join('') : '';
     const draft = parseExtraction(text);
     if (!draft || !(draft.firstName || draft.phone || draft.vehicle || draft.email)) {
-      toast("Couldn't make out the details — type them in"); openAddPrefilled({}); return;
+      // Mid-queue an unreadable shot gets skipped; solo it opens a blank form.
+      if (fromQueue) { toast("Couldn't make out that photo — skipping it"); return false; }
+      toast("Couldn't make out the details — type them in"); openAddPrefilled({}); return true;
     }
     toast('Pulled the details — check them over'); blip(900, 0.06, 'sine', 0.12);
     openAddPrefilled(draft);
-  } catch (e) { toast('Read needs the CARVIS function deployed — type it in instead'); }
+    return true;
+  } catch (e) { toast('Read needs the CARVIS function deployed — type it in instead'); return false; }
 }
 function readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {
@@ -1187,7 +1275,7 @@ function doImport() {
 
 // ── open / close + lifecycle ─────────────────────────────────────────────────
 function openReferrals() { editingId = null; importPlan = null; buildOverlay(); render(); document.getElementById('crmOverlay').classList.add('show'); blip(760, 0.06, 'sine', 0.12); }
-function closeReferrals() { editingId = null; importPlan = null; const o = document.getElementById('crmOverlay'); if (o) o.classList.remove('show'); }
+function closeReferrals() { editingId = null; importPlan = null; captureChoice = null; photoQueue = []; const o = document.getElementById('crmOverlay'); if (o) o.classList.remove('show'); }
 
 function isOpen() { const o = document.getElementById('crmOverlay'); return o && o.classList.contains('show'); }
 
@@ -1226,8 +1314,42 @@ function hookEnterCustomer() {
   wrapGlobal('runCmd', launch);  // chip + command bar + send button
 }
 
+// One-time drain of the legacy silo queue. index.html stages old carvis_hot /
+// carvis_contacts entries under carvis_silo_pending (it never writes the CRM
+// store itself); we fold them in here, skipping anyone already on file by phone
+// digits (or email when there's no phone). No validateCustomer on purpose — a
+// phone-less legacy contact still belongs in the book; the phone can be added
+// on the edit form later.
+function drainSiloQueue() {
+  let raw = null;
+  try { raw = localStorage.getItem('carvis_silo_pending'); } catch (e) { return; }
+  if (raw == null) return;
+  let pending = [];
+  try { const v = JSON.parse(raw); if (Array.isArray(v)) pending = v.filter((x) => x && typeof x === 'object'); } catch (e) { /* junk key → just clear it */ }
+  const list = getCustomers();
+  const phones = new Set(list.map((c) => digits(c.phone)).filter(Boolean));
+  const emails = new Set(list.map((c) => String(c.email || '').trim().toLowerCase()).filter(Boolean));
+  let moved = 0;
+  pending.forEach((p) => {
+    const ph = digits(p.phone);
+    const em = String(p.email || '').trim().toLowerCase();
+    if (ph ? phones.has(ph) : (em && emails.has(em))) return; // already on file
+    list.push(newCustomer({
+      firstName: p.firstName, lastName: p.lastName, phone: p.phone, email: p.email,
+      vehicle: p.vehicle, category: p.category,
+    }));
+    if (ph) phones.add(ph);
+    if (em) emails.add(em);
+    moved += 1;
+  });
+  if (moved) saveCustomers(list);
+  try { localStorage.removeItem('carvis_silo_pending'); } catch (e) { /* noop */ }
+  if (moved) toast(`Moved ${moved} legacy contact${moved === 1 ? '' : 's'} into the CRM`);
+}
+
 function init() {
   buildOverlay();
+  drainSiloQueue();
   hookSync();
   hookEnterCustomer();
   // Wire the topbar button (added in index.html). Esc closes, matching CARVIS.

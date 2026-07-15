@@ -88,6 +88,7 @@ body.hivis #crmOverlay .modal { max-width: 880px; }
 .crm-empty { font-family:var(--mono); font-size:14px; color:var(--dim); text-align:center;
   padding:16px; border:1px dashed var(--line); border-radius:10px; }
 .crm-readouts { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:6px; }
+.crm-readouts.four { grid-template-columns:repeat(4,1fr); }
 .crm-ro { background:rgba(92,240,255,.04); border:1px solid var(--line); border-radius:10px; padding:11px; text-align:center; }
 .crm-ro .v { font-family:var(--mono); font-size:24px; color:var(--cyan); }
 .crm-ro .l { font-size:12px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; margin-top:3px; }
@@ -101,8 +102,13 @@ body.hivis #crmOverlay .modal { max-width: 880px; }
 .crm-capture-label { font-family:'Orbitron'; font-size:13px; letter-spacing:1px; text-transform:uppercase;
   color:var(--cyan); margin-bottom:9px; }
 .crm-intake-launch { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.crm-intake-launch.three { grid-template-columns:repeat(3,1fr); }
 .crm-btn.cap { justify-content:center; font-size:15px; letter-spacing:.5px; padding:14px 10px; text-transform:none;
   border-color:var(--line-strong); }
+.crm-btn.cap.picked { color:var(--cyan); background:rgba(92,240,255,.08); box-shadow:0 0 10px rgba(92,240,255,.15) inset; }
+/* the One/Several choice row that opens under Photo or File */
+.crm-launch-sub { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.crm-btn.cap.sub { font-size:14px; padding:12px 10px; border-style:dashed; }
 .crm-launch-or { grid-column:1 / -1; font-family:var(--mono); font-size:13px; color:var(--dim); letter-spacing:.3px; text-align:center; margin-top:2px; }
 textarea.rin { resize:vertical; min-height:46px; font-family:inherit; }
 
@@ -198,9 +204,14 @@ body.hivis .crm-intake-q { font-size:26px; }
   .crm-intake-launch, .crm-photo-actions { flex-wrap: wrap; }
   .crm-row .crm-btn.send { flex: 1; }
 
+  /* Capture launcher: keep every lane and choice a fat ≥44px target */
+  .crm-btn.cap { min-height: 52px; }
+  .crm-btn.cap.sub { min-height: 48px; }
+
   /* Stat readouts: a touch tighter so three still fit a narrow screen */
   .crm-readouts { gap: 7px; }
   .crm-ro .v { font-size: 21px; }
+  .crm-readouts.four { grid-template-columns: repeat(2, 1fr); }
 
   /* Bigger spoken-intake question, roomier mic button */
   .crm-intake-q { font-size: 24px; }
