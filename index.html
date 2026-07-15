@@ -822,7 +822,7 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       <div class="numgrid">
         <div><span class="olabel">Cars sold</span><input type="number" min="0" step="1" inputmode="numeric" id="numSold" class="rin" style="margin-top:0" placeholder="0"></div>
         <div><span class="olabel">Cars bought</span><input type="number" min="0" step="1" inputmode="numeric" id="numBought" class="rin" style="margin-top:0" placeholder="0"></div>
-        <div><span class="olabel">Deals closed</span><input type="number" min="0" step="1" inputmode="numeric" id="numDeals" class="rin" style="margin-top:0" placeholder="0"></div>
+        <div><span class="olabel">Deals (auto)</span><input type="number" id="numDeals" class="rin" style="margin-top:0;opacity:.7" value="0" readonly tabindex="-1" title="Deals = cars sold + cars bought, calculated for you"></div>
       </div>
       <button class="rgen" id="numSave">◉ SAVE THIS MONTH</button>
       <div class="ostat" id="numStat"></div>
@@ -831,7 +831,7 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       <div class="numgrid">
         <div><span class="olabel">Sold goal</span><input type="number" min="0" step="1" inputmode="numeric" id="goalSold" class="rin" style="margin-top:0" placeholder="0"></div>
         <div><span class="olabel">Buy goal</span><input type="number" min="0" step="1" inputmode="numeric" id="goalBuy" class="rin" style="margin-top:0" placeholder="0"></div>
-        <div><span class="olabel">Deal goal</span><input type="number" min="0" step="1" inputmode="numeric" id="goalDeal" class="rin" style="margin-top:0" placeholder="0"></div>
+        <div><span class="olabel">Deal goal (auto)</span><input type="number" id="goalDeal" class="rin" style="margin-top:0;opacity:.7" value="0" readonly tabindex="-1" title="Deal goal = sold goal + buy goal"></div>
       </div>
       <button class="rgen" id="goalSave" style="background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205">◉ SAVE GOALS</button>
 
@@ -910,9 +910,12 @@ function prettyMonth(key){ const [y,m]=key.split('-'); return new Date(+y,+m-1,1
 function shortMonth(d){ return d.toLocaleString('en-US',{month:'short'}).toUpperCase(); }
 function loadMonths(){ try{ const m=JSON.parse(localStorage.getItem(MONTHS_KEY)||'{}'); return (m&&typeof m==='object'&&!Array.isArray(m))?m:{}; }catch(e){ return {}; } }
 function saveMonths(m){ try{ localStorage.setItem(MONTHS_KEY, JSON.stringify(m)); }catch(e){} scheduleCloudPush(); }
-function loadGoals(){ try{ const g=JSON.parse(localStorage.getItem(GOALS_KEY)||'{}')||{}; return {soldGoal:+g.soldGoal||0, buyGoal:+g.buyGoal||0, dealGoal:+g.dealGoal||0}; }catch(e){ return {soldGoal:0,buyGoal:0,dealGoal:0}; } }
+// Deal goal is derived too: hit your sold goal + your buy goal = your deal goal.
+function loadGoals(){ try{ const g=JSON.parse(localStorage.getItem(GOALS_KEY)||'{}')||{}; const soldGoal=+g.soldGoal||0, buyGoal=+g.buyGoal||0; return {soldGoal, buyGoal, dealGoal:soldGoal+buyGoal}; }catch(e){ return {soldGoal:0,buyGoal:0,dealGoal:0}; } }
 function saveGoals(g){ try{ localStorage.setItem(GOALS_KEY, JSON.stringify(g)); }catch(e){} scheduleCloudPush(); }
-function monthData(key){ const m=loadMonths()[key]||{}; return {sold:+m.sold||0, bought:+m.bought||0, deals:+m.deals||0}; }
+// Deals is derived, not entered: a deal is a car that changed hands, so the
+// month's deals = cars sold + cars bought. (Any legacy stored `deals` is ignored.)
+function monthData(key){ const m=loadMonths()[key]||{}; const sold=+m.sold||0, bought=+m.bought||0; return {sold, bought, deals:sold+bought}; }
 // Total cars sold across every month of the given year (defaults to this year).
 function yearSold(d){ const y=(d||new Date()).getFullYear()+'-'; const m=loadMonths(); let n=0; for(const k in m){ if(k.indexOf(y)===0) n+=(+m[k].sold||0); } return n; }
 let STATS={sold:0,bought:0,deals:0,soldGoal:0,buyGoal:0,dealGoal:0};
@@ -1785,8 +1788,11 @@ async function askCarvis(){
 function loadMonthIntoForm(key){ const m=monthData(key);
   $('#numSold').value   = m.sold   || '';
   $('#numBought').value = m.bought || '';
-  $('#numDeals').value  = m.deals  || '';
+  syncNumDeals();
 }
+// Keep the read-only "Deals (auto)" box in step with sold + bought as they're typed.
+function syncNumDeals(){ const d=(Math.floor(+$('#numSold').value||0))+(Math.floor(+$('#numBought').value||0)); const e=$('#numDeals'); if(e) e.value=d; }
+function syncGoalDeal(){ const d=(Math.floor(+$('#goalSold').value||0))+(Math.floor(+$('#goalBuy').value||0)); const e=$('#goalDeal'); if(e) e.value=d; }
 function renderHistory(){
   const host=$('#numHistory'); if(!host) return;
   const m=loadMonths(), keys=Object.keys(m).sort().reverse();
@@ -1797,7 +1803,7 @@ function renderHistory(){
 }
 function openNumbers(){
   const mk=monthKey(); $('#numMonth').value=mk; loadMonthIntoForm(mk);
-  const g=loadGoals(); $('#goalSold').value=g.soldGoal||''; $('#goalBuy').value=g.buyGoal||''; $('#goalDeal').value=g.dealGoal||'';
+  const g=loadGoals(); $('#goalSold').value=g.soldGoal||''; $('#goalBuy').value=g.buyGoal||''; syncGoalDeal();
   renderHistory(); $('#numStat').textContent=''; $('#numStat').className='ostat';
   $('#numOverlay').classList.add('show');
 }
@@ -1806,14 +1812,15 @@ const numClamp=(v,max)=>{ v=Math.floor(+v||0); if(v<0)v=0; if(max!=null&&v>max)v
 function saveMonthFromForm(){
   const key=$('#numMonth').value || monthKey();
   const m=loadMonths();
-  m[key]={ sold:numClamp($('#numSold').value), bought:numClamp($('#numBought').value),
-           deals:numClamp($('#numDeals').value) };
+  // Store only the two real figures; deals is derived (sold + bought) on read.
+  m[key]={ sold:numClamp($('#numSold').value), bought:numClamp($('#numBought').value) };
   saveMonths(m); renderHistory(); renderStats();
   $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Saved '+prettyMonth(key);
   toast('Numbers saved'); blip(900,0.07,'sine',0.12);
 }
 function saveGoalsFromForm(){
-  saveGoals({ soldGoal:numClamp($('#goalSold').value), buyGoal:numClamp($('#goalBuy').value), dealGoal:numClamp($('#goalDeal').value) });
+  // Deal goal is derived (sold goal + buy goal) — store only the two you set.
+  saveGoals({ soldGoal:numClamp($('#goalSold').value), buyGoal:numClamp($('#goalBuy').value) });
   renderStats(); $('#numStat').className='ostat ok'; $('#numStat').textContent='✓ Goals saved';
   toast('Goals saved'); blip(820,0.07,'sine',0.12);
 }
@@ -1899,6 +1906,11 @@ function init(){
   $('#numSave').addEventListener('click', saveMonthFromForm);
   $('#goalSave').addEventListener('click', saveGoalsFromForm);
   $('#numMonth').addEventListener('change', e=>loadMonthIntoForm(e.target.value));
+  // Live-total the read-only "Deals (auto)" / "Deal goal (auto)" boxes as you type.
+  $('#numSold').addEventListener('input', syncNumDeals);
+  $('#numBought').addEventListener('input', syncNumDeals);
+  $('#goalSold').addEventListener('input', syncGoalDeal);
+  $('#goalBuy').addEventListener('input', syncGoalDeal);
   $('#numHistory').addEventListener('click', e=>{ const r=e.target.closest('.numrow'); if(!r) return; $('#numMonth').value=r.dataset.k; loadMonthIntoForm(r.dataset.k); });
   if(getSyncKey()) cloudPull({quiet:true});
   // refresh when returning to an already-open tab: flush our own pending edits
