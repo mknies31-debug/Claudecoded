@@ -157,6 +157,20 @@
   .hero .g b{color:var(--gold)}
 
   .gauges{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+  /* deals pace */
+  .pace{width:100%;max-width:360px;margin-top:4px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(92,240,255,.04)}
+  .pace.nogoal{opacity:.7}
+  .pace-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+  .pace-t{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px;color:var(--dim)}
+  .pace-badge{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:1px;padding:2px 9px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
+  .pace-badge.ok{color:var(--green);border-color:rgba(92,247,159,.5);background:rgba(92,247,159,.09)}
+  .pace-badge.bad{color:var(--red);border-color:rgba(255,121,134,.5);background:rgba(255,121,134,.09)}
+  .pace-bar{position:relative;height:12px;border-radius:7px;background:rgba(255,255,255,.06);overflow:hidden;border:1px solid var(--line)}
+  .pace-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:7px;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .5s ease}
+  .pace-target{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--gold);box-shadow:0 0 6px var(--gold);z-index:2;transition:left .5s ease}
+  .pace-legend{display:flex;justify-content:space-between;margin-top:7px;font-family:var(--mono);font-size:13px;color:var(--text)}
+  .pace-legend span:last-child{color:var(--cyan)}
+  .pace-note{margin-top:5px;font-family:var(--mono);font-size:12px;color:var(--dim);line-height:1.4}
   .gauge{display:flex;flex-direction:column;align-items:center;gap:7px;width:96px}
   .gauge svg{transform:rotate(-90deg)}
   .gauge .track2{fill:none;stroke:rgba(47,230,255,.1);stroke-width:7}
@@ -607,6 +621,12 @@
         <svg class="spark" id="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2fe6ff"/><stop offset="1" stop-color="#2fe6ff" stop-opacity="0"/></linearGradient></defs><path id="sparkFill"/><path id="sparkLine"/></svg>
       </div>
       <div class="gauges" id="gauges"></div>
+      <div class="pace" id="dealPace">
+        <div class="pace-h"><span class="pace-t">DEALS PACE</span><span class="pace-badge" id="paceBadge">—</span></div>
+        <div class="pace-bar"><div class="pace-target" id="paceTarget"></div><div class="pace-fill" id="paceFill"></div></div>
+        <div class="pace-legend"><span id="paceActual">0 of 0</span><span id="paceLeft">—</span></div>
+        <div class="pace-note" id="paceNote">Set a deal goal in 📊 Numbers to track pace.</div>
+      </div>
       <div class="quote" id="quote"></div>
     </div>
 
@@ -919,6 +939,54 @@ function monthData(key){ const m=loadMonths()[key]||{}; const sold=+m.sold||0, b
 // Total cars sold across every month of the given year (defaults to this year).
 function yearSold(d){ const y=(d||new Date()).getFullYear()+'-'; const m=loadMonths(); let n=0; for(const k in m){ if(k.indexOf(y)===0) n+=(+m[k].sold||0); } return n; }
 let STATS={sold:0,bought:0,deals:0,soldGoal:0,buyGoal:0,dealGoal:0};
+
+/* ---------- deals pace (custom month curve) ----------
+   Mick's pacing, not a flat line: the first 10 days count as the opening
+   stretch (target 25% by day 10), the 17th is the halfway mark (50%), and the
+   remainder of the month carries the back-half push to 100% by the last day.
+   A month-end car business runs hot late, so the curve accelerates. */
+function lerp(x, x0, x1, y0, y1){ return x1===x0 ? y1 : y0 + (y1-y0)*((x-x0)/(x1-x0)); }
+function dealPacePct(day, dim){
+  day = Math.max(0, Math.min(day, dim));
+  if(day<=10) return lerp(day, 0,10, 0,25);
+  if(day<=17) return lerp(day, 10,17, 25,50);
+  return lerp(day, 17,dim, 50,100);
+}
+function dealPace(d){
+  d = d || new Date();
+  const day = d.getDate(), dim = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  const goal = STATS.dealGoal||0, actual = STATS.deals||0;
+  const expPct = dealPacePct(day, dim), expected = Math.round(goal*expPct/100);
+  const remaining = Math.max(0, goal-actual);
+  const pctLeft = goal>0 ? Math.max(0, Math.round(remaining/goal*100)) : null;
+  const donePct = goal>0 ? Math.min(100, Math.round(actual/goal*100)) : 0;
+  const delta = actual-expected;
+  const status = goal<=0 ? 'none' : (delta>=1 ? 'ahead' : (delta<=-1 ? 'behind' : 'on'));
+  return {day, dim, goal, actual, expPct, expected, remaining, pctLeft, donePct, delta, status};
+}
+function renderPace(){
+  const host=$('#dealPace'); if(!host) return;
+  const p=dealPace();
+  const badge=$('#paceBadge'), fill=$('#paceFill'), tgt=$('#paceTarget'), act=$('#paceActual'), left=$('#paceLeft'), note=$('#paceNote');
+  if(p.goal<=0){
+    host.classList.add('nogoal');
+    if(badge){ badge.textContent='SET GOAL'; badge.className='pace-badge'; }
+    if(fill) fill.style.width='0%'; if(tgt) tgt.style.left='0%';
+    if(act) act.textContent=`${p.actual} deals`; if(left) left.textContent='';
+    if(note) note.textContent='Set a deal goal in 📊 Numbers to track pace.';
+    return;
+  }
+  host.classList.remove('nogoal');
+  if(fill) fill.style.width=p.donePct+'%';
+  if(tgt) tgt.style.left=Math.min(100,Math.round(p.expPct))+'%';
+  if(act) act.textContent=`${p.actual} of ${p.goal} deals`;
+  if(left) left.textContent=`${p.pctLeft}% to go`;
+  const LABEL={ahead:['AHEAD','ok'], on:['ON PACE','ok'], behind:['BEHIND','bad']};
+  const [txt,cls]=LABEL[p.status]||['—',''];
+  const sign=p.delta>0?`+${p.delta}`:`${p.delta}`;
+  if(badge){ badge.textContent = p.status==='on' ? txt : `${txt} ${sign}`; badge.className='pace-badge '+cls; }
+  if(note) note.textContent=`Target by day ${p.day}: ${p.expected} of ${p.goal} (${Math.round(p.expPct)}%). ${p.remaining} deal${p.remaining===1?'':'s'} left.`;
+}
 function refreshStats(){ STATS={...monthData(monthKey()), ...loadGoals()}; return STATS; }
 function gaugeVals(key){ const s=STATS;
   if(key==='sold')   return {val:s.sold,   max:s.soldGoal};
@@ -943,7 +1011,7 @@ function renderStats(){
   const set=(id,v)=>{ const e=$('#'+id); if(e) e.textContent=v; };
   set('roSold',STATS.sold); set('roBought',STATS.bought);
   set('roLeads', (typeof HOT!=='undefined'?HOT.length:0)); set('roInv', (typeof INVENTORY!=='undefined'?INVENTORY.length:0));
-  renderTicker(); drawChart(); buildSpark();
+  renderPace(); renderTicker(); drawChart(); buildSpark();
 }
 
 /* ---------- BOOT ---------- */
