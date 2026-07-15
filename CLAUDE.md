@@ -35,6 +35,9 @@ shared/            CLEAN API — isomorphic, dependency-free, browser + node
   goals.mjs          Goals & Rewards engine (the Level-Up layer) — seed list from
                      Mick's working file, editable objectives + rewards, progress
                      math (computeGoalStats). One rule: no reward until checked.
+  reporting.mjs      referral scorecard math — computeReferralStats(customers,
+                     touchLogs): asked / received / bought / thank-you pending /
+                     top sources / conversion %.
 
 crm/               ROBUST VIEWS — runs in the CARVIS shell (ES module)
   crm.js             mounts the overlay, capture form, dashboard, text queue,
@@ -59,9 +62,13 @@ state in `localStorage` under `carvis_referral_*`, which `snapshotStore()`
 already pushes to Netlify Blobs (store `carvis-sync`, key `sha256(syncKey)`). The
 cron opens the **same** blob using `CRM_SYNC_KEY`.
 
-- `carvis_referral_customers` — array of customers
+- `carvis_referral_customers` — array of customers (**the single contact store**;
+  the dashboard Hot Prospects panel and the Outreach recipient list both derive
+  from it — the legacy `carvis_hot` / `carvis_contacts` silos were merged in via
+  a one-time queue, raw backup kept under `carvis_silo_backup`)
 - `carvis_referral_touchlogs` — array of touch logs (the audit trail)
-- `carvis_referral_meta`      — `{ lastRun, templatesApproved }`
+- `carvis_referral_meta`      — `{ lastRun, lastReport, templatesApproved }`
+- `carvis_referral_goals`     — the Goals & Rewards (Level-Up) list
 
 See `shared/schema.mjs` for field-by-field shapes.
 
