@@ -171,6 +171,11 @@
   .pace-legend{display:flex;justify-content:space-between;margin-top:7px;font-family:var(--mono);font-size:13px;color:var(--text)}
   .pace-legend span:last-child{color:var(--cyan)}
   .pace-note{margin-top:5px;font-family:var(--mono);font-size:12px;color:var(--dim);line-height:1.4}
+  /* inventory freshness */
+  .invfresh{margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--green);line-height:1.4;letter-spacing:.3px}
+  .invfresh:empty{display:none}
+  .invfresh.stale{color:var(--gold)}
+  .invfresh b{color:inherit}
   .gauge{display:flex;flex-direction:column;align-items:center;gap:7px;width:96px}
   .gauge svg{transform:rotate(-90deg)}
   .gauge .track2{fill:none;stroke:rgba(47,230,255,.1);stroke-width:7}
@@ -575,6 +580,7 @@
             <div class="ro"><div class="v" id="roLeads">0</div><div class="l">Pipeline</div></div>
             <div class="ro"><div class="v" id="roInv">0</div><div class="l">Inventory</div></div>
           </div>
+          <div class="invfresh" id="invFresh" title="When the inventory feed was last refreshed"></div>
         </div>
       </div>
       <div class="panel hp">
@@ -1011,7 +1017,7 @@ function renderStats(){
   const set=(id,v)=>{ const e=$('#'+id); if(e) e.textContent=v; };
   set('roSold',STATS.sold); set('roBought',STATS.bought);
   set('roLeads', (typeof HOT!=='undefined'?HOT.length:0)); set('roInv', (typeof INVENTORY!=='undefined'?INVENTORY.length:0));
-  renderPace(); renderTicker(); drawChart(); buildSpark();
+  renderPace(); renderInvFresh(); renderTicker(); drawChart(); buildSpark();
 }
 
 /* ---------- BOOT ---------- */
@@ -1333,12 +1339,23 @@ async function sendOutreach(){
    falls back to these samples until the crawl runs. */
 const vmoney = n => '$'+(+n||0).toLocaleString();
 const MAKES=['ford','chevrolet','chevy','gmc','ram','dodge','jeep','chrysler','toyota','honda','kia','hyundai','nissan','subaru','mazda','buick','cadillac','lincoln','volkswagen','vw','tesla','lexus','acura','volvo','audi','bmw'];
-let INVENTORY=[], vCur=null, vMatches=[];
+let INVENTORY=[], vCur=null, vMatches=[], INV_UPDATED=null;
 // Real inventory only (inventory.json, scraped from mosaicautos.com).
 // No sample fallback — if it can't load, car lookups simply report no match.
 async function loadInventory(){
-  try{ const r=await fetch('inventory.json',{cache:'no-store'}); if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.vehicles)&&d.vehicles.length) INVENTORY=d.vehicles; } }catch(e){}
+  try{ const r=await fetch('inventory.json',{cache:'no-store'}); if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.vehicles)&&d.vehicles.length){ INVENTORY=d.vehicles; INV_UPDATED=d.updated||d.generated||null; } } }catch(e){}
   try{ renderStats(); }catch(e){}   // refresh the Inventory readout once loaded
+}
+// Inventory freshness — a car lot changes daily, so flag a stale feed loudly.
+function renderInvFresh(){
+  const el=$('#invFresh'); if(!el) return;
+  if(!INV_UPDATED){ el.textContent=''; el.className='invfresh'; return; }
+  const t=Date.parse(INV_UPDATED); if(isNaN(t)){ el.textContent=''; return; }
+  const days=Math.floor((Date.now()-t)/86400000);
+  const ago = days<1?'today' : days===1?'yesterday' : days<14?days+' days ago' : days<60?Math.floor(days/7)+' weeks ago' : Math.floor(days/30)+' months ago';
+  const stale = days>=7;
+  el.className='invfresh'+(stale?' stale':'');
+  el.innerHTML = `${stale?'⚠ ':'●'} Inventory feed updated <b>${ago}</b>${stale?' — verify live on mosaicautos.com before quoting':''}`;
 }
 const vTitle=v=>`${v.year||''} ${v.make||''} ${v.model||''} ${v.trim||''}`.replace(/\s+/g,' ').trim();
 function isCarQuery(q){

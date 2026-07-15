@@ -28,6 +28,19 @@ function loadArr(key) { try { const v = JSON.parse(localStorage.getItem(key) || 
 // so a software update can never misread or corrupt data saved by an old version.
 const getCustomers = () => loadArr(KEYS.customers).map(migrateCustomer).filter(Boolean);
 const getLogs = () => loadArr(KEYS.touchLogs);
+// meta { lastRun, lastReport, templatesApproved } — the cron writes it, sync
+// pulls it here, so we can show whether the follow-up engine actually ran.
+const getMeta = () => { try { const m = JSON.parse(localStorage.getItem(KEYS.meta) || '{}'); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; } catch (e) { return {}; } };
+function fmtAgo(iso) {
+  if (!iso) return 'never';
+  const t = Date.parse(iso); if (Number.isNaN(t)) return 'unknown';
+  const mins = Math.floor((Date.now() - t) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
 function saveCustomers(list) { snapshotHistory(); localStorage.setItem(KEYS.customers, JSON.stringify(list)); pushCloud(); }
 function saveLogs(list) { localStorage.setItem(KEYS.touchLogs, JSON.stringify(list)); pushCloud(); }
 
@@ -145,12 +158,48 @@ function renderDashboard() {
       <div class="crm-ro"><div class="v">${heldToday.length}</div><div class="l">Held (need copy)</div></div>
       <div class="crm-ro"><div class="v">${textsSentToday.length}</div><div class="l">Texts Sent Today</div></div>
     </div>
+    ${sectionHealth()}
     ${sectionReferral(customers)}
     ${sectionTexts(customers)}
     ${sectionTasks(customers)}
     ${sectionStagnant(customers, today)}
     ${sectionSentList(sentToday, customers)}
   `;
+}
+
+// System Health — did the daily follow-up engine actually run? Reads the cron's
+// last report out of synced meta. Stale (or never) is the thing to catch: a
+// silent cron means no emails/texts are going out and you'd never know.
+function sectionHealth() {
+  const meta = getMeta();
+  const lastRun = meta.lastRun || null;
+  const r = meta.lastReport || null;
+  const t = lastRun ? Date.parse(lastRun) : NaN;
+  const stale = !lastRun || Number.isNaN(t) || (Date.now() - t) > 36 * 3600 * 1000; // ~1.5 days
+  const cls = !lastRun ? 'warn' : (stale ? 'alert' : '');
+  const dot = !lastRun ? '○' : (stale ? '⚠' : '●');
+  const runLine = lastRun
+    ? `Last run ${fmtAgo(lastRun)} · ${new Date(lastRun).toLocaleString()}`
+    : 'The daily follow-up engine has not reported a run yet.';
+  const failed = r && r.emailsFailed ? `<span class="pill opt">${r.emailsFailed} email${r.emailsFailed === 1 ? '' : 's'} failed</span>` : '';
+  const stats = r ? `<div class="crm-row" style="margin-top:8px;gap:14px 16px">
+      <span class="cmeta">✉ ${r.emailsSent || 0} sent</span>
+      <span class="cmeta">⏸ ${r.emailsHeld || 0} held</span>
+      <span class="cmeta">✆ ${r.textsQueued || 0} texts queued</span>
+      <span class="cmeta">◦ ${r.tasksQueued || 0} tasks</span>
+      <span class="cmeta">⊘ ${r.skippedOptedOut || 0} opted out</span>
+    </div>` : '';
+  const hint = stale
+    ? `<div class="cmeta" style="margin-top:8px">${lastRun
+        ? 'No run in over a day — check Netlify → Functions → daily-runner (Run now) and that CRM_SYNC_KEY matches your ⇅ Sync key.'
+        : 'Once CRM_SYNC_KEY is set and the cron runs, open the app so its report syncs here. Texts still work by hand meanwhile.'}</div>`
+    : '';
+  const body = `<div class="crm-card ${cls}">
+      <div class="crm-row between"><div class="cname">${dot} Follow-up engine</div>${failed}</div>
+      <div class="cmeta">${esc(runLine)}</div>
+      ${stats}${hint}
+    </div>`;
+  return section('◉ System Health', fmtAgo(lastRun), body);
 }
 
 // Referral loop-close monitor — referredById points at a customer on file.
