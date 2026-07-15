@@ -591,16 +591,7 @@
         <div class="ph"><span class="hbar"></span><h3>Hot Prospects</h3><span class="meta" id="hotMeta">0</span></div>
         <div class="pbody">
           <div class="hot-add">
-            <input id="hotName" class="hin" placeholder="Name — most important contact">
-            <input id="hotNote" class="hin" placeholder="Vehicle / why they matter (optional)">
-            <div class="hot-row">
-              <div class="heatpick" id="hotHeat">
-                <button data-h="hot" class="on">🔥 HOT</button>
-                <button data-h="warm">WARM</button>
-                <button data-h="cool">COOL</button>
-              </div>
-              <button class="hadd" id="hotAdd">＋ ADD</button>
-            </div>
+            <button class="hadd" id="hotAdd" style="width:100%">＋ ADD A HOT PROSPECT</button>
           </div>
           <div id="hotList"></div>
         </div>
@@ -631,7 +622,7 @@
         <div class="pace-h"><span class="pace-t">DEALS PACE</span><span class="pace-badge" id="paceBadge">—</span></div>
         <div class="pace-bar"><div class="pace-target" id="paceTarget"></div><div class="pace-fill" id="paceFill"></div></div>
         <div class="pace-legend"><span id="paceActual">0 of 0</span><span id="paceLeft">—</span></div>
-        <div class="pace-note" id="paceNote">Set a deal goal in 📊 Numbers to track pace.</div>
+        <div class="pace-note" id="paceNote">Set a deal goal in 📊 Scoreboard to track pace.</div>
       </div>
       <div class="quote" id="quote"></div>
     </div>
@@ -668,11 +659,11 @@
     <button class="mic" id="replyBtn" title="Reply to a buyer's Marketplace message" style="font-size:18px">✉</button>
     <button class="mic" id="outreachBtn" title="Send a referral / sold-customer email" style="font-size:17px">📧</button>
     <button class="mic" id="carBtn" title="Find a car / ask about inventory" style="font-size:18px">🚗</button>
-    <button class="mic" id="statsBtn" title="Enter monthly sales numbers (backfill any month)" style="font-size:17px">📊</button>
+    <button class="mic" id="statsBtn" title="Sales scoreboard — enter your monthly totals (backfill any month)" style="font-size:17px">📊</button>
     <div class="chips">
       <div class="chip" data-cmd="ask">◉ Ask CARVIS</div>
       <div class="chip" data-cmd="enter customer">⇄ Enter Customer</div>
-      <div class="chip" data-cmd="numbers">📊 Numbers</div>
+      <div class="chip" data-cmd="numbers">📊 Scoreboard</div>
       <div class="chip" data-cmd="findcar">🚗 Find a car</div>
       <div class="chip" data-cmd="reply">✉ Buyer reply</div>
       <div class="chip" data-cmd="outreach">📧 Outreach</div>
@@ -731,17 +722,7 @@
       <span class="olabel">Recipient</span>
       <select class="rsel" id="oContact"></select>
       <div class="orow"><input class="rin" id="oName" placeholder="Name" style="flex:1;margin-top:0"><input class="rin" id="oTo" placeholder="email@address.com" style="flex:2;margin-top:0"></div>
-      <button class="omanage" id="oManageToggle" type="button">＋ Manage / import contacts</button>
-      <div class="omg hidden" id="oManage">
-        <textarea class="rta" id="oImport" rows="3" placeholder="Paste your customers — one per line:
-Cory Bjork, cory@email.com, Sierra 2500, sold
-Janelle Aas, janelle@email.com, referral"></textarea>
-        <button class="rgen" id="oImportBtn" style="margin-top:8px">＋ IMPORT PASTED</button>
-        <div class="orow" style="margin-top:10px;justify-content:space-between">
-          <button class="omanage" id="oExportBtn" type="button" style="margin:0">⬇ Export backup (for your other desktop)</button>
-          <label class="omanage" style="margin:0;cursor:pointer">⬆ Import file<input type="file" id="oFile" accept=".csv,.json,.txt" style="display:none"></label>
-        </div>
-      </div>
+      <div class="mnote"><span>✦</span><span>Contacts now live in ⇄ REFERRALS — add or import them there and anyone with an email shows up here.</span></div>
       <span class="olabel">Template</span>
       <div class="otpl" id="oTpl">
         <button data-tpl="review" class="on">Review + referral</button>
@@ -792,11 +773,11 @@ Janelle Aas, janelle@email.com, referral"></textarea>
       <button class="x" id="syncClose">✕</button>
     </div>
     <div class="mb">
-      <p style="font-size:16px;line-height:1.55;color:var(--text)">Your hot prospects, daily habits, and saved contacts live in this browser. Export a backup here, then restore it on your other computer to carry everything across.</p>
+      <p style="font-size:16px;line-height:1.55;color:var(--text)">Your CRM contacts (⇄ REFERRALS), daily habits, and monthly numbers live in this browser. Export a backup here, then restore it on your other computer to carry everything across.</p>
       <button class="rgen" id="syncExport" style="margin-top:16px">⬇ EXPORT BACKUP</button>
       <label class="rgen" id="syncImportLabel" style="margin-top:10px;display:block;text-align:center;cursor:pointer;background:linear-gradient(135deg,var(--gold),#b9802f);color:#1c1205">⬆ RESTORE FROM BACKUP<input type="file" id="syncFile" accept=".json,application/json" style="display:none"></label>
       <div class="ostat" id="syncStat" style="margin-top:12px"></div>
-      <div class="mnote"><span>✦</span><span>One file holds everything — hot prospects, today's habit checklist, and your contacts. Email it to yourself or drop it in a shared drive, then Restore on the other machine.</span></div>
+      <div class="mnote"><span>✦</span><span>One file holds everything — your CRM contacts (hot prospects included), today's habit checklist, and your monthly numbers. Email it to yourself or drop it in a shared drive, then Restore on the other machine.</span></div>
 
       <span class="olabel" style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px;display:block">☁ Cloud sync — automatic between home &amp; work</span>
       <p style="font-size:16px;line-height:1.55;color:var(--text)">Set the <b>same private key</b> on both computers. After that CARVIS syncs on its own — saves push up after every change, and it pulls the latest each time it loads.</p>
@@ -839,7 +820,7 @@ Janelle Aas, janelle@email.com, referral"></textarea>
   <div class="modal" role="dialog" aria-modal="true">
     <div class="mh">
       <div class="av">📊</div>
-      <div><div class="mt">MONTHLY NUMBERS</div><div class="ms">Your real totals — backfill any past month</div></div>
+      <div><div class="mt">SALES SCOREBOARD</div><div class="ms">Your real totals — backfill any past month</div></div>
       <button class="x" id="numClose">✕</button>
     </div>
     <div class="mb">
@@ -979,7 +960,7 @@ function renderPace(){
     if(badge){ badge.textContent='SET GOAL'; badge.className='pace-badge'; }
     if(fill) fill.style.width='0%'; if(tgt) tgt.style.left='0%';
     if(act) act.textContent=`${p.actual} deals`; if(left) left.textContent='';
-    if(note) note.textContent='Set a deal goal in 📊 Numbers to track pace.';
+    if(note) note.textContent='Set a deal goal in 📊 Scoreboard to track pace.';
     return;
   }
   host.classList.remove('nogoal');
@@ -1016,7 +997,7 @@ function renderStats(){
     if(gv) gv.textContent = val; });
   const set=(id,v)=>{ const e=$('#'+id); if(e) e.textContent=v; };
   set('roSold',STATS.sold); set('roBought',STATS.bought);
-  set('roLeads', (typeof HOT!=='undefined'?HOT.length:0)); set('roInv', (typeof INVENTORY!=='undefined'?INVENTORY.length:0));
+  set('roLeads', crmHot().length); set('roInv', (typeof INVENTORY!=='undefined'?INVENTORY.length:0));
   renderPace(); renderInvFresh(); renderTicker(); drawChart(); buildSpark();
 }
 
@@ -1081,7 +1062,7 @@ function renderGauges(){
 function renderDirectives(){
   const due = DATA.leads.slice().sort((a,b)=>(b.quiet||0)-(a.quiet||0));
   if(!due.length){
-    $('#dirBody').innerHTML = '<div class="hot-empty">No directives yet.<br>Pin Hot Prospects or import contacts to build your day.</div>';
+    $('#dirBody').innerHTML = '<div class="hot-empty">No directives yet.<br>Add Hot Prospects in ⇄ REFERRALS to build your day.</div>';
     $('#dirMeta').textContent='—'; return;
   }
   $('#dirBody').innerHTML = due.map(l=>{
@@ -1252,47 +1233,19 @@ function genReplies(){
 /* ---------- outreach email (referral / sold-customer) ----------
    CARVIS sends real emails via /.netlify/functions/send-email (Resend).
    Templates use Mick's real scripts (;mpREV1 review+referral, etc.).
-   Sample contacts stand in until wired to Lead Command's refContacts/sold leads. */
+   Recipients come straight from the CRM (⇄ REFERRALS) — carvis_referral_customers
+   is the single contact store now. Anyone there with an email (and not opted
+   out) is offered; add/import/export contacts in the CRM, not here. */
 const first2 = n => (n||'').split(' ')[0];
-const SAMPLE_CONTACTS=[];   // no assumed contacts — Mick imports his own
-// Real contacts persist in localStorage; start empty until Mick imports his own.
-function loadContacts(){ try{ const s=JSON.parse(localStorage.getItem('carvis_contacts')||'null'); if(Array.isArray(s)) return s; }catch(e){} return []; }
-let CONTACTS=loadContacts();
-function saveContacts(){ try{ localStorage.setItem('carvis_contacts',JSON.stringify(CONTACTS)); }catch(e){} scheduleCloudPush(); }
-function addContacts(list){ let n=0; list.forEach(c=>{ if(!c.email) return; if(CONTACTS.some(x=>(x.email||'').toLowerCase()===c.email.toLowerCase())) return; CONTACTS.push(c); n++; }); if(n) saveContacts(); return n; }
-function parseImport(text){
-  return text.split(/\n+/).map(line=>{
-    const parts=line.split(',').map(s=>s.trim()).filter(Boolean); if(!parts.length) return null;
-    const email=parts.find(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)); if(!email) return null;
-    const type=/referral/i.test(line)?'referral':'sold';
-    const name=(parts[0]&&parts[0]!==email)?parts[0]:email.split('@')[0];
-    const vehicle=parts.find(x=>x!==name&&x!==email&&!/^(sold|referral)$/i.test(x))||'';
-    return {name,email,vehicle,type};
-  }).filter(Boolean);
-}
+// Safe read of the CRM's customer store (crm.js owns all writes to it).
+function readCrmCustomers(){ try{ const s=JSON.parse(localStorage.getItem('carvis_referral_customers')||'[]'); return Array.isArray(s)?s:[]; }catch(e){ return []; } }
+const crmName = c => ((c.firstName||'')+' '+(c.lastName||'')).trim();
+let OUTREACH=[];   // current dropdown rows, derived on open — never persisted here
 function refreshContactDropdown(){
-  $('#oContact').innerHTML = CONTACTS.length
-    ? CONTACTS.map((c,i)=>`<option value="${i}">${c.name} — ${c.type==='sold'?'sold · '+(c.vehicle||'—'):'referral'}</option>`).join('')
-    : '<option value="">No contacts yet — use “Manage contacts” below to import</option>';
-}
-function importText(text){
-  text=(text||'').trim(); if(!text){ toast('Nothing to import'); return; }
-  let list;
-  if(text[0]==='['){ try{ list=JSON.parse(text).map(c=>({name:c.name,email:c.email,vehicle:c.vehicle||'',type:c.type||'sold'})); }catch(e){ list=parseImport(text); } }
-  else list=parseImport(text);
-  const n=addContacts(list); refreshContactDropdown();
-  toast(n?`Imported ${n} contact${n>1?'s':''}`:'No new contacts (need valid emails; duplicates skipped)');
-  blip(900,0.07,'triangle',0.13);
-}
-function doImport(){ const t=$('#oImport').value; if(!t.trim()){ toast('Paste at least one contact'); return; } importText(t); $('#oImport').value=''; }
-function importFile(file){ if(!file) return; const r=new FileReader(); r.onload=()=>importText(String(r.result||'')); r.onerror=()=>toast('Could not read that file'); r.readAsText(file); }
-function contactsToCSV(){ return CONTACTS.map(c=>[c.name,c.email,c.vehicle||'',c.type||'sold'].join(', ')).join('\n'); }
-function exportContacts(){
-  if(!CONTACTS.length){ toast('No contacts to export'); return; }
-  const blob=new Blob([contactsToCSV()],{type:'text/csv'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='carvis-contacts.csv'; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),500);
-  toast(`Exported ${CONTACTS.length} contacts`); blip(900,0.07,'triangle',0.13);
+  OUTREACH=readCrmCustomers().filter(c=>c&&c.email&&!c.optedOut);
+  $('#oContact').innerHTML = OUTREACH.length
+    ? OUTREACH.map((c,i)=>`<option value="${i}">${esc(crmName(c)||c.email)}${c.vehicle?' ('+esc(c.vehicle)+')':''}</option>`).join('')
+    : '<option value="">No contacts with an email yet — add them in ⇄ REFERRALS</option>';
 }
 const MAILTPL={
   review:{ subject:c=>`Hope the ${c.vehicle} is treating you well`,
@@ -1303,11 +1256,13 @@ const MAILTPL={
     body:c=>`Hey ${first2(c.name)},\n\nJust checking in — how's the ${c.vehicle} running for you? Anything come up that I can help with?\n\nIf you ever need anything down the road, I'm one message away.\n\nMick — North Star Car Guy` },
 };
 const MAIL_FOOTER='\n\n— North Star Car Guy · Mosaic Auto Group, Zumbrota, MN · Reply "STOP" to opt out.';
-function curContact(){ return CONTACTS[+($('#oContact').value||0)]||CONTACTS[0]||null; }
+function curContact(){
+  const c=OUTREACH[+($('#oContact').value||0)]||OUTREACH[0]||null;
+  return c ? {name:crmName(c), email:c.email, vehicle:c.vehicle||''} : null;
+}
 function openOutreach(){
   refreshContactDropdown();
   $('#oContact').value='0';
-  $('#oManage') && $('#oManage').classList.add('hidden');
   $$('#oTpl button').forEach((b,i)=>b.classList.toggle('on',i===0));
   fillContact(); $('#oStat').textContent=''; $('#oStat').className='ostat';
   $('#oOverlay').classList.add('show');
@@ -1696,41 +1651,69 @@ function drawChart(){
   });
 }
 
-/* ---------- hot prospects (manually-entered priority contacts) ----------
-   Mick's own short list of the people he must not let slip — pinned next to
-   the daily habits. Persists in localStorage; rides along in Data Sync. */
+/* ---------- hot prospects (derived from the CRM) ----------
+   The panel is a read-only window into the CRM (⇄ REFERRALS): every customer
+   with category 'hot' who hasn't opted out. Adding/editing happens in the CRM
+   — crm.js owns carvis_referral_customers. "Quiet" = days since the record was
+   last touched (updatedAt, falling back to createdAt). */
 const esc = s => String(s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const HEAT = {
-  hot:{ac:'var(--red)', lbl:'🔥 HOT', rank:0},
-  warm:{ac:'var(--gold)', lbl:'WARM', rank:1},
-  cool:{ac:'var(--cyan)', lbl:'COOL', rank:2},
-};
-let hotHeat='hot';
-function loadHot(){ try{ const s=JSON.parse(localStorage.getItem('carvis_hot')||'[]'); return Array.isArray(s)?s:[]; }catch(e){ return []; } }
-let HOT=loadHot();
-function saveHot(){ try{ localStorage.setItem('carvis_hot',JSON.stringify(HOT)); }catch(e){} scheduleCloudPush(); }
+function crmHot(){ return readCrmCustomers().filter(c=>c&&c.category==='hot'&&!c.optedOut); }
+function hotQuiet(c){ const t=Date.parse(c.updatedAt||c.createdAt||''); return isNaN(t)?0:Math.max(0,Math.floor((Date.now()-t)/86400000)); }
+function hotPhone(p){ const d=String(p||'').replace(/\D+/g,''); return d.length===10?phoneFmt(d):(d.length===11&&d[0]==='1'?phoneFmt(d.slice(1)):String(p||'')); }
 function renderHot(){
-  HOT.sort((a,b)=>((HEAT[a.heat]||HEAT.warm).rank-(HEAT[b.heat]||HEAT.warm).rank)||(b.id-a.id));
-  $('#hotMeta').textContent=HOT.length;
-  if(!HOT.length){ $('#hotList').innerHTML='<div class="hot-empty">No hot prospects yet.<br>Add the people you can\'t let slip.</div>'; return; }
-  $('#hotList').innerHTML=HOT.map(p=>{ const h=HEAT[p.heat]||HEAT.warm;
-    return `<div class="hot-item" style="--ac:${h.ac}" data-id="${p.id}">
-      <div class="hn"><div class="hnm">${esc(p.name)}</div>${p.note?`<div class="hnt">${esc(p.note)}</div>`:''}<div class="hheat">${h.lbl}</div></div>
+  const hot=crmHot().sort((a,b)=>hotQuiet(b)-hotQuiet(a));   // quietest first — they need you most
+  $('#hotMeta').textContent=hot.length;
+  if(!hot.length){ $('#hotList').innerHTML='<div class="hot-empty">No hot prospects yet.<br>Add one in ⇄ REFERRALS and mark it 🔥 Hot.</div>'; return; }
+  $('#hotList').innerHTML=hot.map(p=>{
+    const q=hotQuiet(p), sub=[p.vehicle, hotPhone(p.phone)].filter(Boolean).join(' · ');
+    return `<div class="hot-item" style="--ac:var(--red)" data-id="${esc(p.id)}">
+      <div class="hn"><div class="hnm">${esc(crmName(p))}</div>${sub?`<div class="hnt">${esc(sub)}</div>`:''}<div class="hheat">🔥 HOT${q>0?` · QUIET ${q}D`:''}</div></div>
       <div class="hot-acts">
-        <button class="js-hot-draft" data-id="${p.id}" title="Draft a reply">✉</button>
-        <button class="js-hot-del" data-id="${p.id}" title="Remove">✕</button>
+        <button class="js-hot-draft" data-id="${esc(p.id)}" title="Draft a reply">✉</button>
       </div>
     </div>`;
   }).join('');
 }
-function addHot(){
-  const name=$('#hotName').value.trim(); if(!name){ toast('Add a name first'); $('#hotName').focus(); return; }
-  HOT.push({id:Date.now(), name, note:$('#hotNote').value.trim(), heat:hotHeat});
-  saveHot(); renderHot();
-  $('#hotName').value=''; $('#hotNote').value=''; $('#hotName').focus();
-  blip(900,0.06,'sine',0.12); toast('Prospect pinned');
+// live-refresh the CRM-derived views when crm.js saves (same tab or another tab)
+let crmRawLast=localStorage.getItem('carvis_referral_customers');
+function refreshCrmViews(){
+  const raw=localStorage.getItem('carvis_referral_customers'); if(raw===crmRawLast) return;
+  crmRawLast=raw; renderHot(); try{ renderStats(); }catch(e){}
 }
-function delHot(id){ HOT=HOT.filter(p=>p.id!==id); saveHot(); renderHot(); blip(360,0.06,'sawtooth',0.1); }
+
+/* ---------- one-time legacy silo migration (read-only + safe) ----------
+   carvis_hot and carvis_contacts used to keep their own contact lists. The CRM
+   store (carvis_referral_customers) is the single source of truth now, so on
+   the first boot after the change we (1) stash the raw legacy JSON under
+   carvis_silo_backup so nothing is ever lost, (2) queue the entries under
+   carvis_silo_pending for the CRM to import, and (3) set carvis_silo_migrated.
+   index.html NEVER writes carvis_referral_customers — crm.js owns that path
+   (validation + undo history) and drains the pending queue itself.
+   Queue shape — carvis_silo_pending:
+     [{firstName, lastName, phone, email, vehicle, category}]
+   category is 'hot' (from carvis_hot) or 'sold' (from carvis_contacts).
+   Entries with neither phone nor email are skipped; legacy keys stay put. */
+function migrateSilos(){
+  try{
+    if(localStorage.getItem('carvis_silo_migrated')) return;
+    const parse=s=>{ try{ const a=JSON.parse(s||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
+    const rawHot=localStorage.getItem('carvis_hot'), rawCon=localStorage.getItem('carvis_contacts');
+    const legacyHot=parse(rawHot), legacyCon=parse(rawCon);
+    if(!legacyHot.length && !legacyCon.length){ localStorage.setItem('carvis_silo_migrated','1'); return; }
+    localStorage.setItem('carvis_silo_backup', JSON.stringify({ts:new Date().toISOString(), carvis_hot:rawHot||'', carvis_contacts:rawCon||''}));
+    const splitName=n=>{ n=String(n||'').trim(); const i=n.indexOf(' '); return i<0?[n,'']:[n.slice(0,i),n.slice(i+1).trim()]; };
+    const row=(src,category)=>{
+      const [firstName,lastName]=splitName(src.name);
+      const phone=String(src.phone||'').trim(), email=String(src.email||'').trim();
+      if(!phone && !email) return null;
+      return {firstName, lastName, phone, email, vehicle:String(src.vehicle||src.note||'').trim(), category};
+    };
+    const pending=legacyHot.map(p=>row(p,'hot')).concat(legacyCon.map(c=>row(c,'sold'))).filter(Boolean);
+    localStorage.setItem('carvis_silo_pending', JSON.stringify(pending));
+    localStorage.setItem('carvis_silo_migrated','1');
+    scheduleCloudPush();
+  }catch(e){}
+}
 
 /* ---------- data sync (home ↔ work) ----------
    Two layers, same snapshot:
@@ -1747,7 +1730,7 @@ function snapshotStore(){
 function applyStore(store){
   let n=0;
   Object.entries(store||{}).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&k!=='carvis_synckey'&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
-  CONTACTS=loadContacts(); HOT=loadHot(); taskState=loadTaskState();
+  taskState=loadTaskState(); crmRawLast=localStorage.getItem('carvis_referral_customers');
   try{ refreshContactDropdown(); }catch(e){}
   renderHot(); renderTasks();
   try{ renderStats(); }catch(e){}   // reflect pulled/restored monthly numbers
@@ -1913,6 +1896,7 @@ function saveGoalsFromForm(){
 /* ---------- wire ---------- */
 function init(){
   initSpace();
+  migrateSilos();   // one-time: queue legacy carvis_hot / carvis_contacts for the CRM
   applyTimeTheme(); setInterval(applyTimeTheme, 5*60*1000);
   renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker(); renderTasks(); renderHot();
   renderStats();   // fill hero/ring/gauges/readouts/ticker/chart from saved monthly numbers (0 until entered)
@@ -1925,8 +1909,7 @@ function init(){
 
   document.addEventListener('click', e=>{
     const tk=e.target.closest('.task'); if(tk){ toggleTask(tk.dataset.id); return; }
-    const hdl=e.target.closest('.js-hot-del'); if(hdl){ delHot(+hdl.dataset.id); return; }
-    const hdr=e.target.closest('.js-hot-draft'); if(hdr){ const p=HOT.find(x=>x.id===+hdr.dataset.id); if(p){ openReply(); $('#rVeh').value=p.note||''; } return; }
+    const hdr=e.target.closest('.js-hot-draft'); if(hdr){ const p=crmHot().find(x=>x.id===hdr.dataset.id); if(p){ openReply(); $('#rVeh').value=p.vehicle||''; } return; }
     const dr=e.target.closest('.js-draft'); if(dr){ blip(720,0.06,'sine',0.13); openDraft(+dr.dataset.id); return; }
     const dn=e.target.closest('.js-done'); if(dn){ blip(300,0.08,'sawtooth',0.12);
       const di=dn.closest('.di'); di.style.transition='.25s'; di.style.opacity='0'; di.style.transform='translateX(16px)';
@@ -1960,19 +1943,21 @@ function init(){
   $('#oContact').addEventListener('change', fillContact);
   $('#oSend').addEventListener('click', sendOutreach);
   $('#oTpl').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; $$('#oTpl button').forEach(x=>x.classList.toggle('on',x===b)); applyTemplate(b.dataset.tpl); });
-  $('#oManageToggle').addEventListener('click', ()=>$('#oManage').classList.toggle('hidden'));
-  $('#oImportBtn').addEventListener('click', doImport);
-  $('#oExportBtn').addEventListener('click', exportContacts);
-  $('#oFile').addEventListener('change', e=>{ importFile(e.target.files[0]); e.target.value=''; });
   loadInventory();
   $('#carBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); $('#cmd').focus(); toast('Ask about a car — type a year, make/model, or stock #'); });
   $('#vQ').addEventListener('keydown', e=>{ if(e.key==='Enter'){ $('#vA').textContent=vAnswer(vCur,$('#vQ').value); blip(700,0.05,'sine',0.12); } });
   $('#vDraft').addEventListener('click', ()=>{ if(!vCur) return; closeVehicle(); openReply(); $('#rVeh').value=vTitle(vCur); });
 
-  // hot prospects
-  $('#hotAdd').addEventListener('click', addHot);
-  $('#hotHeat').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; hotHeat=b.dataset.h; $$('#hotHeat button').forEach(x=>x.classList.toggle('on',x===b)); });
-  ['hotName','hotNote'].forEach(id=>$('#'+id).addEventListener('keydown', e=>{ if(e.key==='Enter') addHot(); }));
+  // hot prospects — the CRM owns the records; the button hands off to it
+  $('#hotAdd').addEventListener('click', ()=>{
+    blip(760,0.06,'sine',0.12);
+    if(typeof window.openReferrals==='function'){ window.openReferrals(); toast('Add them as a Hot Prospect in the CRM'); }
+    else toast('The CRM is still loading — give it a second');
+  });
+  // keep the panel + readouts current as crm.js saves (same tab, other tab, or cloud pull)
+  setInterval(refreshCrmViews, 4000);
+  window.addEventListener('storage', refreshCrmViews);
+  document.addEventListener('carvis:storeupdated', refreshCrmViews);
 
   // data sync (home ↔ work)
   $('#syncBtn').addEventListener('click', ()=>{ blip(760,0.06,'sine',0.12); openSync(); });
