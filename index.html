@@ -201,6 +201,16 @@
   .di .act:hover{color:var(--text);border-color:var(--line-strong)}
   .di .act.go{background:rgba(47,230,255,.12);border-color:var(--cyan-dim);color:var(--cyan)}
   .di .act.go:hover{background:rgba(47,230,255,.2)}
+  /* Today panel — CRM-derived day plan */
+  .tband{font-family:var(--mono);font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin:10px 2px 6px}
+  #dirBody .tband:first-child{margin-top:0}
+  .ti{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font:inherit;color:var(--text);cursor:pointer;
+    border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:11px;padding:9px 11px;margin-bottom:7px;background:rgba(47,230,255,.03);transition:.2s}
+  .ti:hover{border-color:var(--line-strong);background:rgba(47,230,255,.08)}
+  .ti .tic{font-size:15px}
+  .ti .tnm{font-weight:700;font-size:15px;letter-spacing:.3px;white-space:nowrap}
+  .ti .tlb{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tmrw{font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:.5px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
 
   /* ============ TICKER + COMMAND ============ */
   .ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;background:rgba(2,10,18,.6)}
@@ -504,6 +514,7 @@
   body.hivis .verify{font-size:16px}
   body.hivis .di .nm{font-size:20px} body.hivis .di .veh{font-size:17px} body.hivis .di .tag{font-size:15px}
   body.hivis .di .act{font-size:15px;padding:11px 0}
+  body.hivis .ti .tnm{font-size:17px} body.hivis .ti .tlb{font-size:15px} body.hivis .tband,body.hivis .tmrw{font-size:15px}
   body.hivis .task .tk-t{font-size:19px;line-height:1.45} body.hivis .task .tk-hp{font-size:13px}
   body.hivis .task .tk-box{width:26px;height:26px}
   body.hivis .hot-item .hnm{font-size:20px} body.hivis .hot-item .hnt{font-size:16px} body.hivis .hot-item .hheat{font-size:12px}
@@ -637,7 +648,7 @@
         </div>
       </div>
       <div class="panel dir">
-        <div class="ph"><span class="hbar"></span><h3>Directives</h3><span class="meta" id="dirMeta">TODAY</span></div>
+        <div class="ph"><span class="hbar"></span><h3>Today</h3><span class="meta" id="dirMeta">—</span></div>
         <div class="pbody" id="dirBody"></div>
       </div>
       <div class="panel mk">
@@ -1059,26 +1070,47 @@ function renderGauges(){
       <div class="gl">${g.label}</div>
     </div>`).join('');
 }
-function renderDirectives(){
-  const due = DATA.leads.slice().sort((a,b)=>(b.quiet||0)-(a.quiet||0));
-  if(!due.length){
-    $('#dirBody').innerHTML = '<div class="hot-empty">No directives yet.<br>Add Hot Prospects in ⇄ REFERRALS to build your day.</div>';
-    $('#dirMeta').textContent='—'; return;
+/* Today — live day plan derived from the CRM store (carvis_referral_customers).
+   Read-only: every row opens ⇄ REFERRALS, where the real one-tap actions live. */
+function chiDate(offset){
+  const s=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago'}).format(new Date());
+  if(!offset) return s;
+  const d=new Date(s+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+offset);
+  return d.toISOString().slice(0,10);
+}
+function renderToday(){
+  const today=chiDate(0), tomorrow=chiDate(1);
+  const cs=readCrmCustomers().filter(c=>c&&!c.optedOut);
+  const m=[], mid=[], aft=[]; let tmrw=0;
+  for(const c of cs){
+    const nm=crmName(c)||'Unknown';
+    (c.pendingTasks||[]).forEach(t=>{ if(!t) return;
+      if(t.type==='call') m.push({i:'✆',n:nm,l:'call'});
+      else if(t.type==='reachout') m.push({i:'💬',n:nm,l:'reach-out'});
+      else if(t.type==='video') aft.push({i:'🎥',n:nm,l:'video'});
+      else if(t.type==='gift') aft.push({i:'🎁',n:nm,l:'gift'});
+    });
+    (c.pendingTexts||[]).forEach(()=>mid.push({i:'✎',n:'Text '+(c.firstName||nm),l:'text'}));
+    if(c.nextAction && c.nextActionDue){
+      if(c.nextActionDue<today) m.push({i:'➜',n:nm,l:c.nextAction});
+      else if(c.nextActionDue===today) mid.push({i:'➜',n:nm,l:c.nextAction});
+      else if(c.nextActionDue===tomorrow) tmrw++;
+    }
+    if(c.referredById && !c.referrerThanked){
+      const r=cs.find(x=>x.id===c.referredById&&x.id!==c.id);
+      if(r) aft.push({i:'⚑',n:crmName(r)||'Referrer',l:'thank-you — sent you '+(c.firstName||nm)});
+    }
   }
-  $('#dirBody').innerHTML = due.map(l=>{
-    const tag = l.quiet?`<span class="tag quiet">QUIET ${l.quiet}D</span>`:`<span class="tag appt">APPT ${l.appt}</span>`;
-    const ac = l.quiet?'var(--red)':'var(--green)';
-    return `<div class="di" data-id="${l.id}" style="--ac:${ac}">
-      <div class="dtop"><span class="nm">${l.name}</span>${tag}</div>
-      <div class="veh">${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}</div>
-      <div class="acts">
-        <a class="act" href="tel:${l.phone}">CALL</a>
-        <button class="act go js-draft" data-id="${l.id}">DRAFT</button>
-        <button class="act js-done" data-id="${l.id}">DONE</button>
-      </div>
-    </div>`;
-  }).join('');
-  $('#dirMeta').textContent = due.length+' TODAY';
+  const total=m.length+mid.length+aft.length;
+  $('#dirMeta').textContent = total ? total+' OPEN' : '—';
+  const foot = tmrw ? `<div class="tmrw">▸ Tomorrow — ${tmrw} next step${tmrw===1?'':'s'} queued</div>` : '';
+  if(!total){
+    $('#dirBody').innerHTML = '<div class="hot-empty">Nothing queued for today.<br>Add a next step to any contact, or let the nightly run build your morning.</div>'+foot;
+    return;
+  }
+  const row=x=>`<button class="ti js-today" title="Open the CRM to work this item"><span class="tic">${x.i}</span><span class="tnm">${esc(x.n)}</span><span class="tlb">${esc(x.l)}</span></button>`;
+  const band=(h,xs)=>xs.length?`<div class="tband">${h}</div>`+xs.map(row).join(''):'';
+  $('#dirBody').innerHTML = band('☀ Morning',m)+band('◐ Midday',mid)+band('◑ Afternoon',aft)+foot;
 }
 function renderTicker(){
   const s=STATS;
@@ -1675,10 +1707,11 @@ function renderHot(){
   }).join('');
 }
 // live-refresh the CRM-derived views when crm.js saves (same tab or another tab)
-let crmRawLast=localStorage.getItem('carvis_referral_customers');
+let crmRawLast=localStorage.getItem('carvis_referral_customers'), crmDayLast=chiDate(0);
 function refreshCrmViews(){
-  const raw=localStorage.getItem('carvis_referral_customers'); if(raw===crmRawLast) return;
-  crmRawLast=raw; renderHot(); try{ renderStats(); }catch(e){}
+  const raw=localStorage.getItem('carvis_referral_customers'), day=chiDate(0);
+  if(raw===crmRawLast && day===crmDayLast) return;
+  crmRawLast=raw; crmDayLast=day; renderHot(); renderToday(); try{ renderStats(); }catch(e){}
 }
 
 /* ---------- one-time legacy silo migration (read-only + safe) ----------
@@ -1898,7 +1931,7 @@ function init(){
   initSpace();
   migrateSilos();   // one-time: queue legacy carvis_hot / carvis_contacts for the CRM
   applyTimeTheme(); setInterval(applyTimeTheme, 5*60*1000);
-  renderSystem(); renderMarket(); renderGauges(); renderDirectives(); renderTicker(); renderTasks(); renderHot();
+  renderSystem(); renderMarket(); renderGauges(); renderToday(); renderTicker(); renderTasks(); renderHot();
   renderStats();   // fill hero/ring/gauges/readouts/ticker/chart from saved monthly numbers (0 until entered)
   tick(); setInterval(tick,1000);
   window.addEventListener('resize', drawChart);
@@ -1910,6 +1943,7 @@ function init(){
   document.addEventListener('click', e=>{
     const tk=e.target.closest('.task'); if(tk){ toggleTask(tk.dataset.id); return; }
     const hdr=e.target.closest('.js-hot-draft'); if(hdr){ const p=crmHot().find(x=>x.id===hdr.dataset.id); if(p){ openReply(); $('#rVeh').value=p.vehicle||''; } return; }
+    const ti=e.target.closest('.js-today'); if(ti){ blip(720,0.06,'sine',0.13); if(typeof window.openReferrals==='function') window.openReferrals(); return; }
     const dr=e.target.closest('.js-draft'); if(dr){ blip(720,0.06,'sine',0.13); openDraft(+dr.dataset.id); return; }
     const dn=e.target.closest('.js-done'); if(dn){ blip(300,0.08,'sawtooth',0.12);
       const di=dn.closest('.di'); di.style.transition='.25s'; di.style.opacity='0'; di.style.transform='translateX(16px)';
