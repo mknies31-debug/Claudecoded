@@ -271,6 +271,12 @@
   .mh .ms{font-family:var(--mono);font-size:14px;color:var(--dim);margin-top:3px;letter-spacing:.5px}
   .mh .x{margin-left:auto;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
   .mh .x:hover{color:var(--text);border-color:var(--line-strong)}
+  .mh .hf{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spacing:.6px;color:var(--dim);border:1px solid var(--line);background:transparent;border-radius:8px;padding:7px 10px;cursor:pointer;white-space:nowrap;transition:.2s}
+  .mh .hf:hover{color:var(--text);border-color:var(--line-strong)}
+  .mh .hf.on{color:var(--gold);border-color:var(--gold);background:rgba(255,201,102,.08)}
+  .mh .hf+.x{margin-left:10px}
+  .brief{margin:10px auto 0;max-width:560px;font-family:var(--mono);font-size:13px;letter-spacing:.4px;line-height:1.55;color:var(--cyan);opacity:0;transition:opacity 1.1s ease}
+  .brief.show{opacity:.9}
   .mb{padding:18px 20px 22px}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;padding:3px;margin-bottom:15px}
   .seg button{font-family:'Orbitron';font-size:14px;letter-spacing:1.5px;padding:8px 16px;border-radius:6px;color:var(--dim);cursor:pointer;transition:.2s}
@@ -626,6 +632,7 @@
         <div class="v" id="heroV">0</div>
         <div class="l" id="heroL">CARS SOLD · MONTH TO DATE</div>
         <div class="g" id="heroG">—</div>
+        <div class="brief" id="briefLine"></div>
         <svg class="spark" id="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2fe6ff"/><stop offset="1" stop-color="#2fe6ff" stop-opacity="0"/></linearGradient></defs><path id="sparkFill"/><path id="sparkLine"/></svg>
       </div>
       <div class="gauges" id="gauges"></div>
@@ -812,6 +819,7 @@
     <div class="mh">
       <div class="av">◉</div>
       <div><div class="mt">ASK CARVIS</div><div class="ms">Live answers · powered by Fable 5</div></div>
+      <button class="hf" id="aiHands" title="Hands-free voice loop — after CARVIS speaks, it listens for your reply">🎙 HANDS-FREE OFF</button>
       <button class="x" id="aiClose">✕</button>
     </div>
     <div class="mb">
@@ -1132,6 +1140,8 @@ function startHud(){
     countTo(gv, val, v=> v);
   });
   startHum(); initNodes(); buildSpark(); drawChart(); startQuotes();
+  // morning briefing — once per calendar day, after the boot blips settle
+  setTimeout(()=>{ try{ dailyBriefing(); }catch(e){} }, 1200);
 }
 function countTo(el, target, fmt){
   const dur=1100, t0=performance.now();
@@ -1407,6 +1417,7 @@ function runCmd(raw){
   const q=raw.trim(); if(!q) return;
   const low=q.toLowerCase();
   if(low==='ask'||low==='carvis'||low==='ai'){ openAI(); $('#cmd').value=''; return; }
+  if(low==='briefing'||low==='brief me'||low==='good morning'){ dailyBriefing(true); $('#cmd').value=''; return; }
   if(low==='numbers'||low==='stats'||low==='month'||low==='totals'){ openNumbers(); return; }
   if(low==='reply'||low==='buyer reply'){ openReply(); return; }
   if(low==='outreach'||low==='email'){ openOutreach(); return; }
@@ -1843,6 +1854,7 @@ function speak(text){
     if(!audioOn || !window.speechSynthesis) return;
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text); u.rate=1.04; u.pitch=0.92;
+    u.onend=()=>{ try{ hfAfterSpeech(); }catch(e){} };   // hands-free loop hook
     speechSynthesis.speak(u);
   }catch(e){}
 }
@@ -1852,7 +1864,7 @@ function openAI(seed){
   if(seed){ $('#aiIn').value=seed; askCarvis(); }
   else setTimeout(()=>{ try{ $('#aiIn').focus(); }catch(e){} },60);
 }
-function closeAI(){ $('#aiOverlay').classList.remove('show'); try{ speechSynthesis.cancel(); }catch(e){} }
+function closeAI(){ $('#aiOverlay').classList.remove('show'); try{ hfStop(); }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} }
 async function askCarvis(){
   if(aiBusy) return;
   const q=$('#aiIn').value.trim(); if(!q) return;
@@ -1863,8 +1875,9 @@ async function askCarvis(){
   $('#aiStat').className='ostat'; $('#aiStat').textContent='';
   const r0=$('#reactor'); if(r0) r0.classList.add('listening');
   try{
+    let snap=''; try{ snap=carvisSnapshot(); }catch(e){}
     const r=await fetch('/.netlify/functions/carvis',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:AIMSGS})});
+      body:JSON.stringify({messages:AIMSGS, context:snap})});
     const d=await r.json().catch(()=>({}));
     th.remove();
     if(!r.ok){
@@ -1876,6 +1889,8 @@ async function askCarvis(){
       const text=(d.content||[]).map(b=>b.text||'').join('\n').trim()||'(no answer)';
       AIMSGS.push({role:'assistant',content:text});
       aiAdd('bot',text); speak(text); blip(940,0.06,'sine',0.12);
+      // audio off (or no TTS) = no utterance onend — kick the hands-free loop directly
+      if(!audioOn || !window.speechSynthesis){ try{ hfAfterSpeech(); }catch(e){} }
     }
   }catch(e){
     th.remove(); AIMSGS.pop();
@@ -1884,6 +1899,151 @@ async function askCarvis(){
   }
   aiBusy=false; if(r0) r0.classList.remove('listening');
 }
+
+/* ---------- live snapshot — what CARVIS knows about the business right now ----------
+   Compact plain text shipped as `context` with every ask so the live brain
+   answers from today's real numbers, not vibes. Every sub-read is wrapped so
+   one bad store can never kill the whole snapshot. */
+function crmMeta(){ try{ const m=JSON.parse(localStorage.getItem('carvis_referral_meta')||'{}'); return (m&&typeof m==='object'&&!Array.isArray(m))?m:{}; }catch(e){ return {}; } }
+function snapData(){
+  const d={};
+  try{ d.stats=refreshStats(); }catch(e){}
+  try{ d.pace=dealPace(); }catch(e){}
+  try{ d.year=yearSold(); }catch(e){}
+  try{
+    const today=chiDate(0), cs=readCrmCustomers().filter(c=>c&&!c.optedOut);
+    let texts=0,due=0,overdue=0,reach=0,thanks=0,hot=0,cold=0,sold=0; const overdueNames=[];
+    for(const c of cs){
+      texts+=(c.pendingTexts||[]).length;
+      (c.pendingTasks||[]).forEach(t=>{ if(t&&t.type==='reachout') reach++; });
+      if(c.nextAction&&c.nextActionDue){
+        if(c.nextActionDue<today){ overdue++; overdueNames.push(c.firstName||crmName(c)||'someone'); }
+        else if(c.nextActionDue===today) due++;
+      }
+      if(c.referredById&&!c.referrerThanked&&cs.some(x=>x.id===c.referredById&&x.id!==c.id)) thanks++;
+      if(c.category==='hot') hot++; else if(c.category==='cold') cold++; else sold++;
+    }
+    Object.assign(d,{texts,due,overdue,overdueNames,reach,thanks,hot,cold,sold,contacts:cs.length});
+  }catch(e){}
+  try{
+    const m=crmMeta();
+    if(m.lastRun){ const t=Date.parse(m.lastRun); if(!isNaN(t)) d.cronH=Math.max(0,Math.round((Date.now()-t)/3600000)); }
+    const r=m.lastReport; if(r&&typeof r==='object') d.cronRep={emails:+r.emailsSent||0, queued:+r.textsQueued||0};
+  }catch(e){}
+  try{ if(typeof INV_UPDATED!=='undefined'&&INV_UPDATED){ const t=Date.parse(INV_UPDATED); if(!isNaN(t)) d.invDays=Math.floor((Date.now()-t)/86400000); } }catch(e){}
+  return d;
+}
+function carvisSnapshot(){
+  const d=snapData(), seg=[];
+  try{ seg.push(new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})); }catch(e){}
+  try{ const s=d.stats; if(s&&(s.sold||s.bought||s.soldGoal)){
+    let m='Month: '+(s.sold||0)+' sold'+(s.soldGoal?' (goal '+s.soldGoal+')':'');
+    if(s.bought) m+=', '+s.bought+' bought';
+    const p=d.pace;
+    if(p&&p.status&&p.status!=='none'){
+      const sign=p.delta>0?'+'+p.delta:''+p.delta;
+      m+=', deals pace: '+p.status.toUpperCase()+(p.status==='on'?'':' '+sign)
+        +' (expected '+p.expected+' of '+p.goal+' by day '+p.day+(p.pctLeft!=null?', '+p.pctLeft+'% to go':'')+')';
+    }
+    seg.push(m);
+  }}catch(e){}
+  try{ if(d.year) seg.push('Year: '+d.year+' sold'); }catch(e){}
+  try{
+    const q=[];
+    if(d.texts) q.push(d.texts+(d.texts===1?' text':' texts')+' ready');
+    const steps=(d.due||0)+(d.overdue||0);
+    if(steps) q.push(steps+(steps===1?' next step':' next steps')+' due today'+(d.overdue?' ('+d.overdue+' overdue)':''));
+    if(d.reach) q.push(d.reach+(d.reach===1?' reach-out':' reach-outs'));
+    if(d.thanks) q.push(d.thanks+(d.thanks===1?' referral thank-you':' referral thank-yous')+' pending');
+    if(q.length) seg.push('Queue: '+q.join(', '));
+  }catch(e){}
+  try{ if(d.contacts){
+    const p=[]; if(d.hot)p.push(d.hot+' hot'); if(d.cold)p.push(d.cold+' cold'); if(d.sold)p.push(d.sold+' sold customers');
+    if(p.length) seg.push('Pipeline: '+p.join(', '));
+  }}catch(e){}
+  try{ if(d.cronH!=null){
+    let c='Cron last ran '+(d.cronH<1?'under an hour':d.cronH<48?d.cronH+'h':Math.round(d.cronH/24)+'d')+' ago';
+    if(d.cronRep&&(d.cronRep.emails||d.cronRep.queued))
+      c+=' ('+[d.cronRep.emails?d.cronRep.emails+' emails sent':'', d.cronRep.queued?d.cronRep.queued+' texts queued':''].filter(Boolean).join(', ')+')';
+    seg.push(c);
+  }}catch(e){}
+  try{ if(d.invDays!=null&&d.invDays>=7) seg.push('Inventory feed '+(d.invDays<14?d.invDays+' days':Math.floor(d.invDays/7)+' weeks')+' old'); }catch(e){}
+  return seg.join('. ').slice(0,1200);
+}
+
+/* ---------- morning briefing — a short spoken read of the day ----------
+   Runs once per calendar day after the HUD lands (guard: carvis_last_brief),
+   or on demand via the command bar ("briefing" / "brief me" / "good morning"). */
+function dailyBriefing(force){
+  try{ if(!force && localStorage.getItem('carvis_last_brief')===chiDate(0)) return ''; }catch(e){}
+  try{ localStorage.setItem('carvis_last_brief', chiDate(0)); }catch(e){}
+  let line='';
+  try{
+    const d=snapData(), h=new Date().getHours();
+    const greet=h<12?'Morning, Mick.':h<17?'Afternoon, Mick.':'Evening, Mick.';
+    const facts=[];
+    if(d.texts) facts.push((d.texts===1?'one text':d.texts+' texts')+' ready to fire');
+    const steps=(d.due||0)+(d.overdue||0);
+    if(steps){
+      let f=(steps===1?'one next step':steps+' next steps')+' due';
+      if(d.overdue) f+=(d.overdueNames&&d.overdueNames[0])
+        ? ' — '+d.overdueNames[0]+(d.overdue>1?' and '+(d.overdue-1)+' more are':' is')+' overdue'
+        : ' ('+d.overdue+' overdue)';
+      facts.push(f);
+    }
+    if(d.reach) facts.push((d.reach===1?'one keep-warm reach-out':d.reach+' keep-warm reach-outs')+' waiting');
+    if(d.thanks) facts.push(d.thanks===1?'a referral thank-you owed':d.thanks+' referral thank-yous owed');
+    const parts=[greet], top=facts.slice(0,2);
+    if(top.length){ const t=top.join(' and '); parts.push(t.charAt(0).toUpperCase()+t.slice(1)+'.'); }
+    else parts.push('Nothing in the queue — the board is clean.');
+    const p=d.pace;
+    if(p&&p.status&&p.status!=='none'){
+      const n=Math.abs(p.delta);
+      parts.push(p.status==='on' ? "You're on pace for the month."
+        : "You're "+(n===1?'one deal':n+' deals')+' '+(p.status==='ahead'?'ahead of':'behind')+' pace.');
+    }
+    if(top.length) parts.push(d.texts?"I'd start with the texts.":"I'd start there.");
+    line=parts.join(' ');
+  }catch(e){ line='Morning, Mick. The board is up.'; }
+  try{
+    const el=$('#briefLine');
+    if(el){ el.textContent=line; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+    else toast(line);
+  }catch(e){}
+  try{ speak(line); }catch(e){}
+  return line;
+}
+
+/* ---------- hands-free conversation loop (Ask CARVIS overlay) ----------
+   Toggle ON → after each spoken answer, recognition opens for the follow-up.
+   Stops on: overlay close, toggle off, error, or 12s of silence. Never listens
+   while aiBusy or while TTS is mid-sentence. */
+const HF_SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let handsFree=false, hfRec=null, hfTimer=null;
+try{ handsFree=localStorage.getItem('carvis_handsfree')==='1'; }catch(e){}
+function hfSupported(){ return !!(HF_SR&&window.speechSynthesis); }
+function hfLabel(){ const b=$('#aiHands'); if(b){ b.textContent='🎙 HANDS-FREE '+(handsFree?'ON':'OFF'); b.classList.toggle('on',handsFree); } }
+function hfStop(){
+  clearTimeout(hfTimer); hfTimer=null;
+  if(hfRec){ const r=hfRec; hfRec=null; try{ r.onresult=r.onend=r.onerror=null; r.stop(); }catch(e){} }
+  const r0=$('#reactor'); if(r0&&!aiBusy) r0.classList.remove('listening');
+  const st=$('#aiStat'); if(st&&st.textContent==='listening…'){ st.textContent=''; st.className='ostat'; }
+}
+function hfListen(){
+  if(!handsFree||!hfSupported()||hfRec||aiBusy) return;
+  if(!$('#aiOverlay').classList.contains('show')) return;
+  try{ if(speechSynthesis.speaking) return; }catch(e){}
+  const rec=new HF_SR(); rec.lang='en-US'; rec.interimResults=false; rec.maxAlternatives=1;
+  hfRec=rec;
+  const r0=$('#reactor'); if(r0) r0.classList.add('listening');
+  const st=$('#aiStat'); if(st){ st.className='ostat'; st.textContent='listening…'; }
+  clearTimeout(hfTimer); hfTimer=setTimeout(()=>{ if(hfRec===rec) hfStop(); },12000);
+  rec.onresult=e=>{ const t=(e.results[0][0].transcript||'').trim(); hfStop(); if(t){ $('#aiIn').value=t; askCarvis(); } };
+  rec.onerror=()=>{ if(hfRec===rec) hfStop(); };
+  rec.onend=()=>{ if(hfRec===rec) hfStop(); };
+  try{ rec.start(); }catch(e){ hfStop(); }
+}
+function hfAfterSpeech(){ if(handsFree) setTimeout(hfListen,250); }
 
 /* ---------- monthly numbers modal ---------- */
 function loadMonthIntoForm(key){ const m=monthData(key);
@@ -2004,6 +2164,17 @@ function init(){
   // ask CARVIS (live)
   $('#aiSend').addEventListener('click', askCarvis);
   $('#aiIn').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); askCarvis(); } });
+  // hands-free loop — hide the toggle entirely where the speech APIs don't exist
+  if(!hfSupported()){ const hb=$('#aiHands'); if(hb) hb.remove(); }
+  else{
+    hfLabel();
+    $('#aiHands').addEventListener('click', ()=>{
+      handsFree=!handsFree;
+      try{ localStorage.setItem('carvis_handsfree', handsFree?'1':'0'); }catch(e){}
+      hfLabel(); blip(handsFree?880:480,0.06,'sine',0.12);
+      if(handsFree) hfListen(); else hfStop();
+    });
+  }
   // monthly numbers
   $('#statsBtn').addEventListener('click', ()=>{ blip(760,0.06,'sine',0.12); openNumbers(); });
   $('#numClose').addEventListener('click', closeNumbers);
