@@ -123,6 +123,11 @@ to Anthropic (via the Netlify function, which keeps your API key server-side):
 
 - **Add → import from images** (`extract`): the image(s) you choose are sent so
   the model can read the transactions.
+- **Add → snap your balances** (`balances`): the balance-screen photo(s) you
+  choose are sent so the model can read account names, balances, and APRs.
+  Foresight then reconciles each account to the photographed balance, records a
+  daily snapshot for the total-debt trend, and fills in missing card/loan APRs
+  to power the interest-cost tracker.
 - **Advisor → deep optimization plan** (`analyze`): the selected transaction
   ledger (a Markdown table of the account or all accounts you pick) is sent.
 - **Advisor → full financial review** (`advise`): a snapshot of your finances —

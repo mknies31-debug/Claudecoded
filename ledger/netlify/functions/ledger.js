@@ -68,6 +68,22 @@ Structure the response with these Markdown ## sections, in order:
 
 Be specific and numerical — show dates and dollar amounts. Base every figure on the ledger provided; do not invent transactions.`;
 
+// PROMPT 4 — Balance-screen reading: the daily "snap your bank app" update.
+const BALANCES_SYSTEM = `You are a precise visual financial parsing agent. The uploaded image(s) are screenshots of banking/credit-card/loan app screens showing ACCOUNT BALANCES (an accounts overview, a card summary, a loan payoff screen, etc.).
+
+Extract every account balance visible into a GitHub-flavored Markdown table with exactly these headers, in this order:
+
+| Account Name | Account Type | Balance | APR | As-of Date |
+
+Rules:
+- Account Name: exactly as shown, INCLUDING any masked digits (e.g. "Everyday Checking ...1234") — the digits help match accounts.
+- Account Type: exactly one of — Checking, Savings, Investment, Cash, Credit Card, Loan, or Other. Infer from context (a card's "current balance" → Credit Card; "available balance" on a checking screen → Checking).
+- Balance: the number shown, digits and decimal point only (no currency symbols, no commas). For credit cards and loans report the amount OWED as a POSITIVE number. Use the CURRENT/statement balance, not "available credit".
+- APR: the interest rate as a plain number (e.g. 24.99) if visible on the screen; otherwise "null".
+- As-of Date: ISO YYYY-MM-DD if a date is shown on screen; otherwise "null".
+
+Output ONLY the Markdown table — no preamble, no commentary. Use "null" for anything unreadable. NEVER guess a balance; if a number is cut off or blurred, put "null".`;
+
 // PROMPT 3 — Behavior-focused advisor over a full snapshot.
 const ADVISE_SYSTEM = `You are a sharp, plain-spoken personal financial advisor. You are given a SNAPSHOT of someone's finances: monthly income, budget vs. actual by category, credit cards (limit, current balance/utilization, assigned purpose such as Work/Personal/House, statement due date, monthly cap), savings goals (target, saved, target date, pace), and account balances by type.
 
@@ -80,9 +96,10 @@ Give behavior-focused guidance — what to DO, not a lecture. Cover:
 Rules: use the numbers in the snapshot — never invent balances, limits, or transactions. Be concrete and prioritized (lead with the highest-impact move). Use short Markdown ## sections and plain language. If the snapshot is missing something you'd need, say so briefly rather than guessing.`;
 
 const MODE_CONFIG = {
-  extract: { system: EXTRACT_SYSTEM, max_tokens: 4096 },
-  analyze: { system: ANALYZE_SYSTEM, max_tokens: 4096 },
-  advise:  { system: ADVISE_SYSTEM,  max_tokens: 4096 },
+  extract:  { system: EXTRACT_SYSTEM,  max_tokens: 4096 },
+  balances: { system: BALANCES_SYSTEM, max_tokens: 2048 },
+  analyze:  { system: ANALYZE_SYSTEM,  max_tokens: 4096 },
+  advise:   { system: ADVISE_SYSTEM,   max_tokens: 4096 },
 };
 
 const json = (statusCode, obj, extra) => ({
@@ -127,7 +144,7 @@ exports.handler = async (event) => {
   catch { return json(400, { error: 'Invalid JSON body.' }); }
 
   const cfg = MODE_CONFIG[mode];
-  if (!cfg) return json(400, { error: 'mode must be "extract", "analyze", or "advise".' });
+  if (!cfg) return json(400, { error: 'mode must be "extract", "balances", "analyze", or "advise".' });
   if (!Array.isArray(messages) || messages.length === 0) {
     return json(400, { error: 'messages must be a non-empty array.' });
   }

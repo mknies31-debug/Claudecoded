@@ -351,6 +351,26 @@
   <!-- ===================== ADD ===================== -->
   <section id="panel-add" class="panel">
     <div class="card">
+      <h2>📷 Snap your balances <span class="pill">AI</span></h2>
+      <p class="sub">The daily update: open your bank or card app, screenshot the balance screen (or photograph it with this phone's camera), and Foresight updates each account to match — no typing. Cards &amp; loans feed the debt tracker automatically.</p>
+      <p class="sub" style="color:var(--dim)">🔒 Only the image(s) you add here are sent to Anthropic to read the numbers. Downscaled first, never stored.</p>
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn gold" style="flex:1;min-width:140px" onclick="document.getElementById('balCam').click()">📷 Snap balance screen</button>
+        <button class="btn ghost" style="flex:1;min-width:140px" onclick="document.getElementById('balFile').click()">🖼️ Screenshot from library</button>
+      </div>
+      <input id="balCam" type="file" accept="image/*" capture="environment" hidden>
+      <input id="balFile" type="file" accept="image/*" multiple hidden>
+      <div id="balThumbs" class="thumbs"></div>
+      <div class="row mt">
+        <button id="balReadBtn" class="btn" disabled onclick="runBalances()">Update balances</button>
+        <button class="btn ghost" onclick="clearBalImages()">Clear</button>
+        <span id="balStatus" class="status"></span>
+      </div>
+      <div id="balAlert" class="alert err"></div>
+      <div id="balPreview"></div>
+    </div>
+
+    <div class="card">
       <h2>Add a transaction</h2>
       <p class="sub">Log one transaction. If you don't have an account yet, you can create one right here — adding your first transaction starts the account.</p>
       <div id="addFormHost"></div>
@@ -533,9 +553,15 @@ function migrate(data){
   const A = Array.isArray(data.accounts)? data.accounts : [];
   data.accounts = A.filter(a=>a&&typeof a==='object').map(a=>{
     const base={ id:idStr(a.id)||uid(), name:str(a.name)||'Account', type:str(a.type)||'Other', institution:str(a.institution), opening:num(a.opening) };
-    if(base.type==='Credit Card') return { ...base, limit:num(a.limit), dueDay:num(a.dueDay), purpose:str(a.purpose), cap:num(a.cap) };
+    if(base.type==='Credit Card') return { ...base, limit:num(a.limit), dueDay:num(a.dueDay), purpose:str(a.purpose), cap:num(a.cap), apr:num(a.apr) };
+    if(base.type==='Loan') return { ...base, apr:num(a.apr) };
     return base;
   });
+  // Balance snapshots — one per account per day, from "snap your balance" photos.
+  const S = Array.isArray(data.balSnaps)? data.balSnaps : [];
+  data.balSnaps = S.filter(s=>s&&typeof s==='object').map(s=>({
+    id:idStr(s.id)||uid(), accountId:idStr(s.accountId), date:str(s.date), balance:num(s.balance),
+  })).filter(s=>s.accountId&&s.date);
   const T = Array.isArray(data.txns)? data.txns : [];
   data.txns = T.filter(t=>t&&typeof t==='object').map(t=>({
     id:idStr(t.id)||uid(), accountId:idStr(t.accountId), date:str(t.date), payee:str(t.payee),
@@ -626,6 +652,39 @@ function totalDebt(){
   DB.accounts.forEach(a=>{ if(TYPE[a.type]?.cls==='liability'){ const b=balanceOf(a); if(b<0) owed += -b; } });
   return owed;
 }
+function liabilityAccounts(){ return DB.accounts.filter(a=>TYPE[a.type]?.cls==='liability'); }
+// Estimated interest this balance costs per month: owed × APR/12.
+function monthlyInterestOf(a){
+  const owed=Math.max(0,-balanceOf(a)); const apr=+a.apr||0;
+  return (owed>0&&apr>0)? owed*apr/100/12 : 0;
+}
+// Roll up the cost of carrying all debt: per-month, per-year, plus how many
+// debt accounts still need an APR entered before the picture is complete.
+function interestSummary(){
+  let mo=0, missing=0, withApr=0;
+  liabilityAccounts().forEach(a=>{ const owed=Math.max(0,-balanceOf(a));
+    if(owed<=0) return;
+    if(+a.apr>0){ mo+=monthlyInterestOf(a); withApr++; } else missing++;
+  });
+  return { mo, yr:mo*12, missing, withApr };
+}
+// Total-debt history from balance snapshots: for each snap date, sum the latest
+// known owed amount of every liability account as of that date.
+function debtHistory(){
+  const liabs=liabilityAccounts(); if(!liabs.length) return [];
+  const snaps=DB.balSnaps.filter(s=>liabs.some(a=>a.id===s.accountId)).sort((a,b)=>a.date<b.date?-1:1);
+  if(!snaps.length) return [];
+  const dates=[...new Set(snaps.map(s=>s.date))];
+  return dates.map(d=>{
+    let total=0;
+    liabs.forEach(a=>{
+      const past=snaps.filter(s=>s.accountId===a.id && s.date<=d);
+      if(past.length){ const b=past[past.length-1].balance; if(b<0) total+=-b; }
+      else { const b=balanceOf(a); if(b<0) total+=-b; }   // no snap yet — use current
+    });
+    return { date:d, debt:total };
+  });
+}
 
 /* =========================================================================
    TAB SWITCHING
@@ -654,6 +713,50 @@ function refreshActive(){
 /* =========================================================================
    DASHBOARD
    ========================================================================= */
+/* ---------- total-debt indicator: trend + cost of interest ---------- */
+function debtSparkSVG(hist){
+  if(hist.length<2) return '';
+  const w=560, h=90, pad=8;
+  const vals=hist.map(p=>p.debt);
+  const mn=Math.min(...vals), mx=Math.max(...vals), span=(mx-mn)||1;
+  const x=i=> pad + i*(w-pad*2)/(hist.length-1);
+  const y=v=> h-pad - (v-mn)*(h-pad*2)/span;
+  const pts=hist.map((p,i)=>`${x(i).toFixed(1)},${y(p.debt).toFixed(1)}`).join(' ');
+  const first=hist[0], last=hist[hist.length-1];
+  const falling=last.debt<=first.debt;
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:72px;display:block" preserveAspectRatio="none" aria-label="Debt trend">
+    <polyline points="${pts}" fill="none" stroke="${falling?'#16a34a':'#e11d48'}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="row" style="justify-content:space-between;font-size:12px;color:var(--dim)"><span>${esc(first.date)}</span><span style="color:${falling?'#16a34a':'#e11d48'};font-weight:700">${falling?'▼':'▲'} ${money0(Math.abs(last.debt-first.debt))} ${falling?'paid down':'added'} since first snapshot</span><span>${esc(last.date)}</span></div>`;
+}
+function dashDebtCard(){
+  const liabs=liabilityAccounts().filter(a=>balanceOf(a)<0 || a.apr>0 || DB.balSnaps.some(s=>s.accountId===a.id));
+  if(!liabs.length) return '';
+  const is=interestSummary();
+  const hist=debtHistory();
+  const rows=liabs.map(a=>{
+    const owed=Math.max(0,-balanceOf(a));
+    const mi=monthlyInterestOf(a);
+    const aprCell = a.apr>0 ? (a.apr+'%')
+      : `<button class="btn ghost sm" style="padding:2px 8px" onclick="${a.type==='Credit Card'?`openCardModal('${a.id}')`:`promptLoanApr('${a.id}')`}">set APR</button>`;
+    return `<tr><td>${esc(a.name)} <span class="muted">(${esc(a.type)})</span></td><td class="amt neg">${money0(owed)}</td><td>${aprCell}</td><td class="amt ${mi>0?'neg':''}">${mi>0?money(mi)+'/mo':'—'}</td></tr>`;
+  }).join('');
+  return `<div class="card">
+    <h3>Total debt &amp; what it costs you</h3>
+    ${hist.length>=2?debtSparkSVG(hist):`<p class="sub" style="margin-top:2px">📷 Snap your balances daily (Add tab) and the debt trend line draws itself here.</p>`}
+    <div class="table-scroll" style="margin-top:8px"><table class="tx"><thead><tr><th>Debt</th><th class="amt">Owed</th><th>APR</th><th class="amt">Interest cost</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${is.mo>0?`<div class="alertbox ${is.mo>50?'warn':'caution'}" style="margin-top:10px"><span class="ic">%</span><span>Carrying this debt costs ≈ <strong>${money(is.mo)}/month</strong> — about <strong>${money0(is.yr)}/year</strong> in interest alone.</span></div>`:''}
+    ${is.missing>0?`<div class="alertbox" style="margin-top:8px"><span class="ic">ℹ</span><span>${is.missing} debt account${is.missing>1?'s are':' is'} missing an APR — add it to see the full interest cost.</span></div>`:''}
+  </div>`;
+}
+function promptLoanApr(id){
+  const a=DB.accounts.find(x=>x.id===id); if(!a) return;
+  const v=prompt('APR % for '+a.name+' (from your statement):', a.apr||'');
+  if(v===null) return;
+  const n=parseFloat(v); if(!isFinite(n)||n<0){ alert('Enter a number like 6.75'); return; }
+  a.apr=n; save(); refreshActive();
+}
+
 function renderDashboard(){
   const empty = document.getElementById('dashEmpty');
   const body = document.getElementById('dashBody');
@@ -684,8 +787,9 @@ function renderDashboard(){
       <div class="stat"><div class="k">Checking</div><div class="v">${money0(t['Checking'])}</div></div>
       <div class="stat"><div class="k">Savings</div><div class="v">${money0(t['Savings'])}</div></div>
       <div class="stat"><div class="k">Investments</div><div class="v">${money0(t['Investment'])}</div></div>
-      <div class="stat"><div class="k">Debt Obligations</div><div class="v neg">${money0(debt)}</div></div>
+      <div class="stat"><div class="k">Total Debt</div><div class="v neg">${money0(debt)}</div>${interestSummary().mo>0?`<div class="meta">≈ ${money(interestSummary().mo)}/mo interest</div>`:''}</div>
     </div>
+    ${dashDebtCard()}
     ${dashAlerts()}
     ${dashBudgetSummary()}
     <div class="chart-grid">
@@ -798,12 +902,21 @@ function openAccountModal(preType){
         <div><label class="fld">Assigned purpose</label><select id="m_purpose" class="in">${purposeOptions('Personal budget')}</select></div>
         <div><label class="fld">Monthly spend cap (optional)</label><input id="m_cap" class="in" type="number" step="1" min="0" placeholder="auto = 30% of limit"></div>
       </div>
+      <div><label class="fld">Interest rate — APR % (from your statement)</label><input id="m_apr" class="in" type="number" step="0.01" min="0" placeholder="e.g. 24.99"></div>
+    </div>
+    <div id="m_loanfields" style="display:${type==='Loan'?'block':'none'};border:1px dashed var(--line-strong);border-radius:11px;padding:4px 12px 12px;margin-top:12px;background:#f8f9fc">
+      <p class="muted" style="margin:10px 0 0;font-weight:700;color:var(--green-2)">Loan details — used for interest-cost tracking</p>
+      <div><label class="fld">Interest rate — APR %</label><input id="m_apr_loan" class="in" type="number" step="0.01" min="0" placeholder="e.g. 6.75"></div>
     </div>
     <div class="row mt"><button class="btn" onclick="submitAccount()">Create account</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div>
     <div id="m_err" class="alert err"></div>`);
   setTimeout(()=>document.getElementById('m_name').focus(),50);
 }
-function onAcctTypeChange(){ document.getElementById('m_cardfields').style.display = document.getElementById('m_type').value==='Credit Card'?'block':'none'; }
+function onAcctTypeChange(){
+  const t=document.getElementById('m_type').value;
+  document.getElementById('m_cardfields').style.display = t==='Credit Card'?'block':'none';
+  const lf=document.getElementById('m_loanfields'); if(lf) lf.style.display = t==='Loan'?'block':'none';
+}
 function submitAccount(){
   const name=document.getElementById('m_name').value.trim();
   if(!name){ showAlert('m_err','err','Give the account a name.'); return; }
@@ -817,6 +930,10 @@ function submitAccount(){
     acc.purpose = document.getElementById('m_purpose').value;
     const capRaw = parseFloat(document.getElementById('m_cap').value);
     acc.cap = (!isNaN(capRaw)&&capRaw>0) ? capRaw : Math.round(acc.limit*UTIL_TARGET);
+    acc.apr = parseFloat(document.getElementById('m_apr').value)||0;
+  }
+  if(type==='Loan'){
+    acc.apr = parseFloat(document.getElementById('m_apr_loan').value)||0;
   }
   DB.accounts.push(acc); save(); closeModal(); showTab(type==='Credit Card'?'cards':'accounts');
 }
@@ -1137,8 +1254,12 @@ function wireDrop(){
   const camInput=document.getElementById('fileCam');
   drop.addEventListener('click',()=>fileInput.click());
   drop.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); }});
-  fileInput.addEventListener('change',e=>addFiles(e.target.files));
-  if(camInput) camInput.addEventListener('change',e=>addFiles(e.target.files)); // native camera capture
+  fileInput.addEventListener('change',e=>{ addFiles(e.target.files); e.target.value=''; });
+  if(camInput) camInput.addEventListener('change',e=>{ addFiles(e.target.files); e.target.value=''; }); // native camera capture
+  // balance-snap inputs (the daily update path)
+  const bc=document.getElementById('balCam'), bf=document.getElementById('balFile');
+  if(bc) bc.addEventListener('change',e=>{ addBalFiles(e.target.files); e.target.value=''; });
+  if(bf) bf.addEventListener('change',e=>{ addBalFiles(e.target.files); e.target.value=''; });
   ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
   ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
   drop.addEventListener('drop',e=>{ if(e.dataTransfer?.files) addFiles(e.dataTransfer.files); });
@@ -1220,6 +1341,129 @@ function parseTableRows(md){
   return rows;
 }
 function splitRow(line){ let l=line.trim(); if(l.startsWith('|'))l=l.slice(1); if(l.endsWith('|'))l=l.slice(0,-1); return l.split('|').map(c=>c.trim()); }
+
+/* =========================================================================
+   SNAP-YOUR-BALANCES — photograph a balance screen, reconcile accounts,
+   feed the debt tracker. The daily phone-only update path.
+   ========================================================================= */
+let balImages=[], balRows=[];
+function addBalFiles(fileList){
+  const files=Array.from(fileList||[]); if(!files.length) return;
+  document.getElementById('balStatus').innerHTML='<span class="spinner"></span>Preparing…';
+  (async()=>{
+    for(const f of files){ if(!f.type.startsWith('image/')) continue; try{ balImages.push(await downscale(f)); }catch{} }
+    document.getElementById('balStatus').textContent='';
+    renderBalThumbs();
+  })();
+}
+function renderBalThumbs(){
+  const box=document.getElementById('balThumbs'); box.innerHTML='';
+  balImages.forEach((img,i)=>{ const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${img.dataUrl}" alt=""><button title="Remove" onclick="removeBalImage(${i})">×</button>`; box.appendChild(d); });
+  document.getElementById('balReadBtn').disabled=balImages.length===0;
+}
+function removeBalImage(i){ balImages.splice(i,1); renderBalThumbs(); }
+function clearBalImages(){ balImages=[]; balRows=[]; renderBalThumbs(); hideAlert('balAlert'); document.getElementById('balPreview').innerHTML=''; }
+
+async function runBalances(){
+  if(!balImages.length) return;
+  const btn=document.getElementById('balReadBtn'); btn.disabled=true; hideAlert('balAlert');
+  document.getElementById('balStatus').innerHTML='<span class="spinner"></span>Reading '+balImages.length+' screen(s)…';
+  const content=balImages.map(img=>({type:'image',source:{type:'base64',media_type:img.mediaType,data:img.base64}}));
+  content.push({type:'text',text:'Today\'s date is '+todayISO()+'. Extract every account balance visible in the image(s) above into the Markdown table exactly as specified. Output only the table.'});
+  try{
+    const out=await callLedger('balances',[{role:'user',content}]);
+    balRows=parseBalanceRows(out);
+    document.getElementById('balStatus').textContent = balRows.length?('Found '+balRows.length+' balance(s).'):'';
+    if(!balRows.length) showAlert('balAlert','err','No balances found — try a screenshot that shows the account name and balance together.');
+    else renderBalancePreview();
+    balImages=[]; renderBalThumbs();
+  }catch(err){ showAlert('balAlert','err',err.message); document.getElementById('balStatus').textContent=''; }
+  finally{ document.getElementById('balReadBtn').disabled=balImages.length===0; }
+}
+// | Account Name | Account Type | Balance | APR | As-of Date |
+function parseBalanceRows(md){
+  let s=md.replace(/```[a-zA-Z]*\n?/g,'').replace(/```/g,'').trim();
+  const rows=[];
+  for(const line of s.split('\n').map(l=>l.trim()).filter(l=>l.startsWith('|'))){
+    const c=splitRow(line); if(!c.length) continue;
+    if(c.join('').replace(/[\s-]/g,'')==='') continue;
+    if(/account/i.test(c[0]||'')&&/balance/i.test((c[2]||''))) continue;   // header
+    const bal=parseAmount(c[2]); if(isNaN(bal)) continue;                  // never guess a balance
+    const apr=parseFloat(String(c[3]||'').replace(/[^0-9.]/g,''));
+    const asof=/^\d{4}-\d{2}-\d{2}/.test(c[4]||'')?c[4].slice(0,10):'';
+    rows.push({ name:(c[0]||'Account').trim(), type:normBalType(c[1]), bal, apr:(isFinite(apr)&&apr>0&&apr<100)?apr:0, asof });
+  }
+  return rows;
+}
+function normBalType(t){ t=(t||'').toLowerCase();
+  if(t.includes('credit')) return 'Credit Card';
+  if(t.includes('loan')||t.includes('mortgage')) return 'Loan';
+  for(const k of ['Checking','Savings','Investment','Cash']) if(t.includes(k.toLowerCase())) return k;
+  return 'Other';
+}
+// Best-guess match of an extracted account row to an existing account:
+// masked digits are the strongest signal, then name tokens, then type.
+function matchAccount(row){
+  const digits=(row.name.match(/\d{3,4}/g)||[]).pop()||'';
+  const toks=row.name.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>2&&!/^\d+$/.test(w));
+  let best=null, bestScore=1;   // require score >= 2 to auto-match
+  DB.accounts.forEach(a=>{
+    let s=0; const an=a.name.toLowerCase();
+    if(digits && a.name.includes(digits)) s+=3;
+    toks.forEach(w=>{ if(an.includes(w)) s+=1; });
+    if(a.type===row.type) s+=1;
+    if(s>bestScore){ bestScore=s; best=a; }
+  });
+  return best;
+}
+const LIAB_BAL=t=> t==='Credit Card'||t==='Loan';
+function renderBalancePreview(){
+  const host=document.getElementById('balPreview');
+  host.innerHTML=`<div style="margin-top:16px"><h3 style="margin:0 0 4px">Confirm ${balRows.length} update(s)</h3>
+    <p class="sub">Each row updates that account to the photographed balance (a "Balance update (photo)" entry covers the difference). Cards &amp; loans record what you owe.</p>
+    ${balRows.map((r,i)=>{ const m=matchAccount(r);
+      const owedNote=LIAB_BAL(r.type)?' owed':'';
+      return `<div class="card" style="padding:12px;margin:8px 0">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <strong>${esc(r.name)}</strong>
+          <span class="amt ${LIAB_BAL(r.type)?'neg':'pos'}" style="font-weight:800">${money(Math.abs(r.bal))}${owedNote}</span>
+        </div>
+        <div class="sub" style="margin:2px 0 6px">${esc(r.type)}${r.apr?` · APR ${r.apr}%`:''}${r.asof?` · as of ${esc(r.asof)}`:''}</div>
+        <select id="balmap_${i}" class="in">${accountSelectOptions(m?m.id:'__new__')}</select>
+      </div>`; }).join('')}
+    <div class="row mt"><button class="btn gold" onclick="applyBalances()">✓ Apply updates</button><button class="btn ghost" onclick="clearBalImages()">Discard</button><span id="balApplyStatus" class="status"></span></div></div>`;
+}
+function applyBalances(){
+  let updated=0, created=0, unchanged=0;
+  balRows.forEach((r,i)=>{
+    const sel=document.getElementById('balmap_'+i); if(!sel) return;
+    let acc;
+    if(sel.value==='__new__'){
+      acc={ id:uid(), name:r.name.slice(0,60)||'Account', type:LIAB_BAL(r.type)?r.type:(r.type||'Other'), institution:'', opening:0, createdAt:todayISO() };
+      if(acc.type==='Credit Card'){ acc.limit=0; acc.dueDay=0; acc.purpose='Personal budget'; acc.cap=0; acc.apr=r.apr||0; }
+      if(acc.type==='Loan') acc.apr=r.apr||0;
+      DB.accounts.push(acc); created++;
+    } else { acc=DB.accounts.find(a=>a.id===sel.value); if(!acc) return; }
+    // Photographed APR fills a missing rate (never overwrites one you typed).
+    if(r.apr>0 && (acc.type==='Credit Card'||acc.type==='Loan') && !(+acc.apr>0)) acc.apr=r.apr;
+    const target = LIAB_BAL(acc.type)? -Math.abs(r.bal) : r.bal;
+    const date = r.asof||todayISO();
+    const delta = target - balanceOf(acc);
+    if(Math.abs(delta)>=0.005){
+      DB.txns.push({ id:uid(), accountId:acc.id, date, payee:'Balance update (photo)', amount:delta,
+        currency:'USD', method:'', category:'Other', recurring:false, freq:'', bnpl:'', note:'Synced from balance screenshot' });
+      updated++;
+    } else unchanged++;
+    // one snapshot per account per day — powers the debt trend line
+    const old=DB.balSnaps.find(s=>s.accountId===acc.id&&s.date===date);
+    if(old) old.balance=target; else DB.balSnaps.push({ id:uid(), accountId:acc.id, date, balance:target });
+  });
+  save();
+  balRows=[]; document.getElementById('balPreview').innerHTML='';
+  const st=document.getElementById('balStatus');
+  st.textContent=`✓ ${updated} updated${created?`, ${created} account(s) created`:''}${unchanged?`, ${unchanged} already matched`:''}`;
+  refreshActive();
+}
 
 function mapCategory(c){ const f=CATEGORIES.find(x=>x.toLowerCase()===(c||'').toLowerCase()); return f||'Other'; }
 function renderImportPreview(){
@@ -1383,7 +1627,10 @@ function cardTileHTML(c){
       <div class="m"><div class="mk">Monthly cap</div><div class="mv">${money0(cap)}</div></div>
       <div class="m"><div class="mk">Spent this mo.</div><div class="mv" style="color:${overCap?'var(--neg)':'inherit'}">${money0(spent)}</div></div>
       <div class="m"><div class="mk">Due day</div><div class="mv">${c.dueDay?('the '+c.dueDay+ordinal(c.dueDay)):'—'}</div></div>
+      <div class="m"><div class="mk">APR</div><div class="mv">${c.apr>0?(c.apr+'%'):'<span style="color:var(--dim)">set in Edit</span>'}</div></div>
+      <div class="m"><div class="mk">Interest cost</div><div class="mv" style="color:${monthlyInterestOf(c)>0?'var(--neg)':'inherit'}">${c.apr>0?(money(monthlyInterestOf(c))+'/mo'):'—'}</div></div>
     </div>
+    ${(c.apr>0&&owed>0)?`<div class="alertbox ${monthlyInterestOf(c)>25?'warn':'caution'}" style="margin-top:10px"><span class="ic">%</span><span>Carrying this ${money0(owed)} balance costs ≈ <strong>${money(monthlyInterestOf(c))}/month</strong> (${money0(monthlyInterestOf(c)*12)}/yr) at ${c.apr}% APR. Pay in full and this drops to $0.</span></div>`:''}
     ${overCap?`<div class="alertbox caution" style="margin-top:10px"><span class="ic">▲</span><span>Over its monthly cap by ${money0(spent-cap)} — ease off to keep this card payable in full.</span></div>`:''}
     ${u>=0.5?`<div class="alertbox warn" style="margin-top:10px"><span class="ic">●</span><span>High utilization (${Math.round(u*100)}%). Paying this down helps your credit and cash flow.</span></div>`:''}
   </div>`;
@@ -1396,7 +1643,8 @@ function openCardModal(id){
      <div><label class="fld">Due day (1–31)</label><input id="c_due" class="in" type="number" min="1" max="31" value="${c.dueDay||''}"></div></div>
     <div class="grid2"><div><label class="fld">Purpose</label><select id="c_purpose" class="in">${purposeOptions(c.purpose||'Personal budget')}</select></div>
      <div><label class="fld">Monthly cap</label><input id="c_cap" class="in" type="number" min="0" value="${c.cap||Math.round((c.limit||0)*UTIL_TARGET)}"></div></div>
-    <p class="muted" style="margin:8px 0 0">Amount owed is calculated from this card's transactions. Add purchases and payments in the Add tab.</p>
+    <div><label class="fld">Interest rate — APR % (from your statement)</label><input id="c_apr" class="in" type="number" step="0.01" min="0" value="${c.apr||''}" placeholder="e.g. 24.99"></div>
+    <p class="muted" style="margin:8px 0 0">Amount owed is calculated from this card's transactions or balance photos. APR powers the interest-cost tracker.</p>
     <div class="row mt"><button class="btn" onclick="saveCard('${id}')">Save</button><button class="btn ghost danger" onclick="deleteAccount('${id}')">Delete card</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
 }
 function saveCard(id){
@@ -1406,6 +1654,7 @@ function saveCard(id){
   c.dueDay=parseInt(document.getElementById('c_due').value)||0;
   c.purpose=document.getElementById('c_purpose').value;
   c.cap=parseFloat(document.getElementById('c_cap').value)||Math.round(c.limit*UTIL_TARGET);
+  c.apr=parseFloat(document.getElementById('c_apr').value)||0;
   save(); closeModal(); renderCards();
 }
 
@@ -1623,7 +1872,9 @@ function buildSnapshot(){
   L.push('CARDS:');
   const cs=cardsList();
   if(!cs.length) L.push('  (none)');
-  cs.forEach(c=>{ L.push('  - '+c.name+' | purpose: '+(c.purpose||'General')+' | limit '+money(c.limit||0)+' | owed '+money(cardOwed(c))+' | utilization '+Math.round(cardUtil(c)*100)+'% | monthly cap '+money(c.cap||Math.round((c.limit||0)*UTIL_TARGET))+' | spent this month '+money(monthSpendFor(c.id))+(c.dueDay?(' | due day '+c.dueDay):'')); });
+  cs.forEach(c=>{ L.push('  - '+c.name+' | purpose: '+(c.purpose||'General')+' | limit '+money(c.limit||0)+' | owed '+money(cardOwed(c))+' | utilization '+Math.round(cardUtil(c)*100)+'% | monthly cap '+money(c.cap||Math.round((c.limit||0)*UTIL_TARGET))+' | spent this month '+money(monthSpendFor(c.id))+(c.dueDay?(' | due day '+c.dueDay):'')+(c.apr>0?(' | APR '+c.apr+'% ≈ '+money(monthlyInterestOf(c))+'/mo interest if carried'):' | APR unknown')); });
+  const isum=interestSummary();
+  if(isum.mo>0) L.push('  INTEREST COST OF CURRENT DEBT: ≈ '+money(isum.mo)+'/month ('+money(isum.yr)+'/year)'+(isum.missing?(' — '+isum.missing+' debt account(s) missing APR'):''));
   L.push('  PAY-IN-FULL: liquid '+money(b.payInFull.liquid)+' vs owed '+money(b.payInFull.owed)+' → '+(b.payInFull.canPay?'CAN pay all cards in full':'CANNOT — short '+money(b.payInFull.shortfall)));
   L.push('');
   L.push('BUDGET vs ACTUAL (this month):');
