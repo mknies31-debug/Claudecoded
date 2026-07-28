@@ -14,6 +14,7 @@ import { INTAKE_STEPS, isSkip, applyAnswer, EXTRACTION_PROMPT, parseExtraction }
 import { planImport, IMPORT_COLUMNS } from '../shared/import.mjs';
 import { GOALS_KEY, LANES, LANE_LABELS, GROUPS, REWARD_LADDER, newGoal, toggleGoal, sanitizeGoals, computeGoalStats, seedGoals } from '../shared/goals.mjs';
 import { computeReferralStats } from '../shared/reporting.mjs';
+import { parseQuickAction, resolveDueDate, buildNextAction } from '../shared/quickaction.mjs';
 
 // ── tiny local helpers (no dependency on CARVIS lexical scope) ───────────────
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1298,11 +1299,53 @@ function hookSync() {
 //    named "Tom" matching because "cusTOMer" contains it).
 // Both are global function declarations, so wrapping each once is the clean hook.
 const ENTER_CUSTOMER_RE = /^\s*(?:hey\s+carvis,?\s+)?(?:enter|add|new|create|start)\s+(?:a\s+|new\s+)?(?:customer|client|profile|contact)\b/i;
+
+// Fantastical-style quick capture — "call John Friday", "text Brenda the RAV4
+// pics tomorrow" — sets a contact's nextAction/nextActionDue straight from the
+// command bar (typed or spoken; both funnel through the same wrapped globals).
+// shared/quickaction.mjs does the language part; this only matches the name to
+// a customer and saves. Returns true when it HANDLED the phrase (saved, or told
+// the user why not) so the wrapper stops there; false means "not ours — let the
+// original command handling run untouched".
+function tryQuickAction(arg) {
+  const parsed = parseQuickAction(arg);
+  if (!parsed) return false;
+  const parts = parsed.name.toLowerCase().split(/\s+/);
+  const first = parts[0];
+  const last = parts[1] || '';
+  const list = getCustomers();
+  const matches = list.filter((c) => {
+    if (String(c.firstName || '').trim().toLowerCase() !== first) return false;
+    return !last || String(c.lastName || '').trim().toLowerCase().startsWith(last);
+  });
+  if (!matches.length) return false; // nobody by that name → normal command
+  if (matches.length > 1) {
+    const cap = first.charAt(0).toUpperCase() + first.slice(1);
+    toast(`More than one ${cap} — open the CRM and set it there`);
+    return true; // ambiguous — never guess a record
+  }
+  const c = matches[0];
+  const due = resolveDueDate(parsed.dayWord, todayStr());
+  c.nextAction = buildNextAction(parsed);
+  c.nextActionDue = due;
+  c.updatedAt = new Date().toISOString();
+  saveCustomers(list);
+  if (isOpen()) render();
+  blip(880, 0.06, 'sine', 0.12);
+  toast(`Next step saved — ${parsed.verb} ${c.firstName} by ${due}`);
+  return true;
+}
+
 function wrapGlobal(name, onMatch) {
   const orig = window[name];
   if (typeof orig === 'function' && orig.__crmWrapped) return;
   const wrapped = function (arg) {
+    // Order matters: the guided-intake regex keeps priority over quick capture.
     if (typeof arg === 'string' && ENTER_CUSTOMER_RE.test(arg)) { onMatch(); return; }
+    if (typeof arg === 'string' && tryQuickAction(arg)) {
+      const cmd = document.getElementById('cmd'); if (cmd) cmd.value = '';
+      return;
+    }
     return typeof orig === 'function' ? orig.apply(this, arguments) : undefined;
   };
   wrapped.__crmWrapped = true;
