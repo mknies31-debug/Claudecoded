@@ -986,10 +986,29 @@ function setDir(d){ txnDir=d; document.querySelectorAll('#t_seg button').forEach
 function onTxnAcctChange(){ const v=document.getElementById('t_acct').value; document.getElementById('t_newacct').style.display = v==='__new__'?'block':'none'; }
 
 let txnModalMode='modal';
+// Every "+ Add a transaction" entry point asks HOW first: photo or manual.
+let pendingImportAcct='';
 function openTxnModal(prefAcct){
+  openModal(`<button class="x" onclick="closeModal()">×</button><h2>Add a transaction</h2>
+    <p class="sub" style="margin-top:2px">How do you want to enter it?</p>
+    <button class="btn gold" style="width:100%;padding:16px;font-size:16px;margin-top:8px" onclick="txnViaPhoto('${idOk(prefAcct)}','lib')">🖼️ Upload from my photos<br><span style="font-weight:400;font-size:12.5px;opacity:.85">bank screenshot or receipt — read automatically</span></button>
+    <button class="btn ghost" style="width:100%;padding:14px;font-size:15px;margin-top:10px" onclick="txnViaPhoto('${idOk(prefAcct)}','cam')">📷 Take a photo now</button>
+    <button class="btn ghost" style="width:100%;padding:14px;font-size:15px;margin-top:10px" onclick="txnViaManual('${idOk(prefAcct)}')">⌨️ Type it in manually</button>`);
+}
+const idOk = v => String(v||'').replace(/[^A-Za-z0-9_-]/g,'');
+function txnViaManual(prefAcct){
   txnModalMode='modal';
-  openModal(`<button class="x" onclick="closeModal()">×</button><h2>Add a transaction</h2>${txnFormHTML(prefAcct)}`);
+  openModal(`<button class="x" onclick="closeModal()">×</button><h2>Add a transaction</h2>${txnFormHTML(prefAcct||undefined)}`);
   txnDir='exp';
+}
+function txnViaPhoto(prefAcct, how){
+  pendingImportAcct=prefAcct||'';
+  closeModal(); showTab('add');
+  setTimeout(()=>{
+    const el=document.getElementById(how==='cam'?'fileCam':'file');
+    if(el) el.click();
+    const card=document.getElementById('drop'); if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
+  },200);
 }
 function renderAddForm(){
   txnModalMode='page';
@@ -1471,7 +1490,7 @@ function renderImportPreview(){
   host.innerHTML = `<div style="margin-top:16px">
     <h3 style="margin:0 0 8px">Review &amp; import ${parsedRows.length} transaction(s)</h3>
     <label class="fld">Import into account</label>
-    <select id="imp_acct" class="in">${accountSelectOptions(DB.accounts[0]?.id||'__new__')}</select>
+    <select id="imp_acct" class="in">${accountSelectOptions(pendingImportAcct||DB.accounts[0]?.id||'__new__')}</select>
     <div id="imp_new" style="display:${DB.accounts.length?'none':'block'};margin-top:8px">
       <input id="imp_aname" class="in" placeholder="New account name (e.g. Chase Checking)">
     </div>
@@ -1501,6 +1520,7 @@ function importParsed(){
   });
   save(); parsedRows=[]; document.getElementById('importPreview').innerHTML='';
   showAlert('exAlert','ok',`Imported ${n} transaction(s). See them in Accounts.`);
+  pendingImportAcct='';
 }
 
 /* =========================================================================
