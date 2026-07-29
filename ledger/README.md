@@ -48,43 +48,43 @@ choose to use an **AI feature** (see Privacy below).
 
 Use **Accounts → Backup** to export/import your data as a JSON file.
 
-## What it does
+## The AI import & advice flows
 
-**Step 1 — Extract (multimodal ingestion).**
-Drop in one or more images: bank-app screenshots, P2P payment history
-(Venmo / PayPal / Apple Pay / Cash App), digital receipts, or photos of paper
-receipts. Foresight reads them and builds a GitHub-flavored Markdown table:
+**Snap your balances (`balances`)** — the daily phone update. Photograph your
+bank/card/loan app's balance screen; Foresight reads every account on it
+(name with masked digits, type, balance, visible APR, as-of date — never
+guessing a blurred number), auto-matches each to your accounts, and reconciles
+them with a tagged "Balance update (photo)" entry. Snapshots power the
+total-debt trend line, and photographed APRs fill in missing rates (never
+overwriting one you typed). Adjustment entries are excluded from income,
+budgets, spending charts, and card caps, so reconciling never distorts your
+analytics.
 
-| Date | Merchant/Payee | Amount | Currency | Payment Method | Category | Recurring Status | BNPL Provider |
+**Import transactions (`extract`)** — drop bank/P2P screenshots or receipt
+photos; Foresight reads them into a review table (ISO dates, signed amounts,
+fixed category list, recurring + BNPL flags, `null` for unreadable cells) that
+you confirm and import into an account.
 
-- Dates normalized to ISO-8601 (`YYYY-MM-DD`).
-- Outflows negative, inflows positive; no currency symbols in the Amount column.
-- Categories constrained to a fixed domain list; recurring vs. one-time flagged.
-- Buy-Now-Pay-Later transactions (Klarna, Sezzle, Afterpay, Affirm) tagged.
-- Unreadable fields become `null` — no guessing.
+**Deep optimization plan (`analyze`)** — the Advisor runs a financial-forensics
+pass over your stored transactions: BNPL "Pay in 4" amortization with projected
+outflows, a recurring-bill/subscription-creep audit, and an "Escrow Sinking
+Fund" savings strategy, in five structured sections.
 
-Each extraction **appends** to a running ledger. Copy it as **Markdown** or as
-**TSV for Sheets/Excel** (paste straight into a spreadsheet).
-
-**Step 2 — Optimize (analysis & savings plan).**
-Hand the ledger to a financial-forensics pass that:
-- amortizes BNPL "Pay in 4" commitments and projects the next 2 months of outflows,
-- audits recurring subscriptions/bills and flags subscription creep,
-- recommends targeted spending reductions and an "Escrow Sinking Fund" strategy.
-
-Output is a structured plan with five sections (Executive Summary, BNPL
-Liabilities, Recurring Bill Audit, Budgeting Strategy, Targeted Expense
-Optimization).
+**Full financial review (`advise`)** — the Advisor reads a snapshot of income,
+budget vs. actual, cards (limits/utilization/purpose/APR + interest cost), and
+goals, and returns behavior-focused guidance.
 
 ## Architecture
 
 - `index.html` — the entire front end. No build, no external JS/CSS
   dependencies (includes its own small Markdown renderer).
-- `netlify/functions/ledger.js` — server-side Anthropic proxy. Holds both
+- `netlify/functions/ledger.js` — server-side Anthropic proxy. Holds all four
   system prompts and the API key. The browser only sends `mode`
-  (`extract` | `analyze`) and the conversation `messages` (including base64
-  image blocks). The key is **never** exposed to the page.
-- `netlify.toml` — deploy config.
+  (`extract` | `balances` | `analyze` | `advise`) and the conversation
+  `messages` (including base64 image blocks). The key is **never** exposed to
+  the page.
+- `netlify.toml` — deploy config. `sw.js`/`manifest.json`/`icon.svg` — PWA
+  shell (offline support + install).
 
 ## Deploy (Netlify)
 
@@ -94,10 +94,11 @@ Optimization).
    **`ANTHROPIC_API_KEY`**.
 3. Trigger a redeploy (Deploys → Trigger deploy) so the function picks up the key.
 
-**Or from Git:**
+**Or from Git (the Claudecoded repo):**
 1. Create a new site from the repo.
-2. Leave **Base directory** BLANK — these files are already at the root (do NOT
-   set it to `ledger`).
+2. Set **Base directory** = `ledger` — in that repo this app lives in the
+   `ledger/` subfolder. (Only leave it blank when deploying an unzipped folder
+   where these files sit at the root.)
 3. Site settings → Environment variables → add **`ANTHROPIC_API_KEY`**.
 4. Deploy. Netlify serves `index.html` at the root and bundles the function at
    `/.netlify/functions/ledger`.

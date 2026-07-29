@@ -1,12 +1,13 @@
 # Foresight — standalone deploy config (its own project).
 #
-# This folder IS the site root. Deploy it directly:
-#   • Drag-and-drop: drop this whole folder onto https://app.netlify.com/drop
-#   • Or "New site from Git": leave Base directory BLANK (do NOT set it to
-#     "ledger" — there is no subfolder here; the files are already at the root).
+# Two ways to deploy:
+#   • Drag-and-drop (zip/folder): drop this folder onto https://app.netlify.com/drop
+#     — the files are at the folder root, leave Base directory blank.
+#   • "New site from Git" from the Claudecoded repo: set Base directory = ledger
+#     (in that repo this app lives in the ledger/ subfolder).
 #
-# Netlify serves index.html at the root and bundles the Anthropic proxy from
-# netlify/functions/ledger.js. No build step.
+# Netlify serves index.html at the site root and bundles the Anthropic proxy
+# from netlify/functions/ledger.js. No build step.
 #
 # Before it works: Site settings → Environment variables → add ANTHROPIC_API_KEY.
 

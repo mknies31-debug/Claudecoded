@@ -1,10 +1,11 @@
 // Foresight → Anthropic proxy (Netlify Function).
 //
 // The browser never holds the Anthropic API key (and can't call the API
-// directly anyway — CORS). This function runs server-side, owns the three
+// directly anyway — CORS). This function runs server-side, owns the four
 // system prompts, and is the single place the key lives. The client sends only
 // { mode, messages }:
 //   • extract  — image(s) → a clean Markdown transaction table
+//   • balances — balance-screen photo(s) → account names/types/balances/APRs
 //   • analyze  — a transaction table → a savings/optimization plan
 //   • advise   — a financial snapshot → behavior-focused guidance
 //
@@ -117,11 +118,13 @@ exports.handler = async (event) => {
   const headers = event.headers || {};
   const h = (name) => headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()] || '';
 
-  // Guard 1 — same-origin. Only enforced when we know our own origin AND the
-  // request carries an Origin header (native/curl requests have none).
-  const allowed = originOf(process.env.ALLOWED_ORIGIN || process.env.URL || '');
-  const reqOrigin = h('origin');
-  if (allowed && reqOrigin && originOf(reqOrigin) !== allowed) {
+  // Guard 1 — same-origin. Only enforced when we know our own origin(s) AND the
+  // request carries an Origin header (native/curl requests have none). Netlify
+  // deploy previews/branch deploys serve from their own origins, so accept those.
+  const allowedSet = [process.env.ALLOWED_ORIGIN, process.env.URL, process.env.DEPLOY_PRIME_URL, process.env.DEPLOY_URL]
+    .map(originOf).filter(Boolean);
+  const reqOrigin = originOf(h('origin'));
+  if (allowedSet.length && reqOrigin && !allowedSet.includes(reqOrigin)) {
     return json(403, { error: 'Blocked: this request came from a different site.' });
   }
 

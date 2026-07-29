@@ -567,7 +567,7 @@ function migrate(data){
     id:idStr(t.id)||uid(), accountId:idStr(t.accountId), date:str(t.date), payee:str(t.payee),
     amount:num(t.amount), currency:str(t.currency)||'USD', method:str(t.method),
     category:str(t.category)||'Other', recurring:!!t.recurring, freq:str(t.freq),
-    bnpl:str(t.bnpl), note:str(t.note),
+    bnpl:str(t.bnpl), note:str(t.note), adjust:!!t.adjust,
   }));
   const G = Array.isArray(data.goals)? data.goals : [];
   data.goals = G.filter(g=>g&&typeof g==='object').map(g=>({
@@ -605,8 +605,10 @@ function money(n){ const neg=n<0; return (neg?'-':'')+'$'+Math.abs(n).toLocaleSt
 // Parse an amount cell, understanding accounting-style negatives: "($45.00)" and
 // a trailing/leading minus both mean -45.00; commas and $ are ignored.
 function parseAmount(s){
-  s=String(s==null?'':s).trim();
-  const neg = /^\(.*\)$/.test(s) || /-/.test(s);
+  s=String(s==null?'':s).trim().replace(/−/g,'-');   // Unicode minus → ASCII
+  // Negative only for accounting parens or a LEADING/TRAILING minus — a hyphen
+  // buried mid-string (a date, "45.00 - pending") must not flip the sign.
+  const neg = /^\(.*\)$/.test(s) || /^-/.test(s) || /-$/.test(s);
   const n = parseFloat(s.replace(/[^0-9.]/g,''));
   if(!isFinite(n)) return NaN;
   return neg ? -Math.abs(n) : n;
@@ -679,8 +681,9 @@ function debtHistory(){
     let total=0;
     liabs.forEach(a=>{
       const past=snaps.filter(s=>s.accountId===a.id && s.date<=d);
+      // No snapshot yet on this date → contribute 0 (don't fabricate past debt
+      // by projecting today's balance backwards; the line starts when snaps do).
       if(past.length){ const b=past[past.length-1].balance; if(b<0) total+=-b; }
-      else { const b=balanceOf(a); if(b<0) total+=-b; }   // no snap yet — use current
     });
     return { date:d, debt:total };
   });
@@ -737,8 +740,10 @@ function dashDebtCard(){
   const rows=liabs.map(a=>{
     const owed=Math.max(0,-balanceOf(a));
     const mi=monthlyInterestOf(a);
-    const aprCell = a.apr>0 ? (a.apr+'%')
-      : `<button class="btn ghost sm" style="padding:2px 8px" onclick="${a.type==='Credit Card'?`openCardModal('${a.id}')`:`promptLoanApr('${a.id}')`}">set APR</button>`;
+    const aprEdit = a.type==='Credit Card'?`openCardModal('${a.id}')`:`promptLoanApr('${a.id}')`;
+    const aprCell = a.apr>0
+      ? `<button class="btn ghost sm" style="padding:2px 8px" onclick="${aprEdit}" title="Edit APR">${a.apr}%</button>`
+      : `<button class="btn ghost sm" style="padding:2px 8px" onclick="${aprEdit}">set APR</button>`;
     return `<tr><td>${esc(a.name)} <span class="muted">(${esc(a.type)})</span></td><td class="amt neg">${money0(owed)}</td><td>${aprCell}</td><td class="amt ${mi>0?'neg':''}">${mi>0?money(mi)+'/mo':'—'}</td></tr>`;
   }).join('');
   return `<div class="card">
@@ -751,9 +756,9 @@ function dashDebtCard(){
 }
 function promptLoanApr(id){
   const a=DB.accounts.find(x=>x.id===id); if(!a) return;
-  const v=prompt('APR % for '+a.name+' (from your statement):', a.apr||'');
+  const v=prompt('APR % for '+a.name+' (from your statement, 0 to clear):', a.apr||'');
   if(v===null) return;
-  const n=parseFloat(v); if(!isFinite(n)||n<0){ alert('Enter a number like 6.75'); return; }
+  const n=parseFloat(v); if(!isFinite(n)||n<0||n>=100){ alert('Enter a rate between 0 and 100, like 6.75'); return; }
   a.apr=n; save(); refreshActive();
 }
 
@@ -872,7 +877,7 @@ function deleteTxn(id){
    MODALS  — create account / add transaction
    ========================================================================= */
 function openModal(html){ document.getElementById('modalBox').innerHTML = html; document.getElementById('modalBg').classList.add('show'); }
-function closeModal(){ document.getElementById('modalBg').classList.remove('show'); }
+function closeModal(){ document.getElementById('modalBg').classList.remove('show'); document.getElementById('modalBox').innerHTML=''; }
 
 function accountTypeOptions(sel){
   return ACCOUNT_TYPES.map(t=>`<option value="${t.key}"${t.key===sel?' selected':''}>${t.key}</option>`).join('');
@@ -998,6 +1003,9 @@ function openTxnModal(prefAcct){
 const idOk = v => String(v||'').replace(/[^A-Za-z0-9_-]/g,'');
 function txnViaManual(prefAcct){
   txnModalMode='modal';
+  // The Add tab renders this same form with the same ids; clear it so
+  // getElementById resolves to THIS modal's fields (showTab('add') re-renders it).
+  const host=document.getElementById('addFormHost'); if(host) host.innerHTML='';
   openModal(`<button class="x" onclick="closeModal()">×</button><h2>Add a transaction</h2>${txnFormHTML(prefAcct||undefined)}`);
   txnDir='exp';
 }
@@ -1085,7 +1093,7 @@ function renderCharts(){
 /* ----- spending aggregations ----- */
 function spendingByCategory(filterFn){
   const m={};
-  DB.txns.forEach(t=>{ if(filterFn && !filterFn(t)) return; const a=+t.amount||0; if(a<0 && t.category!=='Income'){ m[t.category]=(m[t.category]||0)+(-a); } });
+  DB.txns.forEach(t=>{ if(t.adjust) return; if(filterFn && !filterFn(t)) return; const a=+t.amount||0; if(a<0 && t.category!=='Income'){ m[t.category]=(m[t.category]||0)+(-a); } });
   return Object.entries(m).map(([label,value])=>({label,value,color:CAT_COLOR[label]||'#888'})).sort((x,y)=>y.value-x.value);
 }
 function thisMonthSpending(){ const k=ymKey(new Date()); return spendingByCategory(t=>{ const d=parseISO(t.date); return d && ymKey(d)===k; }); }
@@ -1129,7 +1137,7 @@ function chartAssetsVsDebt(liquid, invest, debt){
 }
 function chartTopMerchants(){
   const m={};
-  DB.txns.forEach(t=>{ const a=+t.amount||0; if(a<0){ const k=t.payee||'(unnamed)'; m[k]=(m[k]||0)+(-a); } });
+  DB.txns.forEach(t=>{ if(t.adjust) return; const a=+t.amount||0; if(a<0){ const k=t.payee||'(unnamed)'; m[k]=(m[k]||0)+(-a); } });
   const rows=Object.entries(m).map(([label,value])=>({label,value,color:'#4f46e5'})).sort((x,y)=>y.value-x.value).slice(0,8);
   return hbars(rows);
 }
@@ -1137,7 +1145,7 @@ function chartTopMerchants(){
 /* ----- monthly income vs expense (grouped vertical bars) ----- */
 function monthlyBuckets(){
   const m={};
-  DB.txns.forEach(t=>{ const d=parseISO(t.date); if(!d) return; const k=ymKey(d); (m[k]=m[k]||{inc:0,exp:0,d}); const a=+t.amount||0; if(a>=0) m[k].inc+=a; else m[k].exp+=-a; });
+  DB.txns.forEach(t=>{ if(t.adjust) return; const d=parseISO(t.date); if(!d) return; const k=ymKey(d); (m[k]=m[k]||{inc:0,exp:0,d}); const a=+t.amount||0; if(a>=0) m[k].inc+=a; else m[k].exp+=-a; });
   return Object.values(m).sort((x,y)=>x.d-y.d).slice(-12);
 }
 function chartIncomeExpense(){
@@ -1264,7 +1272,6 @@ function logPayment(id){
 const ENDPOINT = '/.netlify/functions/ledger';
 const HEADERS = ['Date','Merchant/Payee','Amount','Currency','Payment Method','Category','Recurring Status','BNPL Provider'];
 let images = [];
-const OK_TYPES=['image/png','image/jpeg','image/webp','image/gif'];
 const MAX_EDGE=1568, JPEG_QUALITY=0.85, MAX_IMAGES=20;
 let parsedRows=[];
 
@@ -1288,7 +1295,6 @@ async function addFiles(fileList){
   let skipped=0,full=0;
   document.getElementById('exStatus').innerHTML='<span class="spinner"></span>Preparing image(s)…';
   for(const f of files){ if(images.length>=MAX_IMAGES){full++;continue;} if(!f.type.startsWith('image/')){skipped++;continue;} try{ images.push(await downscale(f)); }catch{ skipped++; } }
-  document.getElementById('file').value='';
   document.getElementById('exStatus').textContent='';
   renderThumbs();
   const msgs=[]; if(skipped) msgs.push(skipped+' file(s) skipped — not a readable image.'); if(full) msgs.push(full+' skipped — '+MAX_IMAGES+'-image limit.');
@@ -1315,7 +1321,7 @@ function renderThumbs(){
   document.getElementById('extractBtn').disabled=images.length===0;
 }
 function removeImage(i){ images.splice(i,1); renderThumbs(); }
-function clearImages(){ images=[]; renderThumbs(); hideAlert('exAlert'); document.getElementById('importPreview').innerHTML=''; }
+function clearImages(){ images=[]; renderThumbs(); hideAlert('exAlert'); document.getElementById('importPreview').innerHTML=''; pendingImportAcct=''; }
 
 async function callLedger(mode,messages){
   let res;
@@ -1346,8 +1352,9 @@ async function runExtract(){
   finally{ document.getElementById('extractBtn').disabled=images.length===0; }
 }
 function clearImagesKeepPreview(){ images=[]; renderThumbs(); }
+const stripFences = s => s.replace(/```[a-zA-Z]*\n?/g,'').replace(/```/g,'');
 function parseTableRows(md){
-  let s=md.replace(/```[a-zA-Z]*\n?/g,'').replace(/```/g,'').trim();
+  let s=stripFences(md).trim();
   const lines=s.split('\n').map(l=>l.trim()).filter(l=>l.startsWith('|'));
   const rows=[];
   for(const line of lines){
@@ -1401,7 +1408,7 @@ async function runBalances(){
 }
 // | Account Name | Account Type | Balance | APR | As-of Date |
 function parseBalanceRows(md){
-  let s=md.replace(/```[a-zA-Z]*\n?/g,'').replace(/```/g,'').trim();
+  let s=stripFences(md).trim();
   const rows=[];
   for(const line of s.split('\n').map(l=>l.trim()).filter(l=>l.startsWith('|'))){
     const c=splitRow(line); if(!c.length) continue;
@@ -1415,8 +1422,9 @@ function parseBalanceRows(md){
   return rows;
 }
 function normBalType(t){ t=(t||'').toLowerCase();
+  // loan-ish patterns first: "line of credit" / "credit builder loan" are Loans
+  if(/loan|mortgage|line of credit|heloc/.test(t)) return 'Loan';
   if(t.includes('credit')) return 'Credit Card';
-  if(t.includes('loan')||t.includes('mortgage')) return 'Loan';
   for(const k of ['Checking','Savings','Investment','Cash']) if(t.includes(k.toLowerCase())) return k;
   return 'Other';
 }
@@ -1425,10 +1433,11 @@ function normBalType(t){ t=(t||'').toLowerCase();
 function matchAccount(row){
   const digits=(row.name.match(/\d{3,4}/g)||[]).pop()||'';
   const toks=row.name.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>2&&!/^\d+$/.test(w));
-  let best=null, bestScore=1;   // require score >= 2 to auto-match
+  let best=null, bestScore=1;   // require score >= 2 to auto-match; ties never steal
   DB.accounts.forEach(a=>{
     let s=0; const an=a.name.toLowerCase();
-    if(digits && a.name.includes(digits)) s+=3;
+    // masked digits must match an exact digit GROUP ("...4821" ≠ "14821")
+    if(digits && (a.name.match(/\d{3,4}/g)||[]).includes(digits)) s+=3;
     toks.forEach(w=>{ if(an.includes(w)) s+=1; });
     if(a.type===row.type) s+=1;
     if(s>bestScore){ bestScore=s; best=a; }
@@ -1466,16 +1475,19 @@ function applyBalances(){
     // Photographed APR fills a missing rate (never overwrites one you typed).
     if(r.apr>0 && (acc.type==='Credit Card'||acc.type==='Loan') && !(+acc.apr>0)) acc.apr=r.apr;
     const target = LIAB_BAL(acc.type)? -Math.abs(r.bal) : r.bal;
-    const date = r.asof||todayISO();
+    // The adjustment is dated TODAY (balanceOf sums all history, so a past-dated
+    // delta would rewrite an old month's charts). The as-of date only stamps the
+    // snapshot. adjust:true keeps these out of income/spending/budget analytics.
     const delta = target - balanceOf(acc);
     if(Math.abs(delta)>=0.005){
-      DB.txns.push({ id:uid(), accountId:acc.id, date, payee:'Balance update (photo)', amount:delta,
-        currency:'USD', method:'', category:'Other', recurring:false, freq:'', bnpl:'', note:'Synced from balance screenshot' });
+      DB.txns.push({ id:uid(), accountId:acc.id, date:todayISO(), payee:'Balance update (photo)', amount:delta,
+        currency:'USD', method:'', category:'Other', recurring:false, freq:'', bnpl:'', note:'Synced from balance screenshot'+(r.asof?' (as of '+r.asof+')':''), adjust:true });
       updated++;
     } else unchanged++;
     // one snapshot per account per day — powers the debt trend line
-    const old=DB.balSnaps.find(s=>s.accountId===acc.id&&s.date===date);
-    if(old) old.balance=target; else DB.balSnaps.push({ id:uid(), accountId:acc.id, date, balance:target });
+    const snapDate = r.asof||todayISO();
+    const old=DB.balSnaps.find(s=>s.accountId===acc.id&&s.date===snapDate);
+    if(old) old.balance=target; else DB.balSnaps.push({ id:uid(), accountId:acc.id, date:snapDate, balance:target });
   });
   save();
   balRows=[]; document.getElementById('balPreview').innerHTML='';
@@ -1499,7 +1511,7 @@ function renderImportPreview(){
         return `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(mapCategory(r[5]))}</td><td class="amt ${amt<0?'neg':'pos'}">${isNaN(amt)?'—':money(amt)}</td><td>${rec?'<span class="rec-badge">'+esc(r[6]||'Recurring')+'</span>':''}</td></tr>`;
       }).join('')}
     </tbody></table></div>
-    <div class="row mt"><button class="btn gold" onclick="importParsed()">Import into account</button><button class="btn ghost" onclick="document.getElementById('importPreview').innerHTML='';parsedRows=[]">Discard</button><span id="imp_status" class="status"></span></div>
+    <div class="row mt"><button class="btn gold" onclick="importParsed()">Import into account</button><button class="btn ghost" onclick="document.getElementById('importPreview').innerHTML='';parsedRows=[];pendingImportAcct=''">Discard</button><span id="imp_status" class="status"></span></div>
   </div>`;
   document.getElementById('imp_acct').addEventListener('change',function(){ document.getElementById('imp_new').style.display=this.value==='__new__'?'block':'none'; });
 }
@@ -1575,7 +1587,7 @@ function renderTableHTML(headers,rows){
   return html+'</tbody></table></div>';
 }
 function renderMarkdown(md){
-  const lines=md.replace(/```[a-zA-Z]*\n?/g,'').replace(/```/g,'').split('\n');
+  const lines=stripFences(md).split('\n');
   let html='',i=0,listType=null; const closeList=()=>{ if(listType){ html+='</'+listType+'>'; listType=null; } };
   while(i<lines.length){
     const line=lines[i];
@@ -1599,7 +1611,7 @@ function importData(ev){
   const f=ev.target.files?.[0]; if(!f) return;
   const r=new FileReader();
   r.onload=()=>{ try{ const obj=JSON.parse(r.result); if(!obj.accounts||!obj.txns) throw 0;
-      if(confirm('Replace current data with the backup file?')){ DB=migrate(obj)||obj; save(); refreshActive(); flash('backupStatus','Imported ✓'); } }
+      if(confirm('Replace current data with the backup file?')){ DB=migrate(obj); save(); refreshActive(); flash('backupStatus','Imported ✓'); } }
     catch{ flash('backupStatus','Not a valid backup file'); } ev.target.value=''; };
   r.readAsText(f);
 }
@@ -1610,7 +1622,7 @@ function importData(ev){
 function cardsList(){ return DB.accounts.filter(a=>a.type==='Credit Card'); }
 function cardOwed(a){ const b=balanceOf(a); return b<0?-b:0; }
 function cardUtil(a){ return (a.limit>0)? cardOwed(a)/a.limit : 0; }
-function monthSpendFor(accId){ const k=ymKey(new Date()); return DB.txns.reduce((s,t)=>{ if(t.accountId!==accId) return s; const d=parseISO(t.date); if(!d||ymKey(d)!==k) return s; const a=+t.amount||0; return a<0? s-a : s; },0); }
+function monthSpendFor(accId){ const k=ymKey(new Date()); return DB.txns.reduce((s,t)=>{ if(t.adjust||t.accountId!==accId) return s; const d=parseISO(t.date); if(!d||ymKey(d)!==k) return s; const a=+t.amount||0; return a<0? s-a : s; },0); }
 function purposeCls(p){ if(p==='Work expenses') return 'work'; if(p==='Personal budget') return 'personal'; if(p==='House expenses') return 'house'; return 'general'; }
 function ordinal(n){ const s=['th','st','nd','rd'],v=n%100; return (s[(v-20)%10]||s[v]||s[0]); }
 function recommendBestCards(){
@@ -1681,9 +1693,9 @@ function saveCard(id){
 /* =========================================================================
    BUDGET + INCOME ANALYSIS ENGINE
    ========================================================================= */
-function deriveIncome(){ const k=ymKey(new Date()); return DB.txns.reduce((s,t)=>{ const d=parseISO(t.date); if(!d||ymKey(d)!==k) return s; const a=+t.amount||0; return a>0? s+a : s; },0); }
+function deriveIncome(){ const k=ymKey(new Date()); return DB.txns.reduce((s,t)=>{ if(t.adjust) return s; const d=parseISO(t.date); if(!d||ymKey(d)!==k) return s; const a=+t.amount||0; return a>0? s+a : s; },0); }
 function monthlyIncome(){ return DB.budgets.income>0? DB.budgets.income : deriveIncome(); }
-function catActual(cat){ const k=ymKey(new Date()); return DB.txns.reduce((s,t)=>{ if(t.category!==cat) return s; const d=parseISO(t.date); if(!d||ymKey(d)!==k) return s; const a=+t.amount||0; return a<0? s-a : s; },0); }
+function catActual(cat){ const k=ymKey(new Date()); return DB.txns.reduce((s,t)=>{ if(t.adjust||t.category!==cat) return s; const d=parseISO(t.date); if(!d||ymKey(d)!==k) return s; const a=+t.amount||0; return a<0? s-a : s; },0); }
 function payInFullStatus(){ const t=totalsByType(); const liquid=(t['Checking']||0)+(t['Savings']||0)+(t['Cash']||0); const owed=cardsList().reduce((s,a)=>s+cardOwed(a),0); return { liquid, owed, canPay: liquid>=owed, shortfall:Math.max(0,owed-liquid) }; }
 function budgetAnalysis(){
   const income=monthlyIncome();
