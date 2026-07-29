@@ -598,7 +598,7 @@ function save(){
   idbPut(DB);                                             // primary: IndexedDB (fire-and-forget)
   try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }catch{} // best-effort mirror
 }
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function uid(){ try{ return crypto.randomUUID(); }catch(e){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); } }
 
 /* ---------- money / date helpers ---------- */
 function money(n){ const neg=n<0; return (neg?'-':'')+'$'+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
