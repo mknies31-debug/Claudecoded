@@ -65,15 +65,15 @@ export function sequenceByKey(key) {
 // gift queue a reminder + script for the user to do by hand (the app can't place
 // a call or mail a gift). Rotation order is the user's: Call → Text → Email →
 // Video → Gift/Card, then repeat forever.
-export const FOLLOWUP_TYPES = {
+const FOLLOWUP_TYPES = {
   call: { label: '90-Day Call', channel: 'task', verb: 'Call' },
   text: { label: '90-Day Text', channel: 'text', verb: 'Text' },
   email: { label: '90-Day Email', channel: 'email', verb: 'Email' },
   video: { label: '90-Day Video', channel: 'task', verb: 'Record a video' },
   gift: { label: '90-Day Gift / Card', channel: 'task', verb: 'Send a gift or card' },
 };
-export const FOLLOWUP_ROTATION = ['call', 'text', 'email', 'video', 'gift'];
-export const FOLLOWUP = { startDay: 365, everyDays: 90 };
+const FOLLOWUP_ROTATION = ['call', 'text', 'email', 'video', 'gift'];
+const FOLLOWUP = { startDay: 365, everyDays: 90 };
 
 /** The recurring follow-up window for a stage past the fixed sequence, or null. */
 export function followupForStage(stage) {
@@ -98,7 +98,7 @@ export function followupForStage(stage) {
 export const PROSPECT_INTERVAL = { hot: 2, cold: 14 };
 
 /** The window at a given stage — fixed window or the recurring follow-up. */
-export function windowForStage(stage) {
+function windowForStage(stage) {
   const idx = stage || 0;
   return idx < SEQUENCES.length ? SEQUENCES[idx] : followupForStage(idx);
 }
@@ -123,7 +123,7 @@ const MS_PER_DAY = 86400000;
 // dates in UTC mis-dates any evening entry (after ~7pm CT it rolls to tomorrow)
 // and fires the day-1/14/45 windows off by a day. localDateStr() returns the
 // calendar date *in the given zone* as YYYY-MM-DD so capture and the cron agree.
-export const BUSINESS_TZ = 'America/Chicago';
+const BUSINESS_TZ = 'America/Chicago';
 export function localDateStr(date = new Date(), tz = BUSINESS_TZ) {
   try {
     // en-CA formats as YYYY-MM-DD, which is exactly the shape we store.

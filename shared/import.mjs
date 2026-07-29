@@ -48,12 +48,12 @@ const HEADER_ALIASES = {
 const norm = (h) => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /** Map a header row to canonical field names by column index. */
-export function mapHeaders(headerRow) {
+function mapHeaders(headerRow) {
   return headerRow.map((h) => HEADER_ALIASES[norm(h)] || null);
 }
 
 /** Turn one data row (+ the mapped header) into a customer input object. */
-export function rowToInput(cells, fields) {
+function rowToInput(cells, fields) {
   const get = (f) => { const i = fields.indexOf(f); return i >= 0 ? String(cells[i] || '').trim() : ''; };
   let firstName = get('firstName');
   let lastName = get('lastName');

@@ -30,6 +30,7 @@ their variable is present.
 | `GMAIL_USER` | your Gmail address, `northstarmickknies@gmail.com` | sending via Gmail |
 | `GMAIL_APP_PASSWORD` | the 16-char Google **App Password** (NOT your login password) | sending via Gmail |
 | `MAIL_REPLY_TO` *(optional)* | where replies land (defaults to `GMAIL_USER`) | email |
+| `MAIL_FROM_NAME` *(optional)* | the display name on Gmail sends (default "Mick — North Star Car Guy") | email |
 | `ANTHROPIC_API_KEY` | photo intake + Ask CARVIS | the 📷 From-a-photo feature |
 | `CRON_SECRET` | guards the cron's public URL — manual triggers must send this | keeping the send loop private |
 | `RESEND_API_KEY` / `MAIL_FROM` | only if `EMAIL_PROVIDER=resend` (domain sending) | the Resend path |

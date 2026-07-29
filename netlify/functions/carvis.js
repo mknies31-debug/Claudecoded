@@ -109,7 +109,7 @@ exports.handler = async (event) => {
           'x-api-key': key,
           'anthropic-version': '2023-06-01',
         },
-        body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT, messages }),
+        body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system, messages }),
       });
     } catch (err) {
       lastStatus = 502;

@@ -32,10 +32,10 @@ export function countSentences(str) {
   return parts.length;
 }
 
-export function withinTextLimit(str) {
+function withinTextLimit(str) {
   return countSentences(str) <= TEXT_MAX_SENTENCES;
 }
-export function withinEmailLimit(str) {
+function withinEmailLimit(str) {
   return countSentences(str) <= EMAIL_MAX_SENTENCES;
 }
 
@@ -77,7 +77,7 @@ const TONE_PATTERNS = [
   { re: /\b(synergy|leverage|circle back|touch base|cutting[- ]edge|world[- ]class|best[- ]in[- ]class|reach out at your earliest convenience)\b/i, msg: 'corporate jargon' },
 ];
 
-export function toneViolations(str) {
+function toneViolations(str) {
   const s = String(str || '');
   return TONE_PATTERNS.filter((p) => p.re.test(s)).map((p) => p.msg);
 }

@@ -30,7 +30,7 @@ function loadArr(key) { try { const v = JSON.parse(localStorage.getItem(key) || 
 // so a software update can never misread or corrupt data saved by an old version.
 const getCustomers = () => loadArr(KEYS.customers).map(migrateCustomer).filter(Boolean);
 const getLogs = () => loadArr(KEYS.touchLogs);
-// meta { lastRun, lastReport, templatesApproved } — the cron writes it, sync
+// meta { lastRun, lastReport } — the cron writes it, sync
 // pulls it here, so we can show whether the follow-up engine actually ran.
 const getMeta = () => { try { const m = JSON.parse(localStorage.getItem(KEYS.meta) || '{}'); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; } catch (e) { return {}; } };
 function fmtAgo(iso) {
@@ -115,7 +115,7 @@ function buildOverlay() {
         <button class="x" id="crmClose">✕</button>
       </div>
       <div class="mb">
-        ${APPROVED ? '' : '<div class="crm-banner" id="crmBanner">⏸ Auto-emails are <b>held</b> until your copy is approved. Texts still work — fire them by hand below. (Set APPROVED in shared/templates.mjs once your wording is in.)</div>'}
+        ${APPROVED ? '' : '<div class="crm-banner">⏸ Auto-emails are <b>held</b> until your copy is approved. Texts still work — fire them by hand below. (Set APPROVED in shared/templates.mjs once your wording is in.)</div>'}
         <div class="crm-tabs">
           <button class="crm-tab on" data-tab="dashboard">◉ Daily Ops</button>
           <button class="crm-tab" data-tab="add">＋ Add Customer</button>

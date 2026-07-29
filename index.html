@@ -187,20 +187,6 @@
   /* ============ DIRECTIVES (right) ============ */
   .dir{flex:1;min-height:0;display:flex;flex-direction:column}
   .dir .pbody{overflow-y:auto;flex:1;min-height:0}
-  .di{border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:10px;background:rgba(47,230,255,.03);transition:.2s;border-left:3px solid var(--ac,var(--cyan))}
-  .di:hover{border-color:var(--line-strong);background:rgba(47,230,255,.06)}
-  .di .dtop{display:flex;align-items:center;gap:9px}
-  .di .nm{font-weight:700;font-size:17px;letter-spacing:.3px}
-  .di .tag{margin-left:auto;font-family:var(--mono);font-size:14px;letter-spacing:.5px;padding:3px 8px;border-radius:20px;white-space:nowrap}
-  .di .tag.quiet{background:rgba(255,77,94,.14);color:var(--red)}
-  .di .tag.appt{background:rgba(56,240,138,.14);color:var(--green)}
-  .di .veh{font-size:15px;color:var(--dim);margin-top:3px;font-family:var(--mono);letter-spacing:.3px}
-  .di .acts{display:flex;gap:7px;margin-top:10px}
-  .di .act{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Orbitron';font-size:14px;letter-spacing:1.5px;
-    padding:8px 0;border-radius:8px;border:1px solid var(--line);color:var(--dim);transition:.18s;cursor:pointer}
-  .di .act:hover{color:var(--text);border-color:var(--line-strong)}
-  .di .act.go{background:rgba(47,230,255,.12);border-color:var(--cyan-dim);color:var(--cyan)}
-  .di .act.go:hover{background:rgba(47,230,255,.2)}
   /* Today panel — CRM-derived day plan */
   .tband{font-family:var(--mono);font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin:10px 2px 6px}
   #dirBody .tband:first-child{margin-top:0}
@@ -278,9 +264,6 @@
   .brief{margin:10px auto 0;max-width:560px;font-family:var(--mono);font-size:13px;letter-spacing:.4px;line-height:1.55;color:var(--cyan);opacity:0;transition:opacity 1.1s ease}
   .brief.show{opacity:.9}
   .mb{padding:18px 20px 22px}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;padding:3px;margin-bottom:15px}
-  .seg button{font-family:'Orbitron';font-size:14px;letter-spacing:1.5px;padding:8px 16px;border-radius:6px;color:var(--dim);cursor:pointer;transition:.2s}
-  .seg button.on{background:var(--cyan);color:#02141a}
   .draft{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px}
   .draft .dh{display:flex;align-items:center;gap:9px;margin-bottom:9px}
   .draft .lab{font-family:'Orbitron';font-size:14px;letter-spacing:1.5px}
@@ -321,8 +304,6 @@
   .spark{width:200px;height:34px;margin-top:12px;display:block}
   .spark #sparkLine{fill:none;stroke:var(--cyan);stroke-width:2;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 5px rgba(47,230,255,.6))}
   .spark #sparkFill{fill:url(#sg);stroke:none;opacity:.22}
-  @keyframes diflash{0%{box-shadow:0 0 0 2px rgba(47,230,255,.5);background:rgba(47,230,255,.16)}100%{box-shadow:0 0 0 0 rgba(47,230,255,0)}}
-  .di.fresh{animation:diflash 1.6s ease-out}
   @media(prefers-reduced-motion:reduce){ .stage,.reactor-wrap{transform:none!important}
     .ring,.sweep,.ticker .run,.core .cdot,.scanbeam,.surge,.bloom,.orbit,.panel::before,.brand .logo,.hero .v,
     .app.live .top,.app.live .main>.col,.app.live .ticker,.app.live .cmd{animation:none!important} }
@@ -352,7 +333,6 @@
   .ostat.ok{color:var(--green)} .ostat.err{color:var(--red)} .ostat.send{color:var(--cyan)}
   .omanage{margin-top:10px;font-family:var(--mono);font-size:14px;letter-spacing:.5px;color:var(--cyan);background:none;cursor:pointer;border:none;padding:0}
   .omanage:hover{text-decoration:underline}
-  .omg{margin-top:10px;padding:12px;border:1px dashed var(--line-strong);border-radius:11px}
 
   /* ===== ask CARVIS (live · Fable 5) ===== */
   .ailog{display:flex;flex-direction:column;gap:10px;min-height:90px;max-height:46vh;overflow-y:auto;margin-bottom:12px}
@@ -460,17 +440,6 @@
   .hot{flex:1;min-height:0;display:flex;flex-direction:column}
   .hot .pbody{overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column}
   .hot-add{flex:0 0 auto;margin-bottom:10px}
-  .hin{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text);
-    font-family:'Atkinson Hyperlegible';font-size:17px;padding:9px 11px;outline:none;margin-bottom:7px;transition:.2s}
-  .hin:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(47,230,255,.1)}
-  .hin::placeholder{color:var(--dim)}
-  .hot-row{display:flex;gap:8px;align-items:center}
-  .heatpick{display:flex;gap:5px;flex:1}
-  .heatpick button{flex:1;font-family:'Orbitron';font-size:14px;letter-spacing:.5px;padding:8px 4px;border-radius:7px;
-    border:1px solid var(--line);color:var(--dim);cursor:pointer;transition:.15s}
-  .heatpick button[data-h=hot].on{background:rgba(255,77,94,.16);border-color:var(--red);color:var(--red)}
-  .heatpick button[data-h=warm].on{background:rgba(255,182,72,.16);border-color:var(--gold);color:var(--gold)}
-  .heatpick button[data-h=cool].on{background:rgba(47,230,255,.14);border-color:var(--cyan-dim);color:var(--cyan)}
   .hadd{flex:0 0 auto;font-family:'Orbitron';font-size:14px;letter-spacing:1px;padding:9px 14px;border-radius:8px;border:none;
     background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:#02141a;cursor:pointer;transition:.2s}
   .hadd:hover{filter:brightness(1.1)}
@@ -518,8 +487,6 @@
   body.hivis .ro .v{font-size:25px} body.hivis .ro .l{font-size:15px}
   body.hivis .mk-item p{font-size:19px;line-height:1.5} body.hivis .mk-item .n{font-size:17px}
   body.hivis .verify{font-size:16px}
-  body.hivis .di .nm{font-size:20px} body.hivis .di .veh{font-size:17px} body.hivis .di .tag{font-size:15px}
-  body.hivis .di .act{font-size:15px;padding:11px 0}
   body.hivis .ti .tnm{font-size:17px} body.hivis .ti .tlb{font-size:15px} body.hivis .tband,body.hivis .tmrw{font-size:15px}
   body.hivis .task .tk-t{font-size:19px;line-height:1.45} body.hivis .task .tk-hp{font-size:13px}
   body.hivis .task .tk-box{width:26px;height:26px}
@@ -693,21 +660,7 @@
   </div>
 </div>
 
-<!-- ============ MODAL ============ -->
-<div class="overlay" id="overlay">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div class="mh">
-      <div class="av" id="mAv"></div>
-      <div><div class="mt" id="mName">—</div><div class="ms" id="mSub">—</div></div>
-      <button class="x" id="mClose">✕</button>
-    </div>
-    <div class="mb">
-      <div class="seg" id="mSeg"><button class="on" data-ch="text">TEXT</button><button data-ch="email">EMAIL</button></div>
-      <div id="mDrafts"></div>
-      <div class="mnote"><span>✦</span><span>Three options, every time — <b>Direct</b>, <b>Softer</b>, <b>NEPQ</b>, in Mick's voice. <span class="soon">CARVIS generates these live once talkback ships;</span> templated previews for now.</span></div>
-    </div>
-  </div>
-</div>
+
 
 <!-- ============ BUYER REPLY MODAL ============ -->
 <div class="overlay" id="rOverlay">
@@ -882,7 +835,6 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
-const SRC = { fb:'FB MKTPLACE', ref:'REFERRAL', app:'NORTHSTAR APP', text:'SHORTCODE', mc:'MANYCHAT' };
 const DATA = {
   // Sales are COUNTS Mick enters per month in the NUMBERS panel — never
   // fabricated. Everything starts at 0 until he fills it in (and he can
@@ -921,9 +873,7 @@ const DATA = {
     {nm:'FOLLOW-UP SEQUENCER', status:'standby'},
   ],
   market:[],   // start empty — no assumed market figures
-  leads:[],    // start empty — no assumed directives/leads
 };
-const initials = n => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
 const phoneFmt = p => `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}`;
 
 /* ---------- monthly numbers (real, user-entered, start at 0) ----------
@@ -1158,51 +1108,10 @@ function tick(){
   if(sessStart){ const s=Math.floor((d-sessStart)/1000); $('#sess').textContent=`${p(Math.floor(s/3600))}:${p(Math.floor(s/60)%60)}:${p(s%60)}`; }
 }
 
-/* ---------- draft modal ---------- */
-const first = l => (l.name||'').split(' ')[0];
-// Context-aware lead drafts built from Mick's REAL scripts (lifted from Lead
-// Command's SCRIPTS): quiet → ghost recovery, appt → confirm/lock-in, else →
-// opener/discovery. Shortcodes match the Script Playbook.
-function leadDraftSet(l){
-  const v = l.vehicle, n = first(l);
-  if(l.quiet) return [
-    {lab:'OPTION A',tag:'DIRECT',code:';mpGH2c',body:`${n} — one last thing. I've got something set aside for you: a discount voucher with your name on it. Yours if you still want in.`},
-    {lab:'OPTION B',tag:'SOFTER',code:';mpGH1',body:`${n} — still thinking on the ${v}? No rush. I've got 500 vehicles across all brands — want me to send a quick fit guide and pull a few more that match?`},
-    {lab:'OPTION C',tag:'NEPQ',code:';mpGH2a',body:`${n} — ever wonder what your current ride is actually worth? Free same-day appraisal, no obligation. What are you in right now?`},
-  ];
-  if(l.appt) return [
-    {lab:'OPTION A',tag:'CONFIRM',code:';mpA6',body:`${n} — ${l.appt} works. I'll have the ${v} pulled and ready, and I'll send a walkaround video ahead of time so you can see it up close. See you then.`},
-    {lab:'OPTION B',tag:'SOFTER',code:';ph-lockin',body:`${n} — you're all set. We'll pull the ${v} around, take a look and a drive — totally low pressure, 20–30 minutes. If anything changes, just text me directly.`},
-    {lab:'OPTION C',tag:'NEPQ',code:';mpA1',body:`${n} — quick one before you come in: trading something in, or just adding to the fleet? Helps me have the right numbers ready.`},
-  ];
-  return [
-    {lab:'OPTION A',tag:'DIRECT',code:';mpA4',body:`${n} — just a heads up, the ${v} is for sale and moving. Want to make sure you get a look while it's here. Does today work?`},
-    {lab:'OPTION B',tag:'SOFTER',code:';mp0',body:`Hey ${n} — still here. So I can help you the right way: looking for something soon, or still early?`},
-    {lab:'OPTION C',tag:'NEPQ',code:';mpB1',body:`${n} — what's the main reason the ${v} caught your eye, or what would it do for you that you don't have right now?`},
-  ];
-}
-let mLead=null, mCh='text';
-function openDraft(id){
-  const l=DATA.leads.find(x=>x.id===id); if(!l) return;
-  mLead=l; mCh='text';
-  $('#mAv').textContent=initials(l.name);
-  $('#mName').textContent=`DRAFT · ${l.name}`;
-  $('#mSub').textContent=`${l.vehicle} · ${SRC[l.src]} · ${phoneFmt(l.phone)}`;
-  $$('#mSeg button').forEach(b=>b.classList.toggle('on',b.dataset.ch==='text'));
-  renderDrafts(); $('#overlay').classList.add('show');
-}
-function renderDrafts(){
-  const set = leadDraftSet(mLead);
-  $('#mDrafts').innerHTML = set.map((d,i)=>{
-    const body = mCh==='email' ? d.body+'\n\n— Mick, North Star Car Guy' : d.body;
-    return `<div class="draft ${['a','b','c'][i]}">
-      <div class="dh"><span class="lab">${d.lab}</span><span class="tg">${d.tag} · ${d.code}</span>
-        <button class="cp js-copy" data-txt="${body.replace(/"/g,'&quot;')}">COPY</button></div>
-      <p>${body.replace(/\n/g,'<br>')}</p>
-    </div>`;
-  }).join('');
-}
-function closeModal(){ $('#overlay').classList.remove('show'); }
+/* ---------- draft modal (#overlay) ----------
+   Shell only — the lead-directive flow that used to open it went away with the
+   Directives panel (nothing populates it today). Close wiring kept so Esc /
+   backdrop behave if it ever gets a new opener. */
 
 /* ---------- buyer reply assistant (paste a Marketplace message → 3 options) ----------
    SAFE + manual: CARVIS never touches Messenger (personal Marketplace chats have no
@@ -1422,19 +1331,12 @@ function runCmd(raw){
   if(low==='reply'||low==='buyer reply'){ openReply(); return; }
   if(low==='outreach'||low==='email'){ openOutreach(); return; }
   if(low==='findcar'){ $('#cmd').focus(); toast('Ask about a car — type a year, make/model, or stock # (e.g. "2017 F350")'); return; }
-  if(low.startsWith('draft')||low.startsWith('text')||low.startsWith('message')){
-    const name=low.replace(/^(draft|text|message)\s*/,'');
-    const l=DATA.leads.find(x=>x.name.toLowerCase().includes(name));
-    if(l){ openDraft(l.id); $('#cmd').value=''; return; }
-  }
-  const l=DATA.leads.find(x=>low.includes(x.name.split(' ')[0].toLowerCase()));
-  if(l){ openDraft(l.id); $('#cmd').value=''; return; }
   { const looksMsg=/\?/.test(q)||q.split(/\s+/).length>6; const ms=findVehicles(q);
     if(ms.length && !looksMsg && (isCarQuery(q)||q.split(/\s+/).length<=4)){ openVehicle(ms); $('#cmd').value=''; return; }
     if(isCarQuery(q) && !looksMsg && INVENTORY.length){ const u='https://www.google.com/search?q='+encodeURIComponent('site:mosaicautos.com '+q); toast(`No local match — searching mosaicautos.com for "${q}"`); window.open(u,'_blank','noopener'); $('#cmd').value=''; return; } }
   // exact-match shortcuts only — full sentences fall through to the live brain
   if(low==='market'){ $('#mkList').scrollIntoView({behavior:'smooth'}); toast('Market pulse — see left panel'); $('#cmd').value=''; return; }
-  if(low==='directives'||low==='directive'){ toast(`${DATA.leads.length} directives queued — see right`); $('#cmd').value=''; return; }
+  if(low==='directives'||low==='directive'){ toast('Directives are the Today panel now — see right'); $('#cmd').value=''; return; }
   // anything else → hand it to the live CARVIS brain (Fable 5)
   openAI(q); $('#cmd').value='';
 }
@@ -1639,7 +1541,17 @@ function drawSpark(){
    Daily checklist; checked state persists per-day in localStorage so it resets
    each morning. Tasks map to the six habits: Clarity, Energy, Necessity,
    Productivity, Influence, Courage. */
-const TASK_KEY = () => 'carvis_tasks_'+new Date().toISOString().slice(0,10);
+// Central-time date so the checklist rolls at midnight in Zumbrota, not 6pm
+// (UTC). Old dated keys are pruned after two weeks so the synced blob and file
+// backups don't grow one key per day forever.
+const TASK_KEY = () => 'carvis_tasks_'+chiDate(0);
+function pruneTaskKeys(){
+  try{
+    const cutoff='carvis_tasks_'+chiDate(-14), dead=[];
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('carvis_tasks_')&&k<cutoff) dead.push(k); }
+    dead.forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+}
 function loadTaskState(){ try{ return JSON.parse(localStorage.getItem(TASK_KEY())||'{}')||{}; }catch(e){ return {}; } }
 let taskState=loadTaskState();
 function saveTaskState(){ try{ localStorage.setItem(TASK_KEY(), JSON.stringify(taskState)); }catch(e){} scheduleCloudPush(); }
@@ -1766,14 +1678,19 @@ function migrateSilos(){
               after every change and pulls on load, via /.netlify/functions/sync.
    Both move the same carvis_* localStorage keys (the sync key itself is excluded
    so it never leaves the machine it was set on). */
+// Per-device keys stay local: the sync key itself, and preferences/state that
+// belong to ONE screen — syncing them makes device A's morning briefing silence
+// device B's, or one phone's hands-free/vision/voice pick stomp the other's.
+const LOCAL_ONLY_KEYS=['carvis_synckey','carvis_last_brief','carvis_handsfree','carvis_hivis','carvis_referral_voice'];
+const syncable = k => typeof k==='string' && k.startsWith('carvis_') && !LOCAL_ONLY_KEYS.includes(k);
 function snapshotStore(){
   const s={};
-  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('carvis_')&&k!=='carvis_synckey') s[k]=localStorage.getItem(k); }
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(syncable(k)) s[k]=localStorage.getItem(k); }
   return s;
 }
 function applyStore(store){
   let n=0;
-  Object.entries(store||{}).forEach(([k,v])=>{ if(typeof k==='string'&&k.startsWith('carvis_')&&k!=='carvis_synckey'&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
+  Object.entries(store||{}).forEach(([k,v])=>{ if(syncable(k)&&typeof v==='string'){ localStorage.setItem(k,v); n++; } });
   taskState=loadTaskState(); crmRawLast=localStorage.getItem('carvis_referral_customers');
   try{ refreshContactDropdown(); }catch(e){}
   renderHot(); renderTasks();
@@ -2090,6 +2007,7 @@ function saveGoalsFromForm(){
 function init(){
   initSpace();
   migrateSilos();   // one-time: queue legacy carvis_hot / carvis_contacts for the CRM
+  pruneTaskKeys();  // drop habit-checklist keys older than two weeks
   applyTimeTheme(); setInterval(applyTimeTheme, 5*60*1000);
   renderSystem(); renderMarket(); renderGauges(); renderToday(); renderTicker(); renderTasks(); renderHot();
   renderStats();   // fill hero/ring/gauges/readouts/ticker/chart from saved monthly numbers (0 until entered)
@@ -2104,18 +2022,11 @@ function init(){
     const tk=e.target.closest('.task'); if(tk){ toggleTask(tk.dataset.id); return; }
     const hdr=e.target.closest('.js-hot-draft'); if(hdr){ const p=crmHot().find(x=>x.id===hdr.dataset.id); if(p){ openReply(); $('#rVeh').value=p.vehicle||''; } return; }
     const ti=e.target.closest('.js-today'); if(ti){ blip(720,0.06,'sine',0.13); if(typeof window.openReferrals==='function') window.openReferrals(); return; }
-    const dr=e.target.closest('.js-draft'); if(dr){ blip(720,0.06,'sine',0.13); openDraft(+dr.dataset.id); return; }
-    const dn=e.target.closest('.js-done'); if(dn){ blip(300,0.08,'sawtooth',0.12);
-      const di=dn.closest('.di'); di.style.transition='.25s'; di.style.opacity='0'; di.style.transform='translateX(16px)';
-      setTimeout(()=>{ di.remove(); $('#dirMeta').textContent=$$('.di').length+' TODAY'; },250);
-      toast('Directive cleared'); return;
-    }
     const cp=e.target.closest('.js-copy'); if(cp){ blip(980,0.05,'triangle',0.12);
       navigator.clipboard?.writeText(cp.dataset.txt).catch(()=>{});
       cp.classList.add('done'); cp.textContent='✓ COPIED'; toast('Copied to clipboard');
       setTimeout(()=>{ cp.classList.remove('done'); cp.textContent='COPY'; },1600); return;
     }
-    if(e.target.closest('#mClose')||e.target===$('#overlay')) closeModal();
     if(e.target.closest('#rClose')||e.target===$('#rOverlay')) closeReply();
     if(e.target.closest('#oClose')||e.target===$('#oOverlay')) closeOutreach();
     if(e.target.closest('#vClose')||e.target===$('#vOverlay')) closeVehicle();
@@ -2123,10 +2034,9 @@ function init(){
     if(e.target.closest('#numClose')||e.target===$('#numOverlay')) closeNumbers();
     if(e.target.closest('#aiClose')||e.target===$('#aiOverlay')) closeAI();
     const vp=e.target.closest('.js-vpick'); if(vp){ showVehicle(vMatches[+vp.dataset.i]); return; }
-    const sg=e.target.closest('#mSeg button'); if(sg){ mCh=sg.dataset.ch; $$('#mSeg button').forEach(b=>b.classList.toggle('on',b===sg)); renderDrafts(); }
     const chip=e.target.closest('.chip'); if(chip){ runCmd(chip.dataset.cmd); }
   });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeReply(); closeOutreach(); closeVehicle(); closeSync(); closeNumbers(); closeAI(); } });
 
   $('#send').addEventListener('click', ()=>{ blip(640,0.05,'sine',0.12); runCmd($('#cmd').value); });
   $('#cmd').addEventListener('keydown', e=>{ if(e.key==='Enter') runCmd($('#cmd').value); });

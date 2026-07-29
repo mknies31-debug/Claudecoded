@@ -34,7 +34,6 @@ export class ResendProvider extends EmailProvider {
     this.replyTo = env.MAIL_REPLY_TO || undefined;
   }
   get name() { return 'resend'; }
-  get configured() { return !!this.key; }
 
   async send({ to, toName, subject, html, text }) {
     if (!this.key) throw new Error('RESEND_API_KEY is not set');
@@ -76,7 +75,6 @@ export class MailerLiteProvider extends EmailProvider {
     this.base = 'https://connect.mailerlite.com/api';
   }
   get name() { return 'mailerlite'; }
-  get configured() { return !!this.key; }
 
   async send({ to, toName, subject }) {
     if (!this.key) throw new Error('MAILERLITE_API_KEY is not set');
@@ -118,7 +116,6 @@ export class GmailProvider extends EmailProvider {
     this.replyTo = env.MAIL_REPLY_TO || this.user;
   }
   get name() { return 'gmail'; }
-  get configured() { return !!(this.user && this.pass); }
 
   async send({ to, toName, subject, html, text }) {
     if (!this.user || !this.pass) throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD are not set');

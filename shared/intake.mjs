@@ -57,7 +57,7 @@ export function extractPhone(str) {
 }
 
 /** Strip leading filler ("his name is…", "first name…") and punctuation. */
-export function cleanSpokenName(str) {
+function cleanSpokenName(str) {
   let c = String(str || '').replace(/[.,]/g, '').trim();
   const FILLER = /^(his|her|their|the|a|customer'?s?|client'?s?|name|first|last|is|it'?s|this|that)\s+/i;
   let prev;

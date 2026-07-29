@@ -67,7 +67,7 @@ cron opens the **same** blob using `CRM_SYNC_KEY`.
   from it — the legacy `carvis_hot` / `carvis_contacts` silos were merged in via
   a one-time queue, raw backup kept under `carvis_silo_backup`)
 - `carvis_referral_touchlogs` — array of touch logs (the audit trail)
-- `carvis_referral_meta`      — `{ lastRun, lastReport, templatesApproved }`
+- `carvis_referral_meta`      — `{ lastRun, lastReport }` (the cron's health report)
 - `carvis_referral_goals`     — the Goals & Rewards (Level-Up) list
 
 See `shared/schema.mjs` for field-by-field shapes.
@@ -113,7 +113,7 @@ Once a day the scheduled function:
    (sold)** run the timed window below (delta between `purchaseDate` and today):
    - **Email branch** — render the variant, send via the injected `EmailProvider`,
      append a `touch_log`, advance the customer's `stage`.
-     *Held* (not sent) until `meta.templatesApproved === true`.
+     *Held* (not sent) until `APPROVED === true` in `shared/templates.mjs`.
    - **Text branch** — queue a compliant pending text on the customer. It is
      **never** sent programmatically; the user fires it from the dashboard.
 4. Saves the mutated arrays back to the same blob → the browser pulls them.
@@ -153,5 +153,6 @@ README "Swap the email provider".
 - **Tone:** plain-text, conversational, small-town MN. No exclamation marks, no
   corporate jargon, no AI formatting tells.
 - **Never** send a text from a server. The text branch only ever *queues*.
-- **Copy is the user's.** Ship placeholder copy with `templatesApproved=false`;
-  do not flip it to true until the user supplies real wording.
+- **Copy is the user's.** The auto-email gate is `APPROVED` in
+  `shared/templates.mjs` — currently `true` because Mick's real wording is in.
+  If templates ever revert to placeholders, flip it back to `false`.

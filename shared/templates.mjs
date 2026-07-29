@@ -88,7 +88,7 @@ export const TEMPLATES = {
 // The text touch pulls from FOLLOWUP_TEMPLATES.text, the email touch from
 // .email. Call / video / gift use SCRIPTS — those are talking points for Mick,
 // not sent to the customer, so they speak to him ("ask how…", "record a…").
-export const FOLLOWUP_TEMPLATES = {
+const FOLLOWUP_TEMPLATES = {
   text: {
     direct: "Hey {{first_name}} — Mick here, just checking in on the {{vehicle}}. Hope it's still treating you right. Holler if you ever need anything.",
     softer: "Hey {{first_name}} — thinking of you today. Hope all's well with the {{vehicle}} and the family. No reason for the message, just staying in touch.",
@@ -102,7 +102,7 @@ export const FOLLOWUP_TEMPLATES = {
 };
 
 // Action scripts for the manual touches (read by Mick, not sent).
-export const SCRIPTS = {
+const SCRIPTS = {
   call: "Quick call to {{first_name}}: ask how the {{vehicle}} is treating them and how the family is doing. Keep it short and personal, no pitch. Before you hang up, let them know you're always here and happy to help anyone they send your way.",
   video: "Record a short personal video for {{first_name}} — twenty seconds, one take. Say hi by name, mention the {{vehicle}}, and that you were thinking of them. Keep it casual and send it by text.",
   gift: "Send {{first_name}} a small gift or a handwritten card. A note that mentions the {{vehicle}} and thanks them for their trust goes a long way. Keep it personal, never promotional.",

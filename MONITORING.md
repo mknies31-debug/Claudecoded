@@ -8,7 +8,7 @@ automated** (runs against the code, anytime) and **what needs the live deploy**
 
 ## A. Automated health scan (run anytime, ~5 seconds)
 ```bash
-npm test          # 45 checks: engine, compliance, sequencing, intake, import, hydrate
+npm test          # 108 checks: engine, compliance, sequencing, intake, import, hydrate, goals, reporting, quickaction
 npm run crm:dry   # runs the daily cron over sample data, prints the report, sends nothing
 ```
 This proves the **logic** is sound end-to-end: customers advance through the

@@ -8,12 +8,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { newCustomer, validateCustomer, KEYS, migrateCustomer, SCHEMA_VERSION } from '../shared/schema.mjs';
-import { SEQUENCES, nextDueSequence, daysSincePurchase, isStagnant, isThroughFixedSequence, followupForStage, stageForElapsedDays, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
+import { newCustomer, validateCustomer, KEYS, migrateCustomer, SCHEMA_VERSION, toDateStr } from '../shared/schema.mjs';
+import { SEQUENCES, nextDueSequence, currentSequence, daysSincePurchase, isStagnant, isThroughFixedSequence, followupForStage, stageForElapsedDays, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { parseCSV, planImport } from '../shared/import.mjs';
 import { hydrate, tokensIn } from '../shared/hydrate.mjs';
-import { lintCopy, countSentences, valueViolations, isFrozen } from '../shared/compliance.mjs';
-import { TEMPLATES, VARIANTS, getText, getEmail } from '../shared/templates.mjs';
+import { lintCopy, countSentences, valueViolations, isFrozen, TEXT_MAX_SENTENCES, EMAIL_MAX_SENTENCES } from '../shared/compliance.mjs';
+import { TEMPLATES, VARIANTS, getText, getEmail, getScript, getProspectScript } from '../shared/templates.mjs';
 import { runDailyCycle, toHtml } from '../shared/engine.mjs';
 import { getEmailProvider, headerSafe } from '../netlify/functions/_lib/email-provider.mjs';
 import { INTAKE_STEPS, isSkip, parseFullName, extractPhone, parseSpokenEmail, parseStockNumber, applyAnswer, parseExtraction } from '../shared/intake.mjs';
@@ -666,4 +666,45 @@ test('migrateCustomer back-fills the new fields on an old record', () => {
   assert.equal(m.smsConsent, false);
   assert.equal(m._v, SCHEMA_VERSION);
   assert.equal(m.stage, 2); // existing data preserved
+});
+
+// ── dead-code sweep: pin the public API the views/engine lean on ─────────────
+
+test('the compliance limits are the law: texts ≤ 3 sentences, emails ≤ 6', () => {
+  // These numbers are the CLAUDE.md guardrail. If someone loosens them, the
+  // template tests would still pass — this pins the values themselves.
+  assert.equal(TEXT_MAX_SENTENCES, 3);
+  assert.equal(EMAIL_MAX_SENTENCES, 6);
+  assert.equal(lintCopy('One. Two. Three.', 'text').ok, true);
+  assert.equal(lintCopy('One. Two. Three. Four.', 'text').ok, false);
+  assert.equal(lintCopy('One. Two. Three. Four. Five. Six.', 'email').ok, true);
+  assert.equal(lintCopy('One. Two. Three. Four. Five. Six. Seven.', 'email').ok, false);
+});
+
+test('currentSequence names the window a customer is sitting in (Pipeline display)', () => {
+  assert.equal(currentSequence({ stage: 0 }).key, 'welcome');
+  assert.equal(currentSequence({ stage: 2 }).label, 'Referral Ask');
+  assert.equal(currentSequence({}).key, 'welcome'); // missing stage → first window
+  const rec = currentSequence({ stage: SEQUENCES.length });
+  assert.equal(rec.recurring, true);
+  assert.equal(rec.type, 'call'); // the rotation starts at the 90-day call
+});
+
+test('toDateStr normalizes date-ish input to YYYY-MM-DD and junk to ""', () => {
+  assert.equal(toDateStr('2026-07-07'), '2026-07-07');
+  assert.equal(toDateStr('2026-07-07T12:00:00Z'), '2026-07-07'); // ISO datetime → date part
+  assert.equal(toDateStr(new Date(Date.UTC(2026, 6, 7))), '2026-07-07');
+  // US spreadsheet style parses in local time — assert the shape, not the exact
+  // day, so the suite passes in any timezone (stage-slotting only needs non-NaN).
+  assert.match(toDateStr('07/07/2026'), /^2026-07-0[67]$/);
+  assert.equal(toDateStr('garbage'), '');
+  assert.equal(toDateStr(''), '');
+});
+
+test('getScript / getProspectScript return "" for unknown types (engine safety)', () => {
+  assert.ok(getScript('call').includes('{{first_name}}'), 'call script is a real template');
+  assert.equal(getScript('bogus'), '');
+  assert.ok(getProspectScript('hot').length > 0);
+  assert.ok(getProspectScript('cold').length > 0);
+  assert.equal(getProspectScript('sold'), '', 'buyers have no keep-warm script');
 });

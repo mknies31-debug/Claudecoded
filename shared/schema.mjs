@@ -14,7 +14,7 @@ export const KEYS = {
 };
 
 /** A short, sortable, collision-resistant id without any dependency. */
-export function makeId(prefix = 'c') {
+function makeId(prefix = 'c') {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
