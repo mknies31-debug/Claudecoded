@@ -13,3 +13,7 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Foresight deploy bundle (generated on demand, not source)
+foresight-netlify.zip
+ledger.zip
