@@ -11,8 +11,8 @@
  *
  * Bump CACHE when the shell changes to retire old caches on activate.
  */
-const CACHE = 'foresight-v6';
-const SHELL = ['./', './index.html', './manifest.json', './icon.svg'];
+const CACHE = 'foresight-v7';
+const SHELL = ['./', './index.html', './manifest.json', './icon.svg', './icon-180.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -44,8 +44,12 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));  // refresh cache for offline
+          // Only cache good responses — a mid-deploy 404 or captive-portal page
+          // must never replace the working shell we'd serve offline.
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
           return res;
         })
         .catch(() =>                                          // offline → serve cached shell

@@ -78,11 +78,13 @@ goals, and returns behavior-focused guidance.
 
 - `index.html` — the entire front end. No build, no external JS/CSS
   dependencies (includes its own small Markdown renderer).
-- `netlify/functions/ledger.js` — server-side Anthropic proxy. Holds all four
+- `netlify/functions/ledger.mjs` — server-side Anthropic proxy. Holds all four
   system prompts and the API key. The browser only sends `mode`
   (`extract` | `balances` | `analyze` | `advise`) and the conversation
   `messages` (including base64 image blocks). The key is **never** exposed to
-  the page.
+  the page. The response is **streamed** through as plain text so long
+  analyze/advise generations aren't killed by Netlify's synchronous-function
+  time limit.
 - `netlify.toml` — deploy config. `sw.js`/`manifest.json`/`icon.svg` — PWA
   shell (offline support + install).
 
@@ -90,6 +92,9 @@ goals, and returns behavior-focused guidance.
 
 **Easiest — drag & drop:**
 1. Go to https://app.netlify.com/drop and drop this whole folder onto the page.
+   ⚠️ If you drop a **zip** instead, `index.html` and `netlify.toml` must be at
+   the **root of the zip** — a zip containing a `ledger/` folder deploys the
+   folder itself, leaving the site root a 404 and the AI function undeployed.
 2. Open the new site → Site settings → Environment variables → add
    **`ANTHROPIC_API_KEY`**.
 3. Trigger a redeploy (Deploys → Trigger deploy) so the function picks up the key.
@@ -145,9 +150,11 @@ The `/.netlify/functions/ledger` endpoint spends your Anthropic credits, so it
 has two guards:
 
 - **Same-origin check (automatic):** requests whose browser `Origin` isn't your
-  site are rejected. Netlify's `URL` env var provides the allowed origin; set
-  `ALLOWED_ORIGIN` to override.
-- **Access code (optional but recommended):** set an `ACCESS_CODE` environment
+  site are rejected. Netlify's `URL`/deploy-preview env vars provide the allowed
+  origins; set `ALLOWED_ORIGIN` to allow an extra one. Note this only stops
+  *other websites* — a script with no `Origin` header (curl, bots) passes, so
+  the access code below is the real protection for a public URL.
+- **Access code (recommended):** set an `ACCESS_CODE` environment
   variable in Netlify. Then, once on your phone, open the browser console on the
   site and run
   `localStorage.setItem('foresight.accessCode','YOUR_CODE')`.

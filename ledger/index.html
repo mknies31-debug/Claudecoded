@@ -10,7 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Foresight">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='34' fill='%234f46e5'/><text x='90' y='126' font-size='104' font-family='Georgia,serif' font-weight='bold' text-anchor='middle' fill='%23ffffff'>F</text></svg>">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
 <style>
   :root{
     --ink:#0b1020; --green:#4f46e5; --green-2:#4338ca; --gold:#f59e0b; --gold-soft:#e0e7ff;
@@ -551,8 +552,11 @@ function migrate(data){
   // Rebuild each record with only known fields and coerced types, so a
   // malformed or hostile backup can't poison state or smuggle unexpected data.
   const A = Array.isArray(data.accounts)? data.accounts : [];
+  // Type is interpolated into markup in a few places — clamp it to the known
+  // list so a hostile backup can't smuggle HTML through it.
+  const okType=(v)=> ['Checking','Savings','Investment','Cash','Credit Card','Loan','Other'].includes(v) ? v : 'Other';
   data.accounts = A.filter(a=>a&&typeof a==='object').map(a=>{
-    const base={ id:idStr(a.id)||uid(), name:str(a.name)||'Account', type:str(a.type)||'Other', institution:str(a.institution), opening:num(a.opening) };
+    const base={ id:idStr(a.id)||uid(), name:str(a.name)||'Account', type:okType(str(a.type)), institution:str(a.institution), opening:num(a.opening), createdAt:str(a.createdAt)||todayISO() };
     if(base.type==='Credit Card') return { ...base, limit:num(a.limit), dueDay:num(a.dueDay), purpose:str(a.purpose), cap:num(a.cap), apr:num(a.apr) };
     if(base.type==='Loan') return { ...base, apr:num(a.apr) };
     return base;
@@ -606,26 +610,33 @@ function money(n){ const neg=n<0; return (neg?'-':'')+'$'+Math.abs(n).toLocaleSt
 // a trailing/leading minus both mean -45.00; commas and $ are ignored.
 function parseAmount(s){
   s=String(s==null?'':s).trim().replace(/−/g,'-');   // Unicode minus → ASCII
-  // Negative only for accounting parens or a LEADING/TRAILING minus — a hyphen
-  // buried mid-string (a date, "45.00 - pending") must not flip the sign.
-  const neg = /^\(.*\)$/.test(s) || /^-/.test(s) || /-$/.test(s);
+  // Negative for accounting parens, a trailing minus, or a minus that appears
+  // BEFORE any digit ("-45", "$-45.00", "USD -45.00"). A hyphen after digits
+  // (a date "12-31", "45.00 - pending") must not flip the sign.
+  const neg = /^\(.*\)$/.test(s) || /^[^0-9]*-\s*[0-9.]/.test(s) || /-$/.test(s);
   const n = parseFloat(s.replace(/[^0-9.]/g,''));
   if(!isFinite(n)) return NaN;
   return neg ? -Math.abs(n) : n;
 }
 function money0(n){ const neg=n<0; return (neg?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString(); }
-function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+// LOCAL date, not UTC — toISOString() would stamp tomorrow's date for an
+// evening entry in the Americas, dropping it from this month's analytics.
+function isoOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function todayISO(){ return isoOf(new Date()); }
 function parseISO(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||''); if(!m) return null; return new Date(+m[1],+m[2]-1,+m[3]); }
 function startOfDay(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
 function ymKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function ymLabel(d){ return d.toLocaleString(undefined,{month:'short'})+" '"+String(d.getFullYear()).slice(2); }
 function addFreq(d, freq){
   const x=new Date(d);
-  if(freq==='Weekly') x.setDate(x.getDate()+7);
-  else if(freq==='Biweekly') x.setDate(x.getDate()+14);
-  else if(freq==='Quarterly') x.setMonth(x.getMonth()+3);
-  else if(freq==='Yearly') x.setFullYear(x.getFullYear()+1);
-  else x.setMonth(x.getMonth()+1); // Monthly default
+  if(freq==='Weekly'){ x.setDate(x.getDate()+7); return x; }
+  if(freq==='Biweekly'){ x.setDate(x.getDate()+14); return x; }
+  // Month-based steps clamp to the target month's length — Jan 31 + 1 month is
+  // Feb 28/29, not "Feb 31" rolling over to Mar 3 and skipping a cycle.
+  const day=x.getDate();
+  const months = freq==='Quarterly'?3 : freq==='Yearly'?12 : 1; // Monthly default
+  x.setDate(1); x.setMonth(x.getMonth()+months);
+  x.setDate(Math.min(day, new Date(x.getFullYear(), x.getMonth()+1, 0).getDate()));
   return x;
 }
 
@@ -692,7 +703,7 @@ function debtHistory(){
 /* =========================================================================
    TAB SWITCHING
    ========================================================================= */
-function showTab(name){
+function showTab(name, nav=true){
   ['dashboard','accounts','cards','budget','goals','add','charts','reminders','optimize'].forEach(t=>{
     document.getElementById('panel-'+t).classList.toggle('show', t===name);
   });
@@ -706,11 +717,12 @@ function showTab(name){
   if(name==='charts') renderCharts();
   if(name==='reminders') renderReminders();
   if(name==='optimize') renderAdvisor();
-  window.scrollTo({top:0,behavior:'smooth'});
+  if(nav) window.scrollTo({top:0,behavior:'smooth'});   // only on real navigation
 }
+// Re-render the current tab in place (after a mutation) — no scroll jump.
 function refreshActive(){
   const active = document.querySelector('nav.tabs button.active');
-  if(active) showTab(active.dataset.tab);
+  if(active) showTab(active.dataset.tab, false);
 }
 
 /* =========================================================================
@@ -857,7 +869,11 @@ function renderAccounts(){
     }
     html += `</div>`;
   }
+  // Keep accounts the user expanded open across re-renders (e.g. after
+  // deleting one transaction) instead of collapsing the whole list.
+  const open = Array.from(host.querySelectorAll('.acct.open')).map(el=>el.id);
   host.innerHTML = html;
+  open.forEach(oid=>document.getElementById(oid)?.classList.add('open'));
 }
 function toggleAcct(id){ document.getElementById('acct-'+id)?.classList.toggle('open'); }
 function deleteAccount(id){
@@ -866,7 +882,8 @@ function deleteAccount(id){
   if(!confirm(`Delete "${a.name}"${n?` and its ${n} transaction(s)`:''}? This can't be undone.`)) return;
   DB.accounts = DB.accounts.filter(x=>x.id!==id);
   DB.txns = DB.txns.filter(t=>t.accountId!==id);
-  save(); refreshActive();
+  DB.balSnaps = DB.balSnaps.filter(s=>s.accountId!==id);
+  save(); closeModal(); refreshActive();
 }
 function deleteTxn(id){
   DB.txns = DB.txns.filter(t=>t.id!==id);
@@ -944,7 +961,7 @@ function submitAccount(){
 }
 
 function accountSelectOptions(sel){
-  let o = DB.accounts.map(a=>`<option value="${a.id}"${a.id===sel?' selected':''}>${esc(a.name)} (${a.type})</option>`).join('');
+  let o = DB.accounts.map(a=>`<option value="${a.id}"${a.id===sel?' selected':''}>${esc(a.name)} (${esc(a.type)})</option>`).join('');
   o += `<option value="__new__"${sel==='__new__'||!DB.accounts.length?' selected':''}>➕ Create new account…</option>`;
   return o;
 }
@@ -1261,7 +1278,7 @@ function renderReminders(){
 function logPayment(id){
   const g=recurringGroups().find(x=>x.id===id); if(!g) return;
   const r=computeReminders().find(x=>x.id===id); const due=r?r.due:new Date();
-  DB.txns.push({ id:uid(), accountId:g.accountId, date:due.toISOString().slice(0,10), payee:g.payee,
+  DB.txns.push({ id:uid(), accountId:g.accountId, date:isoOf(due), payee:g.payee,
     amount:g.amount, currency:'USD', method:'', category:g.category||'Other', recurring:true, freq:g.freq, bnpl:'', note:'auto: logged from reminder' });
   save(); refreshActive();
 }
@@ -1323,15 +1340,30 @@ function renderThumbs(){
 function removeImage(i){ images.splice(i,1); renderThumbs(); }
 function clearImages(){ images=[]; renderThumbs(); hideAlert('exAlert'); document.getElementById('importPreview').innerHTML=''; pendingImportAcct=''; }
 
+const MAX_PAYLOAD_BYTES = 4_500_000;  // matches the server's MAX_BODY_BYTES
 async function callLedger(mode,messages){
   let res;
   const hdrs={'content-type':'application/json'};
   try{ const code=localStorage.getItem('foresight.accessCode'); if(code) hdrs['x-access-code']=code; }catch{}
-  try{ res=await fetch(ENDPOINT,{method:'POST',headers:hdrs,body:JSON.stringify({mode,messages})}); }
+  const body=JSON.stringify({mode,messages});
+  // Netlify rejects ~6 MB+ bodies at the platform layer, before our function
+  // can answer — catch oversized image batches here with a usable message.
+  if(body.length>MAX_PAYLOAD_BYTES){
+    throw new Error('Those images are too large to send together ('+(body.length/1048576).toFixed(1)+' MB). Remove a few and send them in smaller batches.');
+  }
+  try{ res=await fetch(ENDPOINT,{method:'POST',headers:hdrs,body}); }
   catch(err){ throw new Error('Could not reach the server function. Deploy to Netlify (or run `netlify dev`) so '+ENDPOINT+' is live. ('+err.message+')'); }
+  const ct=res.headers.get('content-type')||'';
+  // Streaming server: a 200 text/plain body IS the answer text.
+  if(res.ok && ct.includes('text/plain')) return (await res.text()).trim();
   const text=await res.text(); let data;
   try{ data=JSON.parse(text); }catch{ throw new Error('Unexpected non-JSON response ('+res.status+'). '+text.slice(0,160)); }
-  if(!res.ok){ const m=data?.error?.message||data?.error||('Request failed ('+res.status+')'); throw new Error(typeof m==='string'?m:JSON.stringify(m)); }
+  if(!res.ok){
+    let m=data?.error?.message||data?.error||data?.errorMessage||('Request failed ('+res.status+')');
+    if(typeof m==='string'&&/task timed out/i.test(m)) m='The AI took too long and the server cut it off. Try again, or send fewer images at once.';
+    throw new Error(typeof m==='string'?m:JSON.stringify(m));
+  }
+  // Legacy JSON success shape (non-streaming function) — still accepted.
   const parts=Array.isArray(data.content)?data.content.filter(b=>b.type==='text').map(b=>b.text):[];
   return parts.join('\n').trim();
 }
@@ -1422,10 +1454,12 @@ function parseBalanceRows(md){
   return rows;
 }
 function normBalType(t){ t=(t||'').toLowerCase();
-  // loan-ish patterns first: "line of credit" / "credit builder loan" are Loans
-  if(/loan|mortgage|line of credit|heloc/.test(t)) return 'Loan';
-  if(t.includes('credit')) return 'Credit Card';
+  // loan-ish patterns first: "line of credit" / "home equity" are Loans
+  if(/loan|mortgage|line of credit|heloc|home equity/.test(t)) return 'Loan';
+  // asset keywords before the generic 'credit' — "Credit Union Checking" must
+  // land in Checking, not Credit Card (which would negate the balance).
   for(const k of ['Checking','Savings','Investment','Cash']) if(t.includes(k.toLowerCase())) return k;
+  if(t.includes('credit')) return 'Credit Card';
   return 'Other';
 }
 // Best-guess match of an extracted account row to an existing account:
@@ -2008,7 +2042,7 @@ function npSave(){
   await loadAsync();
   wireDrop();
   renderDashboard();
-  if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch{} }
+  if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch{} }
 })();
 </script>
 </body>

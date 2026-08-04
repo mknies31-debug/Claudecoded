@@ -2,7 +2,7 @@
   "name": "Foresight — Budgets, analyzed and projected",
   "short_name": "Foresight",
   "description": "A zero-trust personal financial operating system — accounts, budgets, cards, goals and an AI advisor. Runs entirely on your phone.",
-  "id": "/",
+  "id": "./",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
@@ -11,6 +11,7 @@
   "theme_color": "#4f46e5",
   "categories": ["finance", "productivity"],
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
   ]
 }

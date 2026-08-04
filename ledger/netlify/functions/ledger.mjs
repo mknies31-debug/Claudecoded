@@ -1,4 +1,4 @@
-// Foresight → Anthropic proxy (Netlify Function).
+// Foresight → Anthropic proxy (Netlify Function, streaming).
 //
 // The browser never holds the Anthropic API key (and can't call the API
 // directly anyway — CORS). This function runs server-side, owns the four
@@ -9,9 +9,16 @@
 //   • analyze  — a transaction table → a savings/optimization plan
 //   • advise   — a financial snapshot → behavior-focused guidance
 //
+// The upstream call uses SSE streaming and pipes the text through as
+// text/plain. Streaming matters on Netlify: synchronous functions are killed
+// at ~10s, but a streamed response only needs its FIRST byte quickly — long
+// analyze/advise generations (30-90s) survive. The client treats a
+// text/plain body as the answer text and a JSON body as an error.
+//
 // Two optional guards protect your Anthropic credits on a public deploy:
 //   • Same-origin: if ALLOWED_ORIGIN (or Netlify's URL) is set, a request whose
-//     browser Origin doesn't match is rejected.
+//     browser Origin doesn't match is rejected. (Browser-only protection —
+//     curl sends no Origin; use the access code against non-browser abuse.)
 //   • Access code: if ACCESS_CODE is set, the client must send a matching
 //     x-access-code header (localStorage 'foresight.accessCode').
 //
@@ -27,8 +34,9 @@ const MODEL_CHAIN = [
   'claude-haiku-4-5-20251001',
 ].filter((m, i, a) => m && a.indexOf(m) === i);
 
-// Netlify/Lambda caps the request body around 6 MB; reject oversized payloads
-// (usually too many/too-large base64 images) before spending an upstream call.
+// Netlify caps request bodies around 6 MB; reject oversized payloads (usually
+// too many/too-large base64 images) before spending an upstream call. The
+// client pre-checks the same limit so users normally never hit this.
 const MAX_BODY_BYTES = 4_500_000;
 
 const CATEGORIES = 'Groceries, Apparel, Electronics, Housing & Utilities, Software & Subscriptions, Transportation, Meals & Dining, Professional Services, Medical, Other, or Income';
@@ -69,7 +77,7 @@ Structure the response with these Markdown ## sections, in order:
 
 Be specific and numerical — show dates and dollar amounts. Base every figure on the ledger provided; do not invent transactions.`;
 
-// PROMPT 4 — Balance-screen reading: the daily "snap your bank app" update.
+// PROMPT 3 — Balance-screen reading: the daily "snap your bank app" update.
 const BALANCES_SYSTEM = `You are a precise visual financial parsing agent. The uploaded image(s) are screenshots of banking/credit-card/loan app screens showing ACCOUNT BALANCES (an accounts overview, a card summary, a loan payoff screen, etc.).
 
 Extract every account balance visible into a GitHub-flavored Markdown table with exactly these headers, in this order:
@@ -85,7 +93,7 @@ Rules:
 
 Output ONLY the Markdown table — no preamble, no commentary. Use "null" for anything unreadable. NEVER guess a balance; if a number is cut off or blurred, put "null".`;
 
-// PROMPT 3 — Behavior-focused advisor over a full snapshot.
+// PROMPT 4 — Behavior-focused advisor over a full snapshot.
 const ADVISE_SYSTEM = `You are a sharp, plain-spoken personal financial advisor. You are given a SNAPSHOT of someone's finances: monthly income, budget vs. actual by category, credit cards (limit, current balance/utilization, assigned purpose such as Work/Personal/House, statement due date, monthly cap), savings goals (target, saved, target date, pace), and account balances by type.
 
 Give behavior-focused guidance — what to DO, not a lecture. Cover:
@@ -103,42 +111,81 @@ const MODE_CONFIG = {
   advise:   { system: ADVISE_SYSTEM,   max_tokens: 4096 },
 };
 
-const json = (statusCode, obj, extra) => ({
-  statusCode,
-  headers: Object.assign({ 'content-type': 'application/json' }, extra || {}),
-  body: JSON.stringify(obj),
-});
+const json = (status, obj, extra) =>
+  new Response(JSON.stringify(obj), {
+    status,
+    headers: Object.assign({ 'content-type': 'application/json' }, extra || {}),
+  });
 
 // Compare only the origin (scheme://host:port) of two URLs.
 function originOf(u) { try { return new URL(u).origin; } catch { return ''; } }
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return json(405, { error: 'Method Not Allowed' });
+// Pipe Anthropic's SSE stream through as plain text: forward every text delta,
+// and if the stream errors mid-generation, append a readable notice (the HTTP
+// status is already sent, so it can't change).
+function sseToText(upstreamBody) {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const reader = upstreamBody.getReader();
+  let buf = '';
+  return new ReadableStream({
+    // Pump the whole upstream in start(): a pull()-based transform can stall
+    // when a chunk yields no enqueue (partial SSE line), so drain eagerly —
+    // the payload is small text and chunks still flow to the client as sent.
+    async start(controller) {
+      const handleLine = (line) => {
+        if (!line.startsWith('data:')) return;
+        let ev;
+        try { ev = JSON.parse(line.slice(5).trim()); } catch { return; }
+        if (ev.type === 'content_block_delta' && ev.delta && typeof ev.delta.text === 'string') {
+          controller.enqueue(encoder.encode(ev.delta.text));
+        } else if (ev.type === 'error') {
+          const msg = (ev.error && ev.error.message) || 'the stream was interrupted';
+          controller.enqueue(encoder.encode('\n\n⚠️ Generation stopped early: ' + msg));
+        }
+      };
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf('\n')) >= 0) {
+            handleLine(buf.slice(0, nl).replace(/\r$/, ''));
+            buf = buf.slice(nl + 1);
+          }
+        }
+        handleLine(buf.replace(/\r$/, ''));  // trailing line without newline
+      } catch { /* upstream died mid-stream — deliver what we have */ }
+      controller.close();
+    },
+    cancel(reason) { reader.cancel(reason).catch(() => {}); },
+  });
+}
 
-  const headers = event.headers || {};
-  const h = (name) => headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()] || '';
+export default async (req) => {
+  if (req.method !== 'POST') return json(405, { error: 'Method Not Allowed' });
 
   // Guard 1 — same-origin. Only enforced when we know our own origin(s) AND the
   // request carries an Origin header (native/curl requests have none). Netlify
   // deploy previews/branch deploys serve from their own origins, so accept those.
   const allowedSet = [process.env.ALLOWED_ORIGIN, process.env.URL, process.env.DEPLOY_PRIME_URL, process.env.DEPLOY_URL]
     .map(originOf).filter(Boolean);
-  const reqOrigin = originOf(h('origin'));
+  const reqOrigin = originOf(req.headers.get('origin') || '');
   if (allowedSet.length && reqOrigin && !allowedSet.includes(reqOrigin)) {
     return json(403, { error: 'Blocked: this request came from a different site.' });
   }
 
   // Guard 2 — access code (optional).
   const code = process.env.ACCESS_CODE;
-  if (code && h('x-access-code') !== code) {
+  if (code && (req.headers.get('x-access-code') || '') !== code) {
     return json(401, { error: 'This Foresight is locked. Set the access code in the app: open the site, then in the browser console run  localStorage.setItem(\'foresight.accessCode\',\'YOUR_CODE\')  using the same value as the ACCESS_CODE env var.' });
   }
 
   // Validate the REQUEST before checking server config, so a bad request gets a
   // clear 400/413 instead of being masked by a missing-key 500.
-  const raw = event.body || '';
-  const bodyBytes = event.isBase64Encoded ? Math.floor(raw.length * 3 / 4) : Buffer.byteLength(raw, 'utf8');
-  if (bodyBytes > MAX_BODY_BYTES) {
+  const raw = await req.text();
+  if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
     return json(413, { error: 'Request is too large. Try fewer images or smaller screenshots.' });
   }
 
@@ -146,7 +193,8 @@ exports.handler = async (event) => {
   try { ({ mode, messages } = JSON.parse(raw || '{}')); }
   catch { return json(400, { error: 'Invalid JSON body.' }); }
 
-  const cfg = MODE_CONFIG[mode];
+  // Own-property lookup only — 'constructor', '__proto__' etc. must not pass.
+  const cfg = Object.hasOwn(MODE_CONFIG, mode) ? MODE_CONFIG[mode] : null;
   if (!cfg) return json(400, { error: 'mode must be "extract", "balances", "analyze", or "advise".' });
   if (!Array.isArray(messages) || messages.length === 0) {
     return json(400, { error: 'messages must be a non-empty array.' });
@@ -172,19 +220,22 @@ exports.handler = async (event) => {
       upstream = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model, max_tokens: cfg.max_tokens, system: cfg.system, messages }),
+        body: JSON.stringify({ model, max_tokens: cfg.max_tokens, system: cfg.system, messages, stream: true }),
       });
     } catch (err) {
       lastStatus = 502;
       lastText = JSON.stringify({ error: 'Upstream request to Anthropic failed: ' + String(err && err.message ? err.message : err) });
       break;
     }
-    const text = await upstream.text();
-    if (upstream.ok) {
-      return { statusCode: 200, headers: { 'content-type': 'application/json', 'x-ledger-model': model }, body: text };
+    if (upstream.ok && upstream.body) {
+      return new Response(sseToText(upstream.body), {
+        status: 200,
+        headers: { 'content-type': 'text/plain; charset=utf-8', 'x-ledger-model': model },
+      });
     }
+    const text = await upstream.text();
     lastStatus = upstream.status; lastText = text;
     if (!isModelError(upstream.status, text)) break;
   }
-  return { statusCode: lastStatus, headers: { 'content-type': 'application/json' }, body: lastText };
+  return new Response(lastText, { status: lastStatus, headers: { 'content-type': 'application/json' } });
 };
