@@ -50,7 +50,9 @@ netlify/functions/ ISOLATED SERVICES — secrets + I/O only
   _lib/
     email-provider.mjs  EmailProvider interface + ResendProvider + MailerLiteProvider
     store.mjs           Blob-backed Store gateway (shares keying with sync.mjs)
-  carvis.js sync.mjs send-email.js   (pre-existing CARVIS functions — untouched)
+  send-email.mjs     1:1 Outreach sender — routes through the same provider
+                     layer as the cron, so EMAIL_PROVIDER applies everywhere
+  carvis.js sync.mjs                 (pre-existing CARVIS functions)
 
 test/
   crm.test.mjs       dependency-free regression runner (node --test style, no deps)

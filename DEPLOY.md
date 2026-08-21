@@ -24,7 +24,7 @@ Features stay dark until their variables are present.
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | Live Ask CARVIS answers (`carvis.js`, Fable 5) | `sk-ant-...` |
 | `CARVIS_MODEL` *(optional)* | Force a specific model | a model id your key can use |
-| `RESEND_API_KEY` | Outreach email (`send-email.js`) + referral auto-emails (`daily-runner`) | from resend.com |
+| `EMAIL_PROVIDER` + its keys | ALL email — Outreach (`send-email.mjs`) and referral auto-emails (`daily-runner`) use one provider setting: `gmail` (`GMAIL_USER`/`GMAIL_APP_PASSWORD`), `resend` (`RESEND_API_KEY`), or `mailerlite` | see GO-LIVE.md |
 | `MAIL_FROM` | Email sender identity | `Mick Knies <mick@northstarcarguy.com>` |
 | `MAIL_REPLY_TO` | Where replies land | `mick@northstarcarguy.com` |
 | `CRM_SYNC_KEY` | Lets the daily referral cron find your data — set it to the **same** key you saved under ⇅ SYNC | your private sync key (6+ chars) |
@@ -54,7 +54,7 @@ then it can only reach your own Resend account email — fine for testing wiring
   (Fable 5 first) and uses the first one your key can access, so the live brain
   works even if the newest model isn't enabled on your account. Set
   `CARVIS_MODEL` to pin a specific one.
-- `send-email.js` — sends 1:1 outreach email via Resend, replies routed to Mick.
+- `send-email.mjs` — sends 1:1 outreach email through the shared provider layer (Gmail / Resend / MailerLite), replies routed to Mick.
 - `sync.mjs` — cross-device cloud sync of CARVIS data, keyed by a private
   passphrase, stored in Netlify Blobs.
 - `daily-runner.mjs` — **scheduled** function (daily, 14:00 UTC). Reads the same

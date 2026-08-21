@@ -1400,7 +1400,6 @@ function init() {
   if (btn) btn.addEventListener('click', openReferrals);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { cancelIntake(); closeReferrals(); } });
   window.openReferrals = openReferrals;       // let CARVIS command bar reach it
-  window.crmEnterCustomer = startVoiceIntake;  // direct programmatic entry
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

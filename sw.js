@@ -1,5 +1,12 @@
-const CACHE = 'carvis-v7';
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const CACHE = 'carvis-v8';
+// Precache the whole app shell — including the CRM module graph — so
+// ⇄ REFERRALS works offline even if it was never opened while online.
+const ASSETS = ['/', '/index.html', '/manifest.json', '/inventory.json',
+  '/crm/crm.js', '/crm/crm.css',
+  '/shared/schema.mjs', '/shared/sequences.mjs', '/shared/hydrate.mjs',
+  '/shared/compliance.mjs', '/shared/templates.mjs', '/shared/intake.mjs',
+  '/shared/import.mjs', '/shared/goals.mjs', '/shared/reporting.mjs',
+  '/shared/quickaction.mjs'];
 
 // Install — cache the offline shell
 self.addEventListener('install', e => {

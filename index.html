@@ -694,6 +694,8 @@
       <select class="rsel" id="oContact"></select>
       <div class="orow"><input class="rin" id="oName" placeholder="Name" style="flex:1;margin-top:0"><input class="rin" id="oTo" placeholder="email@address.com" style="flex:2;margin-top:0"></div>
       <div class="mnote"><span>✦</span><span>Contacts now live in ⇄ REFERRALS — add or import them there and anyone with an email shows up here.</span></div>
+      <span class="olabel">Google review link <span style="color:var(--dim);text-transform:none;letter-spacing:0">— paste it once, the Review template uses it</span></span>
+      <input class="rin" id="oReviewLink" style="margin-top:0" placeholder="https://g.page/r/…" inputmode="url">
       <span class="olabel">Template</span>
       <div class="otpl" id="oTpl">
         <button data-tpl="review" class="on">Review + referral</button>
@@ -706,7 +708,7 @@
       <textarea class="rta" id="oBody" rows="7"></textarea>
       <button class="rgen" id="oSend">◉ SEND EMAIL</button>
       <div class="ostat" id="oStat"></div>
-      <div class="mnote"><span>✦</span><span>CARVIS sends on your behalf; replies land in your inbox. A North Star footer + opt-out line is added automatically. <span class="soon">Goes live once RESEND_API_KEY + your sending domain are set in Netlify.</span></span></div>
+      <div class="mnote"><span>✦</span><span>CARVIS sends on your behalf; replies land in your inbox. A North Star footer + opt-out line is added automatically. <span class="soon">Goes live once your email provider is set in Netlify — Gmail App Password (recommended) or Resend. Same setting the nightly engine uses.</span></span></div>
     </div>
   </div>
 </div>
@@ -1198,9 +1200,14 @@ function refreshContactDropdown(){
     ? OUTREACH.map((c,i)=>`<option value="${i}">${esc(crmName(c)||c.email)}${c.vehicle?' ('+esc(c.vehicle)+')':''}</option>`).join('')
     : '<option value="">No contacts with an email yet — add them in ⇄ REFERRALS</option>';
 }
+// Google review link — set once in the Outreach panel, rides sync. Until it's
+// set, the review template asks for a reply instead of mailing a placeholder.
+const REVIEW_LINK_KEY='carvis_review_link';
+const getReviewLink=()=>{ try{ return (localStorage.getItem(REVIEW_LINK_KEY)||'').trim(); }catch(e){ return ''; } };
 const MAILTPL={
   review:{ subject:c=>`Hope the ${c.vehicle} is treating you well`,
-    body:c=>`Hey ${first2(c.name)},\n\nHope the ${c.vehicle} is treating you well. If you've got 60 seconds, a quick Google review means a lot and helps other folks find someone they can trust:\n[your review link]\n\nAnd if anyone in your circle is car shopping — just send them my way. I'll take care of them the same way I took care of you.\n\nThanks again,\nMick — North Star Car Guy` },
+    body:c=>{ const link=getReviewLink();
+      return `Hey ${first2(c.name)},\n\nHope the ${c.vehicle} is treating you well. If you've got 60 seconds, a quick Google review means a lot and helps other folks find someone they can trust${link?':\n'+link:' — reply to this email and I’ll send you the direct link.'}\n\nAnd if anyone in your circle is car shopping — just send them my way. I'll take care of them the same way I took care of you.\n\nThanks again,\nMick — North Star Car Guy`; } },
   referral:{ subject:c=>`Know anyone car shopping, ${first2(c.name)}?`,
     body:c=>`Hey ${first2(c.name)},\n\nQuick one — anyone in your circle thinking about a different vehicle? I've got 500 across all brands, new and used, and I'll treat them right: no pressure, just straight answers.\n\nSend them my way and I'll take good care of them.\n\nMick — North Star Car Guy` },
   checkin:{ subject:c=>`Checking in on the ${c.vehicle}`,
@@ -1215,8 +1222,14 @@ function openOutreach(){
   refreshContactDropdown();
   $('#oContact').value='0';
   $$('#oTpl button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  const rl=$('#oReviewLink'); if(rl) rl.value=getReviewLink();
   fillContact(); $('#oStat').textContent=''; $('#oStat').className='ostat';
   $('#oOverlay').classList.add('show');
+}
+function saveReviewLink(v){
+  try{ localStorage.setItem(REVIEW_LINK_KEY,(v||'').trim()); }catch(e){}
+  scheduleCloudPush();
+  const on=$('#oTpl button.on'); if(on&&on.dataset.tpl==='review') applyTemplate('review'); // live-refresh the draft
 }
 function closeOutreach(){ $('#oOverlay').classList.remove('show'); }
 function fillContact(){ const c=curContact(); $('#oName').value=c?c.name:''; $('#oTo').value=c?c.email:''; const on=$('#oTpl button.on'); applyTemplate(on?on.dataset.tpl:'review'); }
@@ -2046,6 +2059,7 @@ function init(){
   $('#outreachBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); openOutreach(); });
   $('#oContact').addEventListener('change', fillContact);
   $('#oSend').addEventListener('click', sendOutreach);
+  $('#oReviewLink').addEventListener('input', e=>saveReviewLink(e.target.value));
   $('#oTpl').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; $$('#oTpl button').forEach(x=>x.classList.toggle('on',x===b)); applyTemplate(b.dataset.tpl); });
   loadInventory();
   $('#carBtn').addEventListener('click', ()=>{ blip(820,0.06,'sine',0.13); $('#cmd').focus(); toast('Ask about a car — type a year, make/model, or stock #'); });
