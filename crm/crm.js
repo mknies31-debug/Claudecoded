@@ -8,7 +8,7 @@
 import { KEYS, newCustomer, validateCustomer, digits, migrateCustomer, CATEGORIES, CATEGORY_LABELS, isActionDue } from '../shared/schema.mjs';
 import { currentSequence, isStagnant, daysSincePurchase, sequenceByKey, localDateStr } from '../shared/sequences.mjs';
 import { hydrate } from '../shared/hydrate.mjs';
-import { getText, VARIANTS, VARIANT_LABELS, APPROVED } from '../shared/templates.mjs';
+import { getText, VARIANTS, VARIANT_LABELS, APPROVED, OUTREACH_TEMPLATES, OUTREACH_FOOTER } from '../shared/templates.mjs';
 import { isFrozen } from '../shared/compliance.mjs';
 import { INTAKE_STEPS, isSkip, applyAnswer, EXTRACTION_PROMPT, parseExtraction } from '../shared/intake.mjs';
 import { planImport, IMPORT_COLUMNS } from '../shared/import.mjs';
@@ -1400,6 +1400,10 @@ function init() {
   if (btn) btn.addEventListener('click', openReferrals);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { cancelIntake(); closeReferrals(); } });
   window.openReferrals = openReferrals;       // let CARVIS command bar reach it
+  // Bridge the compliance-tested Outreach templates to the non-module shell —
+  // one template library everywhere (the 📧 panel reads these lazily on open).
+  window.OUTREACH_TEMPLATES = OUTREACH_TEMPLATES;
+  window.OUTREACH_FOOTER = OUTREACH_FOOTER;
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

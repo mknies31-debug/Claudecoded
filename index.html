@@ -1204,16 +1204,10 @@ function refreshContactDropdown(){
 // set, the review template asks for a reply instead of mailing a placeholder.
 const REVIEW_LINK_KEY='carvis_review_link';
 const getReviewLink=()=>{ try{ return (localStorage.getItem(REVIEW_LINK_KEY)||'').trim(); }catch(e){ return ''; } };
-const MAILTPL={
-  review:{ subject:c=>`Hope the ${c.vehicle} is treating you well`,
-    body:c=>{ const link=getReviewLink();
-      return `Hey ${first2(c.name)},\n\nHope the ${c.vehicle} is treating you well. If you've got 60 seconds, a quick Google review means a lot and helps other folks find someone they can trust${link?':\n'+link:' — reply to this email and I’ll send you the direct link.'}\n\nAnd if anyone in your circle is car shopping — just send them my way. I'll take care of them the same way I took care of you.\n\nThanks again,\nMick — North Star Car Guy`; } },
-  referral:{ subject:c=>`Know anyone car shopping, ${first2(c.name)}?`,
-    body:c=>`Hey ${first2(c.name)},\n\nQuick one — anyone in your circle thinking about a different vehicle? I've got 500 across all brands, new and used, and I'll treat them right: no pressure, just straight answers.\n\nSend them my way and I'll take good care of them.\n\nMick — North Star Car Guy` },
-  checkin:{ subject:c=>`Checking in on the ${c.vehicle}`,
-    body:c=>`Hey ${first2(c.name)},\n\nJust checking in — how's the ${c.vehicle} running for you? Anything come up that I can help with?\n\nIf you ever need anything down the road, I'm one message away.\n\nMick — North Star Car Guy` },
-};
-const MAIL_FOOTER='\n\n— North Star Car Guy · Mosaic Auto Group, Zumbrota, MN · Reply "STOP" to opt out.';
+// The draft templates live in shared/templates.mjs (compliance-linted with the
+// rest) — crm.js bridges them onto window before the panel can open.
+const mailTpl=k=>{ const t=(window.OUTREACH_TEMPLATES||{})[k]; return t||(()=>({subject:'',body:''})); };
+const mailFooter=()=>window.OUTREACH_FOOTER||'';
 function curContact(){
   const c=OUTREACH[+($('#oContact').value||0)]||OUTREACH[0]||null;
   return c ? {name:crmName(c), email:c.email, vehicle:c.vehicle||''} : null;
@@ -1233,13 +1227,17 @@ function saveReviewLink(v){
 }
 function closeOutreach(){ $('#oOverlay').classList.remove('show'); }
 function fillContact(){ const c=curContact(); $('#oName').value=c?c.name:''; $('#oTo').value=c?c.email:''; const on=$('#oTpl button.on'); applyTemplate(on?on.dataset.tpl:'review'); }
-function applyTemplate(key){ const t=MAILTPL[key]||MAILTPL.review; const cc=curContact()||{}; const c={name:$('#oName').value||cc.name||'there', vehicle:cc.vehicle||''}; $('#oSubj').value=t.subject(c); $('#oBody').value=t.body(c); }
+function applyTemplate(key){
+  const cc=curContact()||{};
+  const d=mailTpl(key)({ firstName:first2($('#oName').value||cc.name)||'there', vehicle:cc.vehicle||'vehicle', reviewLink:getReviewLink() });
+  $('#oSubj').value=d.subject; $('#oBody').value=d.body;
+}
 async function sendOutreach(){
   const to=$('#oTo').value.trim(), toName=$('#oName').value.trim(), subject=$('#oSubj').value.trim();
   const body=$('#oBody').value.trim(), st=$('#oStat');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){ st.className='ostat err'; st.textContent='Enter a valid email address.'; return; }
   if(!subject||!body){ st.className='ostat err'; st.textContent='Subject and message are required.'; return; }
-  const full=body+MAIL_FOOTER;
+  const full=body+mailFooter();
   st.className='ostat send'; st.textContent='◉ Sending…'; blip(680,0.06,'sine',0.12);
   try{
     const r=await fetch('/.netlify/functions/send-email',{method:'POST',headers:{'Content-Type':'application/json'},

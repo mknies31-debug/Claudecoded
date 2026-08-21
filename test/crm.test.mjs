@@ -708,3 +708,28 @@ test('getScript / getProspectScript return "" for unknown types (engine safety)'
   assert.ok(getProspectScript('cold').length > 0);
   assert.equal(getProspectScript('sold'), '', 'buyers have no keep-warm script');
 });
+
+// ── Outreach templates (hand-sent 1:1) obey the same compliance law ──────────
+import { OUTREACH_TEMPLATES, OUTREACH_FOOTER } from '../shared/templates.mjs';
+
+test('every Outreach template passes the email lint, with and without a review link', () => {
+  for (const [key, fn] of Object.entries(OUTREACH_TEMPLATES)) {
+    for (const reviewLink of ['', 'https://g.page/r/example']) {
+      const { subject, body } = fn({ firstName: 'Dale', vehicle: 'RAV4', reviewLink });
+      assert.ok(subject.length > 0 && body.length > 0, key + ' renders');
+      const r = lintCopy(body, 'email');
+      assert.ok(r.ok, `${key} (${reviewLink ? 'link' : 'no link'}): ${r.problems.join('; ')}`);
+      assert.ok(!/\[your review link\]/.test(body), key + ' never ships a placeholder');
+    }
+  }
+  assert.ok(lintCopy(OUTREACH_FOOTER, 'email').ok, 'footer is compliant');
+});
+
+test('review template swaps between the link and the reply-ask correctly', () => {
+  const withLink = OUTREACH_TEMPLATES.review({ firstName: 'Dale', vehicle: 'RAV4', reviewLink: 'https://g.page/r/x' }).body;
+  const without = OUTREACH_TEMPLATES.review({ firstName: 'Dale', vehicle: 'RAV4' }).body;
+  assert.ok(withLink.includes('https://g.page/r/x'));
+  assert.ok(!withLink.includes('reply to this email'));
+  assert.ok(without.includes('reply to this email'));
+  assert.ok(!/https?:\/\//.test(without), 'no stray URL when no link is saved');
+});

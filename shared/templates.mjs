@@ -142,3 +142,27 @@ export function getEmail(sequenceKey, variant = 'direct') {
 export function getScript(type) {
   return SCRIPTS[type] || '';
 }
+
+// ── Outreach (hand-sent 1:1 email) templates ─────────────────────────────────
+// The 📧 Outreach panel's three drafts. They live HERE — not in the shell — so
+// the compliance suite lints them like every other template. Pure functions:
+// ({firstName, vehicle, reviewLink}) → {subject, body}. When no reviewLink is
+// saved yet, the review draft asks for a reply instead of shipping a
+// placeholder. crm.js bridges these onto window for the non-module shell.
+export const OUTREACH_TEMPLATES = {
+  review: ({ firstName = 'there', vehicle = 'vehicle', reviewLink = '' } = {}) => ({
+    subject: `Hope the ${vehicle} is treating you well`,
+    body: `Hey ${firstName},\n\nHope the ${vehicle} is treating you well. If you've got 60 seconds, a quick Google review means a lot and helps other folks find someone they can trust${reviewLink ? ':\n' + reviewLink : ' — reply to this email and I’ll send you the direct link.'}\n\nAnd if anyone in your circle is car shopping — just send them my way. I'll take care of them the same way I took care of you.\n\nThanks again,\nMick — North Star Car Guy`,
+  }),
+  referral: ({ firstName = 'there' } = {}) => ({
+    subject: `Know anyone car shopping, ${firstName}?`,
+    body: `Hey ${firstName},\n\nQuick one — anyone in your circle thinking about a different vehicle? I've got 500 across all brands, new and used, and I'll treat them right: no pressure, just straight answers.\n\nSend them my way and I'll take good care of them.\n\nMick — North Star Car Guy`,
+  }),
+  checkin: ({ firstName = 'there', vehicle = 'vehicle' } = {}) => ({
+    subject: `Checking in on the ${vehicle}`,
+    body: `Hey ${firstName},\n\nJust checking in — how's the ${vehicle} running for you? Anything come up that I can help with?\n\nIf you ever need anything down the road, I'm one message away.\n\nMick — North Star Car Guy`,
+  }),
+};
+
+// Appended server-agnostically at send time by the Outreach panel.
+export const OUTREACH_FOOTER = '\n\n— North Star Car Guy · Mosaic Auto Group, Zumbrota, MN · Reply "STOP" to opt out.';
