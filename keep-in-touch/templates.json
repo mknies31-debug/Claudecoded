@@ -86,7 +86,7 @@
       "season": "fall",
       "tone": "direct",
       "principle": "Reciprocity, honestly earned — a real road warning for the exact roads they drive, no pitch",
-      "subject": "deer on 52 at dusk",
+      "subject": "deer on Hwy 52 at dusk",
       "emailBody": "{first}, the deer are moving hard from now through the rut, and dusk to a couple hours after dark is when they cross Hwy 52 and Hwy 58 down by the river bottoms. If you see one, assume there are two more behind it, brake straight, and do not swerve into the ditch or the oncoming lane, because the ditch and the oncoming lane both hurt worse than the deer. Slow down where the corn just came out, since they have lost their cover and are crossing to find more. If you do hit one, pull over, put the flashers on, and call the county before you call me. Do you drive that stretch after dark much?",
       "textBody": "{first}, deer are moving hard along Hwy 52 and Hwy 58 at dusk, so brake straight and never swerve, and figure there are two more behind the first one. Do you drive that stretch after dark much?",
       "editHint": "Swap the highway for the road they actually drive home on (the hook field is a good source)."
@@ -186,7 +186,7 @@
       "tone": "nepq",
       "principle": "Reciprocity — a self-test for alignment they can run on the way home, no appointment implied",
       "subject": "potholes and a crooked wheel",
-      "emailBody": "{first}, after a winter of potholes on Hwy 58, here is a quick test that tells you a lot: on a flat straight stretch, loosen your grip and see whether the {vehicle} drifts, and look at whether the steering wheel sits straight when you are going straight. A pull or a crooked wheel usually means the alignment got knocked out, and driving on it chews the inside edge off a tire before you ever notice. A shimmy in the wheel around highway speed is more often a bent rim or a lost wheel weight than anything scary. None of it is an emergency, but all of it is easier on the tires the sooner it gets set right. Does the {vehicle} pull to one side when you let go of the wheel?",
+      "emailBody": "{first}, after a winter of potholes on Hwy 58, here is a quick test. On a flat straight stretch, loosen your grip and see whether the {vehicle} drifts, and check whether the steering wheel sits straight. A pull or a crooked wheel usually means the alignment got knocked out, and driving on it chews the inside edge off a tire before you ever notice. None of it is an emergency, but all of it is easier on the tires the sooner it gets set right. Does the {vehicle} pull to one side when you let go of the wheel?",
       "textBody": "{first}, after a winter of potholes, loosen your grip on a straight stretch and see if the {vehicle} drifts, because a pull chews a tire edge fast. Does the {vehicle} pull to one side when you let go of the wheel?",
       "editHint": "Name the pothole stretch they complain about if you know it (the hook field, or the road into their place)."
     },
@@ -197,7 +197,7 @@
       "tone": "softer",
       "principle": "Reciprocity — hail parking and a brake-noise explanation, both things people quietly worry about",
       "subject": "hail season and where you park",
-      "emailBody": "{first}, hail season starts up around here in May, and the storms that come up the Zumbro valley late in the afternoon do not give much warning. If the sky turns that green color, the {vehicle} is better off under a gas station canopy or in a garage than on the south side of the house, and if you are caught out in it, pull well off the road and point the windshield into the wind, since the windshield is the glass built to take it and the side windows are not. While it is on your mind, listen for a grind or a squeal from the brakes on the first few stops of the morning. A winter of salt leaves a rust film on the rotors that usually wears off in a block, and if it does not go away, have somebody look at the pads. Do you have a spot under cover for the {vehicle} when a storm comes up?",
+      "emailBody": "{first}, hail season starts up around here in May, and the storms that come up the Zumbro valley late in the afternoon do not give much warning. If the sky turns that green color, the {vehicle} is better off under a gas station canopy or in a garage. If you are caught out in it, pull well off the road and point the windshield into the wind, since the windshield is the glass built to take it and the side windows are not. While it is on your mind, listen for a grind or a squeal from the brakes on the first few stops of the morning. Do you have a spot under cover for the {vehicle} when a storm comes up?",
       "textBody": "{first}, hail season is here, so get the {vehicle} under a canopy when the sky turns green, and if you are caught out, point the windshield into the wind since it is the glass built to take it. Do you have a spot under cover for the {vehicle} when a storm comes up?",
       "editHint": "If you know they have a garage, change the question to whether they actually park in it."
     },
