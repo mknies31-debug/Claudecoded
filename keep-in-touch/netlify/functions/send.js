@@ -156,8 +156,8 @@ async function sendViaResend(o) {
   const payload = {
     from: o.from,
     to: [o.toName ? o.toName + ' <' + o.to + '>' : o.to],
-    subject: o.subject,
-    text: o.text,
+    subject: String(o.subject || '').replace(/[\r\n]+/g, ' ').trim(),
+    text: String(o.text || '').replace(/\r\n/g, '\n').trim(),
   };
   if (o.replyTo) payload.reply_to = o.replyTo;
   if (o.unsubscribeUrl) {

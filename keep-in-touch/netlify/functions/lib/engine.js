@@ -636,8 +636,11 @@
       var p = OPTOUT_PHRASES[i].replace(/[^a-z]+/g, ' ');
       if ((' ' + norm + ' ').indexOf(' ' + p + ' ') !== -1) return true;
     }
-    var lead = head.trim().match(/^([a-z]+)(.*)$/);
-    if (lead && OPTOUT_KEYWORDS.indexOf(lead[1]) !== -1 && /^\s*($|[^a-z0-9])/.test(lead[2])) return true;
+    // Rule 2: first word is a keyword, followed by end-of-message, a newline,
+    // or punctuation (a bare space followed by another word does NOT count,
+    // so "Stop by the lot Friday" is a visit, not an opt-out).
+    var lead = head.trim().match(/^([a-z]+)([\s\S]*)$/);
+    if (lead && OPTOUT_KEYWORDS.indexOf(lead[1]) !== -1 && /^(\s*$|[ \t]*[^a-z0-9\s]|[ \t]*\r?\n)/.test(lead[2])) return true;
     var words = norm.split(' ');
     if (words.length <= 3) {
       var hasKeyword = false, allFiller = true;
