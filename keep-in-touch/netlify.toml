@@ -1,0 +1,49 @@
+# North Star Keep-In-Touch — Netlify deploy config.
+#
+# This app lives in the keep-in-touch/ folder of a bigger repo. To deploy it as
+# its own site: in Netlify, "Add new site" → "Import an existing project" → pick
+# this repo → set "Base directory" = keep-in-touch. Netlify then reads THIS file,
+# serves keep-in-touch/index.html at the site root and bundles the functions from
+# keep-in-touch/netlify/functions. There is no build step and no npm install.
+# (Drag-and-drop of the keep-in-touch folder onto Netlify also works for Tier 1;
+# see DEPLOY_CHECKLIST.md for the trade-off with scheduled functions.)
+#
+# Before the functions work: Site configuration → Environment variables → add
+# KIT_SECRET, RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO, SITE_URL (Tier 1) and
+# FIREBASE_PROJECT_ID, FIREBASE_SERVICE_ACCOUNT (Tier 2). Full table in the checklist.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  # templates.json sits two folders up from the functions; make sure it ships
+  # with them so daily.js can require('../../templates.json') at runtime.
+  included_files = ["templates.json"]
+
+# Tier 2 daily send. Netlify cron is UTC with no daylight-saving awareness, so
+# the job is scheduled at both 14:00 and 15:00 UTC and daily.js exits on its own
+# unless the clock in America/Chicago says 9 AM. Net effect: once a day, 9 AM
+# Central, all year. (daily.js also exports the same schedule in its config.)
+[functions.daily]
+  schedule = "0 14,15 * * *"
+
+# Security headers for the single-page app. Inline scripts and styles must be
+# allowed because the whole app is one index.html with no external files.
+# connect-src is limited to Netlify itself (the functions) plus the three
+# Google endpoints the app talks to: Auth sign-in, token refresh, Firestore.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+    X-Content-Type-Options = "nosniff"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
+# Functions must never be cached by a browser or CDN.
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Cache-Control = "no-store"

@@ -1,0 +1,69 @@
+// North Star Keep-In-Touch — Firestore security rules.
+// Deny everything to everyone except Mick's signed-in Firebase user, with ONE
+// carefully fenced exception: an anonymous "create" on optouts/{token} so the
+// public unsubscribe page (/?u=TOKEN) can work without a login.
+// No env vars. Paste this whole file into Firebase console → Firestore → Rules → Publish.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // WHO IS MICK?
+    //
+    // Replace PASTE_YOUR_UID_HERE with your Firebase user ID (keep the quotes).
+    // Where to find it: Firebase console → Build → Authentication → Users tab
+    // → the row with your email → the "User UID" column (28 characters, looks
+    // like "aB3dE5fG7hI9jK1lM3nO5pQ7rS9t"). Click it to copy.
+    //
+    // The rules language has no constants, so the UID lives inside this one
+    // function. Every rule below calls isMick(); nothing else grants access.
+    // ------------------------------------------------------------------
+    function isMick() {
+      return request.auth != null
+          && request.auth.uid == "PASTE_YOUR_UID_HERE";
+    }
+
+    // ------------------------------------------------------------------
+    // THE ONE EXCEPTION: anonymous unsubscribe.
+    //
+    // When a customer clicks the unsubscribe link in an email, the page writes
+    // a tiny document at optouts/<their token> with no login. Anyone on the
+    // internet could technically call this, so the shape is locked down hard:
+    //   - the document id must be 20–64 characters (our tokens are 32+)
+    //   - the body must have EXACTLY two keys: "at" and "source"
+    //   - "at" must be a string no longer than 40 characters (an ISO timestamp)
+    //   - "source" must be exactly the string "link"
+    // Nobody anonymous can read, update, delete or list these docs, so a
+    // stranger can't learn who your customers are or undo an opt-out.
+    // A bogus token that matches no customer just gets deleted by the app.
+    // Only Mick (and the daily job via service account) can read/delete them.
+    // ------------------------------------------------------------------
+    match /optouts/{token} {
+      allow create: if token.size() >= 20
+                    && token.size() <= 64
+                    && request.resource.data.keys().hasOnly(['at', 'source'])
+                    && request.resource.data.keys().hasAll(['at', 'source'])
+                    && request.resource.data.at is string
+                    && request.resource.data.at.size() <= 40
+                    && request.resource.data.source == 'link';
+      allow read, update, delete: if isMick();
+    }
+
+    // ------------------------------------------------------------------
+    // EVERYTHING ELSE: customers, touches, replies, templates, settings,
+    // heartbeat, and any collection added later. Mick only, for every
+    // operation. A signed-out visitor, or any other Firebase user, gets
+    // "permission denied" on every read and write.
+    //
+    // Note: the daily scheduled job and the inbound webhook use a Google
+    // service account, which bypasses these rules entirely (that is how
+    // Firestore works for server code). That key never leaves Netlify's
+    // environment variables.
+    // ------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if isMick();
+    }
+  }
+}
