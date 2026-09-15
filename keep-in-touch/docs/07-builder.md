@@ -104,7 +104,7 @@ unmatched tokens are deleted too.
   `pickTemplate(pool, usedTemplateIds, customerId + ':' + dueDate)` (same seed
   as `daily.js`, so app and job pick the same template for the same touch) →
   `render(tpl, customer, settings, {sender, firstText: !firstTextSentAt,
-  season, date})`. The email textarea holds body + sign-off; the compliance
+  season, date, referred})` (`referred` only on REFERRAL_THANKS cards). The email textarea holds body + sign-off; the compliance
   footer (`COMPLIANCE.emailFooter(settings, siteUrl + '/?u=' + token)`) is
   shown under it and appended on send. `r.missing` → "Fill in: …" warning;
   `[VERIFY …]` is highlighted and blocks Approve All for that card.
@@ -120,7 +120,7 @@ unmatched tokens are deleted too.
   you edit the text; tapping it logs the touch and opens Messages. Copy Text
   copies and logs the same way. The app never sends a text itself.
 - Skip → `{type:'skipped', n, dueDate, slot}` + touch doc `status: skipped`
-  (extra items: `pendingThanks` cleared directly, engine has no event for it).
+  (extra REFERRAL_THANKS items: `{type:'skippedExtra'}`).
   Snooze → `{type:'snoozed', days: 7, today}`.
 - Add customer with Referred by → `attributedTouchId =
   STATS.suggestAttributedTouch(referrerId, touches, today)` and
@@ -162,18 +162,17 @@ unmatched tokens are deleted too.
   not logged as a touch.
 - No dark mode: the palette is fixed black/white/magenta by spec.
 
-## Lib gaps worked around (not edited)
+## Lib gaps (closed by the Auditor, engine 1.1.0)
 
-1. `engine.js` has no `{referred}` placeholder even though `templates.json`
-   declares `{referred|…}` and all three REFERRAL_THANKS templates use it. The
-   app substitutes `{referred|fallback}` with `pendingThanks.referredName` (or
-   the fallback) before calling `KIT.render`. `daily.js` never sends
-   REFERRAL_THANKS, so only the app is affected. Suggest adding `referred` to
-   `placeholderValues` (from `opts.referredName`) in a later engine version.
-2. No engine event clears `pendingThanks` for a skipped REFERRAL_THANKS; the
-   app sets `pendingThanks = null` directly.
+1. `engine.js` now fills `{referred|fallback}` itself, from `opts.referred`
+   (the app passes `item.referredName`) or `customer.pendingThanks.referredName`.
+   The app's `withReferred()` workaround was removed; `KIT.render` is called
+   directly for REFERRAL_THANKS cards.
+2. `KIT.applyEvent` has a `{type:'skippedExtra'}` event that clears
+   `pendingThanks` without touching `lastSentDate` or the min-gap floor. Skip
+   on a REFERRAL_THANKS card calls it instead of clearing the field by hand.
 3. `KIT.applyEvent` ignores `lastSentAt` unless `event.sentAt` is passed; the
-   app passes it (as `daily.js` does).
+   app passes it (as `daily.js` does). Unchanged, by design.
 
 ## Assumptions
 

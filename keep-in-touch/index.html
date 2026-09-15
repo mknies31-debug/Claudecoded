@@ -181,6 +181,13 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
  *
  * See SPEC.md §4 for the contract and docs/02-cadence.md for the plain-English
  * explanation of the rules.
+ *
+ * render() placeholders: {first} {name} {vehicle} {year} {make} {model}
+ * {phone} {sale_year} {season} {hook|fallback} {referred|fallback}.
+ * {referred} is the first name of the person a customer sent in (REFERRAL_THANKS):
+ * it comes from opts.referred (or opts.referredName), else from
+ * customer.pendingThanks.referredName. Anything the engine cannot fill renders
+ * as [key] and is listed in the returned `missing` array.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module && module.exports) {
@@ -191,7 +198,7 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   var SLOTS = [
     'THANKS',              // touch 0
@@ -475,7 +482,7 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
   }
 
   // Out-of-cadence REFERRAL_THANKS items (customer.pendingThanks set by the
-  // referralReceived event, cleared by sentExtra).
+  // referralReceived event, cleared by sentExtra or skippedExtra).
   function extraQueueItems(customers, today) {
     today = isYmd(today) ? today : todayChicago();
     var items = [];
@@ -570,6 +577,7 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
     var name = String(customer.name || '').trim();
     var first = String(customer.first || '').trim() || name.split(/\s+/)[0] || '';
     var season = opts.season || seasonFor(isYmd(opts.date) ? opts.date : todayChicago());
+    var referred = opts.referred || opts.referredName || (customer.pendingThanks && customer.pendingThanks.referredName) || '';
     return {
       first: first,
       name: name,
@@ -580,7 +588,8 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
       hook: String(customer.hook || '').trim(),
       phone: settings.mickPhoneDisplay || settings.mickPhone || '',
       sale_year: isYmd(customer.saleDate) ? customer.saleDate.slice(0, 4) : '',
-      season: season
+      season: season,
+      referred: String(referred).trim()
     };
   }
 
@@ -692,6 +701,12 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
           c.firstTextSentAt = event.sentAt || xDate;
         }
         applyFloor(c, xDate, event.minGapDays);
+        break;
+      }
+      case 'skippedExtra': {
+        // Out-of-cadence REFERRAL_THANKS was skipped: clear the pending item.
+        // Nothing went out, so no lastSentDate and no min-gap floor.
+        c.pendingThanks = null;
         break;
       }
       case 'snoozed': {
@@ -864,9 +879,10 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
  * in Node, `window.COMPLIANCE` in the browser when inlined. Pure functions,
  * no I/O, zero dependencies. Contract: SPEC.md §7.
  *
- * Customer-facing rules honored here (SPEC §0): sign-off is Mick / Mosaic
- * Autos; Mick is a salesperson, never the owner; no exclamation points; no
- * superlatives; the brand name never appears in customer-facing text.
+ * Customer-facing rules honored here (SPEC §0, brand change 2026-09-15): the
+ * brand is North Star Car Guy; Mosaic Autos is only the physical location in
+ * the footer; Mick is a salesperson there, never the owner; no exclamation
+ * points; no superlatives.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module && module.exports) {
@@ -1750,7 +1766,7 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
       "tone": "direct",
       "principle": "Reciprocity — a dash light decoder that fits in one email, the thing people search for at the side of the road",
       "subject": "what the dash lights mean",
-      "emailBody": "{first}, here is the short version of the dash lights on the {vehicle}, since the owner's manual is buried in the glovebox. Red means stop the engine soon, and the two that matter are the oil can and the temperature gauge, because driving on either one can wreck an engine in a few miles. Yellow means get it looked at, and a steady check engine light is usually a loose gas cap or a sensor, so tighten the cap first and see if it clears in a day or two. A flashing check engine light is the one exception to the yellow rule, and it means stop driving before a misfire turns into a burned-up catalytic converter. Is anything lit up on the dash of the {vehicle} right now?",
+      "emailBody": "{first}, here is the short version of the dash lights on the {vehicle}, since the book that came with it is buried in the glovebox. Red means stop the engine soon, and the two that matter are the oil can and the temperature gauge, because driving on either one can wreck an engine in a few miles. Yellow means get it looked at, and a steady check engine light is usually a loose gas cap or a sensor, so tighten the cap first and see if it clears in a day or two. A flashing check engine light is the one exception to the yellow rule, and it means stop driving before a misfire turns into a burned-up catalytic converter. Is anything lit up on the dash of the {vehicle} right now?",
       "textBody": "{first}, red dash light means stop the engine soon, yellow means get it looked at, and a flashing check engine light means stop driving now. Is anything lit up on the dash of the {vehicle} right now?",
       "editHint": "If they told you about a light that is always on (a known TPMS or airbag light), mention it so the note does not sound blind."
     },
@@ -1827,9 +1843,9 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
       "tone": "softer",
       "principle": "Mere exposure — a steady, seasonal, no-ask note that keeps Mick familiar without selling",
       "subject": "how the {model} did this {season}",
-      "emailBody": "{first}, this {season} has been a good test for anything with four wheels, and I keep thinking about how the {vehicle} did on {hook|the stretch you drive every day}. Some rigs surprise people the first year, in good ways and bad, and I like to know which one I handed you. There is no wrong answer, I just want the honest one. Has it been treating you right?",
-      "textBody": "{first}, this {season} has been a real test for anything with four wheels, and I keep wondering how the {vehicle} did on {hook|the stretch you drive every day}. Has it been treating you right?",
-      "editHint": "Add one line about what the season actually did (the ice storm, the heat wave) so it is not generic."
+      "emailBody": "{first}, the roads around Zumbrota do not go easy on anything with four wheels, and {hook|the stretch you drive every day} has had a whole {season} to work on the {vehicle}. Some rigs surprise people the first year, in good ways and bad, and I like to know which one I handed you. There is no wrong answer, I just want the honest one. Did the {vehicle} come through this {season} without a complaint?",
+      "textBody": "{first}, {hook|the stretch you drive every day} has had a whole {season} to work on the {vehicle}, and I like to know which rigs surprise people in the first year. Did the {vehicle} come through this {season} without a complaint?",
+      "editHint": "Name what the season actually did (the ice storm, the heat wave) in the first sentence so it is not generic."
     },
     {
       "id": "checkin-06",
@@ -1915,9 +1931,9 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
       "tone": "direct",
       "principle": "Peak-end plus specific-person referral ask — marks the year, then names the co-worker with the dead car",
       "subject": "coming up on a year",
-      "emailBody": "{first}, you are coming up on a year with the {vehicle}, and I still remember the day it went home. A year is about when people start telling the truth about a car, good or bad, so I hope it has earned its spot in the driveway. Here is the ask: somewhere in your life there is a co-worker whose car quit on them lately and who is dreading the search, and my number in their hand would save them a lot of runaround. That is the whole request, and no is fine. Co-worker with a dead car come to mind?",
+      "emailBody": "{first}, you are coming up on a year with the {vehicle}, and it does not feel like a year. A year is about when people start telling the truth about a car, good or bad, so I hope it has earned its spot in the driveway. Here is the ask: somewhere in your life there is a co-worker whose car quit on them lately and who is dreading the search, and my number in their hand would save them a lot of runaround. That is the whole request, and no is fine. Co-worker with a dead car come to mind?",
       "textBody": "{first}, coming up on a year with the {vehicle}, and if a co-worker's car quit on them lately, my number in their hand would save them a lot of runaround. Co-worker with a dead car come to mind?",
-      "editHint": "Add the one thing you remember from the sale day so 'I still remember' is true on the page."
+      "editHint": "Add the one thing you remember from the sale day (the dog, the trade) after the first sentence, so it reads like memory."
     },
     {
       "id": "anniversary-referral-02",
@@ -2025,8 +2041,8 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
       "tone": "softer",
       "principle": "Autonomy respected — confirms the stop in plain words and leaves the door open without a question",
       "subject": "no more notes from me",
-      "emailBody": "Understood, {first}, that was the last one and you will not hear from me again unless you start it. The door stays open on my end, and I hope the {vehicle} keeps treating you right.",
-      "textBody": "Understood, {first}, that was the last one from me. The door stays open on my end if you ever need anything.",
+      "emailBody": "Understood, {first}, that was the last one and you will not hear from me again unless you start it. The door stays open on my end, and if a dash light ever comes on in the {vehicle} that you cannot read, my number still works.",
+      "textBody": "Understood, {first}, that was the last one from me. The door stays open on my end, and if a dash light ever comes on that you cannot read, my number still works.",
       "editHint": "Do not add anything; if they gave a reason, do not answer it here."
     }
   ]
@@ -2475,15 +2491,6 @@ function templateById(id) {
   for (var i = 0; i < LIBRARY.templates.length; i++) if (LIBRARY.templates[i].id === id) return LIBRARY.templates[i];
   return null;
 }
-// The engine has no {referred} placeholder (templates.json declares one for
-// REFERRAL_THANKS). Fill it here before rendering.
-function withReferred(tpl, referredName) {
-  var t = clone(tpl);
-  ['subject', 'emailBody', 'textBody'].forEach(function (k) {
-    t[k] = String(t[k] || '').replace(/\{referred(?:\|([^}]*))?\}/g, function (m, fb) { return referredName || fb || 'somebody you know'; });
-  });
-  return t;
-}
 
 /* ============================================================ 4. State + render */
 var ui = Object.assign({ tab: 'queue', customerId: null, search: '', editId: null, sender: '', tplEdit: null, tplOpen: {}, previewCustomer: '', forceCustomer: '' }, lsGet(LS.ui, {}));
@@ -2633,8 +2640,8 @@ function draftFor(item) {
   var footer = COMPLIANCE.emailFooter(s, unsubscribeUrl);
   var r = null;
   if (tpl) {
-    var t2 = item.extra ? withReferred(tpl, item.referredName) : tpl;
-    r = KIT.render(t2, c, s, { sender: sender, firstText: !c.firstTextSentAt, season: item.season, date: today() });
+    // {referred|…} (REFERRAL_THANKS) is filled by the engine from pendingThanks / opts.referred.
+    r = KIT.render(tpl, c, s, { sender: sender, firstText: !c.firstTextSentAt, season: item.season, date: today(), referred: item.extra ? item.referredName : '' });
   }
   st = st || { key: key, touchId: '', channels: [], done: false, dismissed: false };
   Object.assign(st, {
@@ -2848,9 +2855,9 @@ ACTIONS.skip = function (t) {
     subject: '', emailBody: '', textBody: '', providerId: '', late: !!it.isLate, daysLate: Number(it.daysLate) || 0, createdAt: iso, updatedAt: iso
   };
   store.save('touches', touch.id, touch);
-  var updated;
-  if (it.extra) { updated = clone(c); updated.pendingThanks = null; }
-  else updated = KIT.applyEvent(c, { type: 'skipped', n: it.n, dueDate: it.dueDate, slot: it.slot }, tday);
+  var updated = it.extra
+    ? KIT.applyEvent(c, { type: 'skippedExtra' }, tday)
+    : KIT.applyEvent(c, { type: 'skipped', n: it.n, dueDate: it.dueDate, slot: it.slot }, tday);
   saveCustomer(updated);
   delete cardState[st.key];
   if (ui.forceCustomer === c.id) ui.forceCustomer = '';

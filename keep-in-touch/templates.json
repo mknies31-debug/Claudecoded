@@ -263,7 +263,7 @@
       "tone": "direct",
       "principle": "Reciprocity — a dash light decoder that fits in one email, the thing people search for at the side of the road",
       "subject": "what the dash lights mean",
-      "emailBody": "{first}, here is the short version of the dash lights on the {vehicle}, since the owner's manual is buried in the glovebox. Red means stop the engine soon, and the two that matter are the oil can and the temperature gauge, because driving on either one can wreck an engine in a few miles. Yellow means get it looked at, and a steady check engine light is usually a loose gas cap or a sensor, so tighten the cap first and see if it clears in a day or two. A flashing check engine light is the one exception to the yellow rule, and it means stop driving before a misfire turns into a burned-up catalytic converter. Is anything lit up on the dash of the {vehicle} right now?",
+      "emailBody": "{first}, here is the short version of the dash lights on the {vehicle}, since the book that came with it is buried in the glovebox. Red means stop the engine soon, and the two that matter are the oil can and the temperature gauge, because driving on either one can wreck an engine in a few miles. Yellow means get it looked at, and a steady check engine light is usually a loose gas cap or a sensor, so tighten the cap first and see if it clears in a day or two. A flashing check engine light is the one exception to the yellow rule, and it means stop driving before a misfire turns into a burned-up catalytic converter. Is anything lit up on the dash of the {vehicle} right now?",
       "textBody": "{first}, red dash light means stop the engine soon, yellow means get it looked at, and a flashing check engine light means stop driving now. Is anything lit up on the dash of the {vehicle} right now?",
       "editHint": "If they told you about a light that is always on (a known TPMS or airbag light), mention it so the note does not sound blind."
     },
@@ -340,9 +340,9 @@
       "tone": "softer",
       "principle": "Mere exposure — a steady, seasonal, no-ask note that keeps Mick familiar without selling",
       "subject": "how the {model} did this {season}",
-      "emailBody": "{first}, this {season} has been a good test for anything with four wheels, and I keep thinking about how the {vehicle} did on {hook|the stretch you drive every day}. Some rigs surprise people the first year, in good ways and bad, and I like to know which one I handed you. There is no wrong answer, I just want the honest one. Has it been treating you right?",
-      "textBody": "{first}, this {season} has been a real test for anything with four wheels, and I keep wondering how the {vehicle} did on {hook|the stretch you drive every day}. Has it been treating you right?",
-      "editHint": "Add one line about what the season actually did (the ice storm, the heat wave) so it is not generic."
+      "emailBody": "{first}, the roads around Zumbrota do not go easy on anything with four wheels, and {hook|the stretch you drive every day} has had a whole {season} to work on the {vehicle}. Some rigs surprise people the first year, in good ways and bad, and I like to know which one I handed you. There is no wrong answer, I just want the honest one. Did the {vehicle} come through this {season} without a complaint?",
+      "textBody": "{first}, {hook|the stretch you drive every day} has had a whole {season} to work on the {vehicle}, and I like to know which rigs surprise people in the first year. Did the {vehicle} come through this {season} without a complaint?",
+      "editHint": "Name what the season actually did (the ice storm, the heat wave) in the first sentence so it is not generic."
     },
     {
       "id": "checkin-06",
@@ -428,9 +428,9 @@
       "tone": "direct",
       "principle": "Peak-end plus specific-person referral ask — marks the year, then names the co-worker with the dead car",
       "subject": "coming up on a year",
-      "emailBody": "{first}, you are coming up on a year with the {vehicle}, and I still remember the day it went home. A year is about when people start telling the truth about a car, good or bad, so I hope it has earned its spot in the driveway. Here is the ask: somewhere in your life there is a co-worker whose car quit on them lately and who is dreading the search, and my number in their hand would save them a lot of runaround. That is the whole request, and no is fine. Co-worker with a dead car come to mind?",
+      "emailBody": "{first}, you are coming up on a year with the {vehicle}, and it does not feel like a year. A year is about when people start telling the truth about a car, good or bad, so I hope it has earned its spot in the driveway. Here is the ask: somewhere in your life there is a co-worker whose car quit on them lately and who is dreading the search, and my number in their hand would save them a lot of runaround. That is the whole request, and no is fine. Co-worker with a dead car come to mind?",
       "textBody": "{first}, coming up on a year with the {vehicle}, and if a co-worker's car quit on them lately, my number in their hand would save them a lot of runaround. Co-worker with a dead car come to mind?",
-      "editHint": "Add the one thing you remember from the sale day so 'I still remember' is true on the page."
+      "editHint": "Add the one thing you remember from the sale day (the dog, the trade) after the first sentence, so it reads like memory."
     },
     {
       "id": "anniversary-referral-02",
@@ -538,8 +538,8 @@
       "tone": "softer",
       "principle": "Autonomy respected — confirms the stop in plain words and leaves the door open without a question",
       "subject": "no more notes from me",
-      "emailBody": "Understood, {first}, that was the last one and you will not hear from me again unless you start it. The door stays open on my end, and I hope the {vehicle} keeps treating you right.",
-      "textBody": "Understood, {first}, that was the last one from me. The door stays open on my end if you ever need anything.",
+      "emailBody": "Understood, {first}, that was the last one and you will not hear from me again unless you start it. The door stays open on my end, and if a dash light ever comes on in the {vehicle} that you cannot read, my number still works.",
+      "textBody": "Understood, {first}, that was the last one from me. The door stays open on my end, and if a dash light ever comes on that you cannot read, my number still works.",
       "editHint": "Do not add anything; if they gave a reason, do not answer it here."
     }
   ]

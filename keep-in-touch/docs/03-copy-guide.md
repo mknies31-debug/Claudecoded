@@ -53,8 +53,8 @@ REFERRAL to someone who just sent you one; the engine already converts that
 slot to VALUE.
 
 **ANNIVERSARY_REFERRAL.** These say "coming up on a year" because touch 4
-lands at 360 days. Add the one thing you remember from the sale day so "I
-still remember" is true on the page.
+lands at 360 days. Add the one thing you remember from the sale day (the dog,
+the trade) after the first sentence so it reads like memory, not a form.
 
 **BIRTHDAY.** If you know what they do for fun, ask about that instead of
 "anything fun". Otherwise leave it alone.

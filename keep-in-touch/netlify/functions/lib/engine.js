@@ -11,6 +11,13 @@
  *
  * See SPEC.md §4 for the contract and docs/02-cadence.md for the plain-English
  * explanation of the rules.
+ *
+ * render() placeholders: {first} {name} {vehicle} {year} {make} {model}
+ * {phone} {sale_year} {season} {hook|fallback} {referred|fallback}.
+ * {referred} is the first name of the person a customer sent in (REFERRAL_THANKS):
+ * it comes from opts.referred (or opts.referredName), else from
+ * customer.pendingThanks.referredName. Anything the engine cannot fill renders
+ * as [key] and is listed in the returned `missing` array.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module && module.exports) {
@@ -21,7 +28,7 @@
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   var SLOTS = [
     'THANKS',              // touch 0
@@ -305,7 +312,7 @@
   }
 
   // Out-of-cadence REFERRAL_THANKS items (customer.pendingThanks set by the
-  // referralReceived event, cleared by sentExtra).
+  // referralReceived event, cleared by sentExtra or skippedExtra).
   function extraQueueItems(customers, today) {
     today = isYmd(today) ? today : todayChicago();
     var items = [];
@@ -400,6 +407,7 @@
     var name = String(customer.name || '').trim();
     var first = String(customer.first || '').trim() || name.split(/\s+/)[0] || '';
     var season = opts.season || seasonFor(isYmd(opts.date) ? opts.date : todayChicago());
+    var referred = opts.referred || opts.referredName || (customer.pendingThanks && customer.pendingThanks.referredName) || '';
     return {
       first: first,
       name: name,
@@ -410,7 +418,8 @@
       hook: String(customer.hook || '').trim(),
       phone: settings.mickPhoneDisplay || settings.mickPhone || '',
       sale_year: isYmd(customer.saleDate) ? customer.saleDate.slice(0, 4) : '',
-      season: season
+      season: season,
+      referred: String(referred).trim()
     };
   }
 
@@ -522,6 +531,12 @@
           c.firstTextSentAt = event.sentAt || xDate;
         }
         applyFloor(c, xDate, event.minGapDays);
+        break;
+      }
+      case 'skippedExtra': {
+        // Out-of-cadence REFERRAL_THANKS was skipped: clear the pending item.
+        // Nothing went out, so no lastSentDate and no min-gap floor.
+        c.pendingThanks = null;
         break;
       }
       case 'snoozed': {

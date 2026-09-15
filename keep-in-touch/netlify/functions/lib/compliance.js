@@ -5,9 +5,10 @@
  * in Node, `window.COMPLIANCE` in the browser when inlined. Pure functions,
  * no I/O, zero dependencies. Contract: SPEC.md §7.
  *
- * Customer-facing rules honored here (SPEC §0): sign-off is Mick / Mosaic
- * Autos; Mick is a salesperson, never the owner; no exclamation points; no
- * superlatives; the brand name never appears in customer-facing text.
+ * Customer-facing rules honored here (SPEC §0, brand change 2026-09-15): the
+ * brand is North Star Car Guy; Mosaic Autos is only the physical location in
+ * the footer; Mick is a salesperson there, never the owner; no exclamation
+ * points; no superlatives.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module && module.exports) {

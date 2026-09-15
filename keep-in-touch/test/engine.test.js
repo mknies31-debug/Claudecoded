@@ -682,6 +682,60 @@ test('every touch 0..20 is reachable in order when acted on promptly', function 
   assert.strictEqual((counts.REFERRAL || 0) + (counts.ANNIVERSARY_REFERRAL || 0), 4);
 });
 
+// --------------------------------------------- {referred} + skippedExtra (v1.1)
+
+test('render: {referred|fallback} fills from customer.pendingThanks.referredName', function () {
+  var c = KIT.applyEvent(customer(), { type: 'referralReceived', date: '2026-10-01', referredName: 'Kari' }, '2026-10-01');
+  var tpl = { id: 'referral-thanks-99', slot: 'REFERRAL_THANKS', subject: 'you sent {referred|somebody} my way',
+    emailBody: '{first}, {referred|somebody you know} came in and said your name. Okay if I tell you how it turns out?',
+    textBody: '{referred|somebody you know} said your name. Okay?' };
+  var r = KIT.render(tpl, c, { mickPhoneDisplay: '(507) 555-0000' }, { sender: 'mick' });
+  assert.strictEqual(r.subject, 'you sent Kari my way');
+  assert.ok(r.emailBody.indexOf('Dan, Kari came in') === 0, r.emailBody);
+  assert.ok(r.textBody.indexOf('Kari said') === 0);
+  assert.deepStrictEqual(r.missing, []);
+});
+
+test('render: opts.referred wins over pendingThanks; fallback used when neither is set; no fallback -> [referred] + missing', function () {
+  var c = KIT.applyEvent(customer(), { type: 'referralReceived', date: '2026-10-01', referredName: 'Kari' }, '2026-10-01');
+  var tpl = { slot: 'REFERRAL_THANKS', subject: 's', emailBody: '{referred|a friend} came in. Okay?', textBody: '{referred} came in. Okay?' };
+  var r = KIT.render(tpl, c, { mickPhoneDisplay: '(507) 555-0000' }, { referred: 'Tom' });
+  assert.ok(r.emailBody.indexOf('Tom came in') === 0);
+  assert.ok(r.textBody.indexOf('Tom came in') === 0);
+  var r2 = KIT.render(tpl, customer(), { mickPhoneDisplay: '(507) 555-0000' }, {});
+  assert.ok(r2.emailBody.indexOf('a friend came in') === 0, 'fallback: ' + r2.emailBody);
+  assert.ok(r2.textBody.indexOf('[referred] came in') === 0, 'no fallback renders visibly: ' + r2.textBody);
+  assert.deepStrictEqual(r2.missing, ['referred']);
+  var r3 = KIT.render(tpl, customer(), { mickPhoneDisplay: '(507) 555-0000' }, { referredName: 'Ann' });
+  assert.ok(r3.textBody.indexOf('Ann came in') === 0, 'opts.referredName also accepted');
+});
+
+test('applyEvent skippedExtra: clears pendingThanks, keeps referralCredit, no floor, no lastSentDate', function () {
+  var c = customer({ saleDate: '2026-01-01', nextTouchN: 1 });
+  c = KIT.applyEvent(c, { type: 'sent', n: 1, dueDate: '2026-04-01', sentDate: '2026-04-01', channels: ['email'] }, '2026-04-01');
+  c = KIT.applyEvent(c, { type: 'referralReceived', date: '2026-06-25', referredName: 'Kari' }, '2026-06-25');
+  assert.strictEqual(KIT.extraQueueItems([c], '2026-06-25').length, 1);
+  var before = JSON.stringify(c);
+  var after = KIT.applyEvent(c, { type: 'skippedExtra' }, '2026-06-25');
+  assert.strictEqual(JSON.stringify(c), before, 'input not mutated');
+  assert.strictEqual(after.pendingThanks, null);
+  assert.strictEqual(KIT.extraQueueItems([after], '2026-06-25').length, 0);
+  assert.strictEqual(after.referralCredit, true, 'the next REFERRAL slot still converts to VALUE');
+  assert.strictEqual(after.lastSentDate, '2026-04-01', 'nothing was sent');
+  assert.strictEqual(after.floorDate || '', '', 'no min-gap floor after a skip');
+  assert.strictEqual(KIT.nextTouch(after, '2026-06-25').dueDate, '2026-06-30', 'cadence untouched: touch 2 = sale + 180');
+  assert.strictEqual(after.nextTouchN, 2, 'extra items never consume a touch number');
+});
+
+test('applyEvent sentExtra (contrast): clears pendingThanks AND applies the min-gap floor', function () {
+  var c = customer({ saleDate: '2026-01-01', nextTouchN: 2 });
+  c = KIT.applyEvent(c, { type: 'referralReceived', date: '2026-06-25', referredName: 'Kari' }, '2026-06-25');
+  var after = KIT.applyEvent(c, { type: 'sentExtra', sentDate: '2026-06-25', templateId: 'referral-thanks-01', channels: ['email'] }, '2026-06-25');
+  assert.strictEqual(after.pendingThanks, null);
+  assert.strictEqual(after.lastSentDate, '2026-06-25');
+  assert.strictEqual(KIT.nextTouch(after, '2026-06-25').dueDate, '2026-07-16', 'touch 2 (Jun 30) floored to Jun 25 + 21');
+});
+
 // ----------------------------------------------------------------- done
 
 console.log('');

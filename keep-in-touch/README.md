@@ -64,3 +64,11 @@ node test/audit.js
 
 `docs/04-compliance.md` is the one-page summary for Mosaic Autos' manager.
 Nothing goes live to real customers until it is signed.
+
+## The five lines
+
+1. **Placeholder:** the Mosaic Autos street address in Settings starts as `[VERIFY]`, the UID in `firestore.rules` is `PASTE_YOUR_UID_HERE`, and the `<meta name="kit-firebase">` tag at the top of `index.html` is empty until you paste your Firebase project ID and web API key (the customer-facing unsubscribe page needs it).
+2. **Needs your eyes:** the dealership approval one-pager in `docs/04-compliance.md` (launch gate), the Minnesota statute list in it (have a lawyer read it), and every THANKS template before it goes out, since touch 0 is the one you personalize.
+3. **Deliberate deviation:** after a late send the next touch keeps the original 90-day cadence but never lands sooner than 21 days later (Settings → minGapDays), so nobody gets two notes in one week after a long gap.
+4. **Not verifiable without your accounts:** a real Resend send, Firebase sync, the 9 AM scheduled run, the inbound webhook, and drag-and-drop bundling of the functions folder. `docs/06-audit.md` §3 gives a five-minute check for each. Git-connect deploy is the safe path.
+5. **Most likely to break first:** Resend's unverified sending domain. Until `northstarcarguy.com` shows Verified in Resend, email only delivers to your own Resend login address, and the Netlify build log is where you'll see it.

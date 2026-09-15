@@ -234,6 +234,7 @@ KIT.pickTemplate(pool, usedTemplateIds, seed) -> least-recently-used template (u
 KIT.templatePool(library, overrides, slot, season) -> array of live templates (retired removed, overrides merged); VALUE pulls season pool + "any"
 KIT.render(template, customer, settings, opts) -> { subject, emailBody, textBody, emailFull, textFull }
      placeholders: {first} {name} {vehicle} {year} {make} {model} {hook|fallback text} {phone} {sale_year} {season}
+                   {referred|fallback} (from opts.referred or customer.pendingThanks.referredName; REFERRAL_THANKS)
      emailFull = body + signoff (+ footer from compliance.js if opts.footer provided)
      textFull  = textBody (+ " Reply STOP to opt out." when opts.firstText)
      opts.sender "mick"|"ella" picks the sign-off block
@@ -249,7 +250,9 @@ KIT.applyEvent(customer, event, today)   -> NEW customer object (pure). Events:
      {type:"optOut", reason, channel, at} → status dnc, dnc {...}
      {type:"repeatPurchase", saleDate, vehicle} → purchases push, saleDate/anchor reset, nextTouchN 0, slotOffset 0, vehicle updated, status active
 KIT.isOptOutText(str)                    -> true for stop/unsubscribe/opt out/remove me/quit/cancel/end (whole word, any case, anywhere in the first 80 chars)
-KIT.extraQueueItems(customers, today)    -> pending REFERRAL_THANKS items (customer.pendingThanks = {date, referredName}) — set by applyEvent referralReceived, cleared by a "sentExtra" event
+     {type:"sentExtra", sentDate, channels, templateId} → REFERRAL_THANKS went out: pendingThanks=null, lastSentDate, min-gap floor applies
+     {type:"skippedExtra"}               → REFERRAL_THANKS skipped: pendingThanks=null, nothing else changes
+KIT.extraQueueItems(customers, today)    -> pending REFERRAL_THANKS items (customer.pendingThanks = {date, referredName}) — set by applyEvent referralReceived, cleared by sentExtra / skippedExtra
 ```
 Tests (Agent 2, `node test/engine.test.js`, zero deps, `assert`): sale Dec 31,
 Feb 29 (2028-02-29), 90-day ladder, birthday carry, referral credit, reply reset,
