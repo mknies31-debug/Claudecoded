@@ -89,7 +89,7 @@ Keep a scratch note open. You'll copy six things into it along the way:
    |---|---|---|
    | `KIT_SECRET` | make up a long random phrase (20+ characters, e.g. from your password manager). Write it in your scratch note. | Tier 1 |
    | `RESEND_API_KEY` | the `re_…` key from B.3 | Tier 1 |
-   | `MAIL_FROM` | `Mick at Mosaic Autos <mick@YOURDOMAIN.com>` | Tier 1 |
+   | `MAIL_FROM` | `Mick at North Star Car Guy <mick@northstarcarguy.com>` | Tier 1 |
    | `MAIL_REPLY_TO` | the dedicated Gmail address replies should land in | Tier 1 |
    | `SITE_URL` | fill in after step 5, e.g. `https://kit-mick.netlify.app` (no trailing slash) | Tier 1 |
    | `FIREBASE_PROJECT_ID` | Project ID from A.9 | Tier 2 |
@@ -122,7 +122,7 @@ this way (see `docs/01-architect.md` section E); use Git-connect for Tier 2.
 2. Paste **Web API key** and **Project ID** from A.9. Tap **Save**.
 3. Sign in with the email and password from A.4.
 4. **Settings** tab, fill in:
-   - Your name shown to customers ("Mick at Mosaic Autos"), your phone (the
+   - Your name shown to customers ("Mick at North Star Car Guy"), your phone (the
      number customers should call/text).
    - **Business address**: Mosaic Autos' street address, exactly as it appears
      on their paperwork. It goes in every email footer (CAN-SPAM). Confirm it
@@ -136,7 +136,7 @@ this way (see `docs/01-architect.md` section E); use Git-connect for Tier 2.
 6. **Queue** tab: you won't be due until sale + 3 days, so open your own
    timeline and use **Send now** on touch 0 (or set your sale date 4 days back
    and reload). Tap **Send Email**. Within a minute you should have a plain-text
-   email from "Mick at Mosaic Autos" with the footer and unsubscribe link.
+   email from "Mick at North Star Car Guy" with the footer and unsubscribe link.
    Tap **Send as Text** — Messages opens pre-filled. Both show on your timeline.
 7. Click the unsubscribe link in that email. You should see the goodbye page.
    Reopen the app: your own record is now **Do not contact**. (Flip it back

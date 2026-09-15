@@ -39,7 +39,6 @@ const BANNED_PHRASES = [
   'circling back', 'circle back', 'reaching out', 'reach out', 'i noticed you', "i noticed you haven't",
   'valued customer', 'at this time', 'premier', "don't hesitate", 'do not hesitate',
   'hope this finds you', 'hope this email finds you', 'i wanted to', 'feel free',
-  'north star', 'northstar',
   // fake urgency / scarcity / guilt
   'limited time', 'act now', 'hurry', 'last chance', 'today only', 'deadline', 'expires',
   'while supplies last', "haven't heard", 'have not heard', 'never heard back', "you haven't replied",

@@ -343,7 +343,6 @@ function dailyDeps(db, kitOpts, envExtra) {
     assert.ok(!('html' in p));
     assert.ok(p.text.includes('Mosaic Autos'));
     assert.ok(p.text.includes('/?u=tok_' + 'a'.repeat(32)), 'unsubscribe url in footer');
-    assert.ok(!/North Star/i.test(p.text));
     assert.strictEqual(p.headers['List-Unsubscribe'], '<https://kit.example.netlify.app/?u=tok_' + 'a'.repeat(32) + '>');
     const touches = [...db.docs.entries()].filter(([k]) => k.startsWith('touches/'));
     assert.strictEqual(touches.length, 1);

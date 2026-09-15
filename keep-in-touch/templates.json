@@ -21,8 +21,8 @@
       "tone": "direct",
       "principle": "Peak-end — the highest-effort note in the system lands three days after the sale, while the memory is still warm",
       "subject": "the {vehicle} and my number",
-      "emailBody": "{first}, thank you for buying the {vehicle} from me. Save this number in your phone as Mick at Mosaic, {phone}, and if anything feels off in the first couple weeks, call me before you call anybody else. The title and plates come through the state, not me, so if they feel slow that is normal, and if they feel too slow, tell me and I will chase it. I am glad it was you sitting across the desk. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
-      "textBody": "{first}, this is Mick at Mosaic, save this number, and call me first if anything on the {vehicle} feels off. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "emailBody": "{first}, thank you for buying the {vehicle} from me. Save this number in your phone as North Star Car Guy, {phone}, and if anything feels off in the first couple weeks, call me before you call anybody else. The title and plates come through the state, not me, so if they feel slow that is normal, and if they feel too slow, tell me and I will chase it. I am glad it was you sitting across the desk. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, this is Mick, North Star Car Guy, save this number, and call me first if anything on the {vehicle} feels off. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
       "editHint": "Add one detail from the sale day (the dog, the kid, what they traded) so it reads like memory, not a form."
     },
     {
@@ -43,8 +43,8 @@
       "tone": "nepq",
       "principle": "Peak-end and consistency — restates what they said they needed, so the relationship starts on their words",
       "subject": "one thing before you forget",
-      "emailBody": "{first}, before the {vehicle} turns into just the thing you drive, put this number in your phone under Mick at Mosaic, {phone}. Here is why I ask: the first few weeks are when a small noise or a dash light shows up, and I would rather hear about it from you than have you wonder who to call. The title and plates come from the state and not from me, so give them a bit before you worry. You told me what you needed this rig to do, and I want to hear whether it is doing it. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
-      "textBody": "{first}, put this number in your phone as Mick at Mosaic, and if the {vehicle} makes a noise it did not make on the test drive, I want the call. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "emailBody": "{first}, before the {vehicle} turns into just the thing you drive, put this number in your phone under North Star Car Guy, {phone}. Here is why I ask: the first few weeks are when a small noise or a dash light shows up, and I would rather hear about it from you than have you wonder who to call. The title and plates come from the state and not from me, so give them a bit before you worry. You told me what you needed this rig to do, and I want to hear whether it is doing it. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, put this number in your phone as North Star Car Guy, and if the {vehicle} makes a noise it did not make on the test drive, I want the call. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
       "editHint": "Replace 'what you needed this rig to do' with the actual job they told you about (hauling, the Rochester commute, a kid's first car)."
     },
     {
@@ -417,8 +417,8 @@
       "tone": "nepq",
       "principle": "Specific-person referral ask — the farmer fighting a worn-out truck, framed as a favor to him rather than to Mick",
       "subject": "a truck that quits in harvest",
-      "emailBody": "Think about who you know that farms or hauls for a living, {first}, and whether one of them spent last harvest fighting a truck that kept quitting when it mattered. Those are the people I like helping, because they know exactly what they need and they do not want to be sold, they want to be listened to. If one of them is grumbling about it over coffee, tell him Mick at Mosaic will hear him out and not waste his morning. You would be doing him a favor more than me. Is there a farmer in your circle fighting a worn-out truck?",
-      "textBody": "{first}, if somebody you know farms and spent harvest fighting a truck that kept quitting, tell them Mick at Mosaic will hear them out and not waste their morning. Is there a farmer in your circle fighting a worn-out truck?",
+      "emailBody": "Think about who you know that farms or hauls for a living, {first}, and whether one of them spent last harvest fighting a truck that kept quitting when it mattered. Those are the people I like helping, because they know exactly what they need and they do not want to be sold, they want to be listened to. If one of them is grumbling about it over coffee, tell him Mick at North Star Car Guy will hear him out and not waste his morning. You would be doing him a favor more than me. Is there a farmer in your circle fighting a worn-out truck?",
+      "textBody": "{first}, if somebody you know farms and spent harvest fighting a truck that kept quitting, tell them Mick at North Star Car Guy will hear them out and not waste their morning. Is there a farmer in your circle fighting a worn-out truck?",
       "editHint": "In spring, change 'last harvest' to 'planting'; for a town customer, swap the farmer for the guy who plows driveways."
     },
     {
@@ -472,8 +472,8 @@
       "tone": "softer",
       "principle": "Mere exposure and low-friction reply — a two-option question anybody can answer from a phone",
       "subject": "a birthday note from Mick",
-      "emailBody": "{first}, I had your birthday written down from when we did the paperwork on the {vehicle}, and I did not want it to go by without saying something. So, happy birthday from Mick at Mosaic, and I hope somebody else is doing the driving today. Cake or pie?",
-      "textBody": "{first}, had your birthday written down from the {vehicle} paperwork, so happy birthday from Mick at Mosaic. Cake or pie?",
+      "emailBody": "{first}, I had your birthday written down from when we did the paperwork on the {vehicle}, and I did not want it to go by without saying something. So, happy birthday from Mick at North Star Car Guy, and I hope somebody else is doing the driving today. Cake or pie?",
+      "textBody": "{first}, had your birthday written down from the {vehicle} paperwork, so happy birthday from Mick at North Star Car Guy. Cake or pie?",
       "editHint": "Leave it alone; this one works as-is."
     },
     {
@@ -483,8 +483,8 @@
       "tone": "nepq",
       "principle": "Mere exposure — a reflective line and a one-word question, no ask of any kind",
       "subject": "happy birthday",
-      "emailBody": "{first}, happy birthday from Mick at Mosaic. Another year older means another year of knowing more than you did, which in my experience is the whole point. No ask in this one, just a note from a guy who is glad to know you. Is it a big one this year?",
-      "textBody": "Happy birthday from Mick at Mosaic, {first}, no ask in this one, just a note from a guy who is glad to know you. Is it a big one this year?",
+      "emailBody": "{first}, happy birthday from Mick at North Star Car Guy. Another year older means another year of knowing more than you did, which in my experience is the whole point. No ask in this one, just a note from a guy who is glad to know you. Is it a big one this year?",
+      "textBody": "Happy birthday from Mick at North Star Car Guy, {first}, no ask in this one, just a note from a guy who is glad to know you. Is it a big one this year?",
       "editHint": "If you know it is a milestone, say the milestone instead of asking."
     },
     {

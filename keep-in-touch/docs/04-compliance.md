@@ -11,7 +11,7 @@
 
 1. Mick enters a customer once, right after a sale: name, phone, email, vehicle, sale date, notes, and two separate consent checkboxes (email, text).
 2. About every 90 days the app drafts one short, plain-text note in Mick's voice: a seasonal tip, a hello, or a referral ask. Every note ends with one easy question.
-3. Emails send from "Mick at Mosaic Autos" through a transactional email service (Resend), with Reply-To set to a dedicated Gmail inbox Mick reads.
+3. Emails send from "Mick at North Star Car Guy" through a transactional email service (Resend), with Reply-To set to a dedicated Gmail inbox Mick reads.
 4. Texts are never sent by the app. It opens Mick's own Messages app pre-filled; Mick reads it and taps send from his own phone, or doesn't.
 5. Day one, nothing sends until Mick taps Approve on Today's Queue. An optional later mode can auto-send the email version only, at 9:00 AM Central, and only to customers with recorded email consent.
 6. One reply of STOP (or unsubscribe, opt out, remove me, and similar) on either channel, or one tap on the email unsubscribe link, marks the customer do-not-contact on both channels instantly and the app will not draft to them again.
@@ -27,7 +27,7 @@
 
 **Exact checkbox wording in the app** (from `compliance.js` → `consentLabels`, single source of truth):
 
-- **Email (23 words):** *Okay for Mick at Mosaic Autos to email me a few times a year with tips and a hello. I can stop anytime.*
+- **Email (23 words):** *Okay for Mick (North Star Car Guy) to email me a few times a year with tips and a hello. I can stop anytime.*
 - **Text (24 words):** *Okay for Mick to text me from his own phone now and then. Reply STOP to end texts. Message and data rates may apply.*
 
 Mick reads the line to the customer in the driveway or at the desk, the customer says yes, Mick ticks the box, and the app stamps the time and requires him to pick how it was obtained. The consent summary shown on every customer's timeline reads, for example: `Email: yes (in person at sale, 2026-09-15) · SMS: no`.
@@ -36,9 +36,9 @@ Mick reads the line to the customer in the driveway or at the desk, the customer
 
 | Requirement | How this system meets it |
 |---|---|
-| Accurate From / Reply-To / routing | From: "Mick at Mosaic Autos <mick@…>". Reply-To: Mick's dedicated Gmail. Both set in Settings and in the send function's environment; never spoofed. |
+| Accurate From / Reply-To / routing | From: "Mick at North Star Car Guy <mick@northstarcarguy.com>". Reply-To: Mick's dedicated Gmail. Both set in Settings and in the send function's environment; never spoofed. |
 | Non-deceptive subject line | Subjects are plain ("Deer season and your headlights"). The copy lint in `test/lint-templates.js` and the Auditor reject urgency, scarcity, dollar figures and superlatives. |
-| Identify the sender honestly | Footer line: *"…from me, Mick, a salesperson at Mosaic Autos…"* Nothing anywhere implies Mick owns Mosaic. The brand name "North Star Car Guy" never appears in customer-facing text. |
+| Identify the sender honestly | Footer line: *"…from me, Mick Knies, North Star Car Guy, selling at Mosaic Autos…"* Nothing anywhere implies Mick owns Mosaic. North Star Car Guy is Mick's own brand (his decision 2026-09-15); Mosaic Autos is named as the physical location. |
 | Identify the message as what it is | Footer says the reader is getting it because they bought a vehicle and said keeping in touch was okay, and that these are Mick's own pre-approved words sent on a schedule. |
 | Physical postal address in every email | Last footer line: `Mosaic Autos · {businessAddress}`. The address comes from Settings and is printed on every email without exception — if it is blank or still says [VERIFY], the line prints anyway so the gap is visible, and the deploy checklist blocks go-live until it is the real Mosaic Autos street address. |
 | Working opt-out mechanism, clear and conspicuous | Footer line: *"Don't want these? One tap and you're off: https://…/?u=TOKEN"*. Public page, no login, no form, no "are you sure". One tap writes an opt-out record. |
@@ -52,7 +52,7 @@ Mick reads the line to the customer in the driveway or at the desk, the customer
 
 ```
 --
-You're getting this because you bought a vehicle from me, Mick, a salesperson at Mosaic Autos, and said it was okay for me to keep in touch. These are my own words, written and approved by me ahead of time and sent on a schedule.
+You're getting this because you bought a vehicle from me, Mick Knies, North Star Car Guy, selling at Mosaic Autos, and said it was okay for me to keep in touch. These are my own words, written and approved by me ahead of time and sent on a schedule.
 Don't want these? One tap and you're off: https://<site>/?u=<token>
 Mosaic Autos · <business address from Settings>
 ```
@@ -87,9 +87,9 @@ normalize to lowercase, trim, strip punctuation; opt-out if (a) the message cont
 ## (f) Automated-contact honesty
 
 - Scheduled emails (optional Tier 2 mode) are Mick's own words, written and approved by him ahead of time. The footer says so in plain English on every email. Nothing pretends to be a live, in-the-moment message when it is not.
-- Anything Ella sends by hand signs "Ella, for Mick / Mosaic Autos / phone". She never sends as Mick.
+- Anything Ella sends by hand signs "Ella, for Mick / North Star Car Guy / phone". She never sends as Mick.
 - No fake deadlines, no false scarcity, no "I noticed you haven't replied", no exclamation points, no superlatives — enforced by the copy lint and the Auditor, not by good intentions.
-- Every email signs off Mick / Mosaic Autos / phone number. Nothing implies Mick owns the dealership.
+- Every email signs off Mick / North Star Car Guy / phone number, with the Mosaic Autos address in the footer. Nothing implies Mick owns the dealership.
 
 ## (g) Minnesota-specific statutes — have a lawyer read; not legal advice
 

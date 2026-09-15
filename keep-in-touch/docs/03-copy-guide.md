@@ -4,8 +4,9 @@ The library is `templates.json` (48 email/text pairs, one id per pair). Every
 one passes `node test/lint-templates.js`: five sentences or fewer per email, two
 or fewer per text, exactly one question and it is the last thing on the page,
 no exclamation points, no dollar figures, no banned phrases, no superlatives,
-no "North Star", nothing that sounds like Mick owns the place. The app adds the
-sign-off (Mick / Mosaic Autos / phone) and the compliance footer; the bodies
+nothing that sounds like Mick owns Mosaic Autos. (Mick's 2026-09-15 decision:
+the brand on everything is North Star Car Guy, so that name is allowed.) The app adds the
+sign-off (Mick / North Star Car Guy / phone) and the compliance footer; the bodies
 never carry them.
 
 ## Counts and tone mix
@@ -88,8 +89,8 @@ is that it is short and asks for nothing.
 
 ## The Ella rule
 
-Anything Ella sends by hand goes out with the sign-off "Ella, for Mick / Mosaic
-Autos / phone". The body stays in Mick's voice; the sign-off is what makes it
+Anything Ella sends by hand goes out with the sign-off "Ella, for Mick / North Star
+Car Guy / phone". The body stays in Mick's voice; the sign-off is what makes it
 honest. Scheduled sends are Mick's pre-approved words and the footer says so.
 
 ## Assumptions

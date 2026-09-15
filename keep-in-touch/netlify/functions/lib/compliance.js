@@ -33,7 +33,7 @@
   // Exact checkbox wording shown in Add Customer (docs/04-compliance.md §b).
   // Each is ≤ 25 words, plain, and matches what the customer is agreeing to.
   var consentLabels = {
-    email: 'Okay for Mick at Mosaic Autos to email me a few times a year with tips and a hello. I can stop anytime.',
+    email: 'Okay for Mick (North Star Car Guy) to email me a few times a year with tips and a hello. I can stop anytime.',
     sms: 'Okay for Mick to text me from his own phone now and then. Reply STOP to end texts. Message and data rates may apply.'
   };
 
@@ -65,11 +65,11 @@
     var url = String(unsubscribeUrl == null ? '' : unsubscribeUrl).trim();
     var lines = [
       '--',
-      "You're getting this because you bought a vehicle from me, Mick, a salesperson at Mosaic Autos, " +
+      "You're getting this because you bought a vehicle from me, Mick Knies, North Star Car Guy, selling at Mosaic Autos, " +
         'and said it was okay for me to keep in touch. These are my own words, written and approved by me ' +
         'ahead of time and sent on a schedule.',
       "Don't want these? One tap and you're off: " + url,
-      'Mosaic Autos · ' + address
+      'North Star Car Guy at Mosaic Autos · ' + address
     ];
     return lines.join('\n');
   }

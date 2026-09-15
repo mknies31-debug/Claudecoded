@@ -11,7 +11,7 @@ const crypto = require('crypto');
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const MAX_BODY_BYTES = 20 * 1024; // 20 KB — a five-sentence email is ~1 KB
-const FROM_FALLBACK = 'Mick at Mosaic Autos <onboarding@resend.dev>'; // Resend test sender; delivers only to your own inbox
+const FROM_FALLBACK = 'Mick at North Star Car Guy <onboarding@resend.dev>'; // Resend test sender; delivers only to your own inbox
 const ENV_PATH = 'Netlify → Site configuration → Environment variables → Add a variable';
 
 exports.handler = async (event) => {

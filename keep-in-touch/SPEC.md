@@ -6,9 +6,11 @@ owned by another agent (ownership table below).
 
 ## 0. Ground rules (from Mick's build prompt — restated so nobody forgets)
 
-- Customer-facing sign-off is **Mick / Mosaic Autos / phone**. The words
-  "North Star Car Guy" never appear in any customer-facing body, subject or
-  footer. Nothing may imply Mick owns Mosaic Autos (he is a salesperson there).
+- BRAND (changed by Mick 2026-09-15): the app and every customer-facing message
+  are branded **North Star Car Guy**. Sign-off is **Mick / North Star Car Guy /
+  phone**. Mosaic Autos appears only in the compliance footer as the physical
+  location ("North Star Car Guy at Mosaic Autos · address"). Nothing may imply
+  Mick owns Mosaic Autos.
 - No dollar figures anywhere in templates. `[VERIFY NUMBER]` if a number is truly
   needed.
 - Banned in copy: "just checking in", "touching base", "circling back",
@@ -95,7 +97,7 @@ The Auditor verifies the inlined copies are byte-identical to the lib files.
 7. **Sentence budgets.** Email template body ≤ 5 sentences; text ≤ 2 sentences
    (strict reading of "under 6 / under 3"). Sign-off block and compliance footer
    are outside the count. When Ella sends, the sign-off becomes
-   "Ella, for Mick / Mosaic Autos / phone" — no extra sentence needed.
+   "Ella, for Mick / North Star Car Guy / phone" — no extra sentence needed.
 8. **Phone appears in every email sign-off** (assumption: Mick wants to be
    reachable; the prompt requires it on touch 0 and first text at minimum).
 9. **Scheduled run time & DST.** Netlify cron is UTC and has no DST. `daily.js`
@@ -179,7 +181,7 @@ isOptOut bool, processed bool (clock reset applied), createdAt
 ### settings/main  (single doc)
 ```
 mickPhone "5075550000", mickPhoneDisplay "(507) 555-0000",
-fromName "Mick at Mosaic Autos", fromEmail "mick@…", replyTo "…@gmail.com",
+fromName "Mick at North Star Car Guy", fromEmail "mick@…", replyTo "…@gmail.com",
 businessAddress "[VERIFY] 123 Main St, Zumbrota, MN 55992",
 siteUrl "https://….netlify.app", sendSecret "…" (the x-kit-secret value),
 autoSendEmail bool (Tier 2 toggle, default false), autoSendSms false (hard-coded false, UI shows it disabled with the TCPA reason),
@@ -292,7 +294,7 @@ Env vars (Netlify → Site settings → Environment variables):
 ```
 KIT_SECRET                 shared secret; every HTTP function requires header  x-kit-secret: <value>
 RESEND_API_KEY
-MAIL_FROM                  "Mick at Mosaic Autos <mick@yourdomain.com>"
+MAIL_FROM                  "Mick at North Star Car Guy <mick@northstarcarguy.com>"
 MAIL_REPLY_TO              the dedicated Gmail address
 FIREBASE_PROJECT_ID
 FIREBASE_SERVICE_ACCOUNT   base64 of the service-account JSON (Tier 2 + inbound only)
@@ -345,7 +347,7 @@ COMPLIANCE.canText(customer)   -> bool (active && smsConsent.given && phone)
 COMPLIANCE.consentSummary(customer) -> "Email: yes (in person at sale, 2026-09-15) · SMS: no"
 COMPLIANCE.isOptOutText(str)   -> same regex as engine (single source: compliance may just re-export)
 ```
-Footer must: identify Mick as a salesperson at Mosaic Autos (not owner), say why
+Footer must: identify Mick as North Star Car Guy, selling at Mosaic Autos (not owner), say why
 they're receiving it, include the unsubscribe URL, include the physical address
 placeholder `settings.businessAddress`, and be plain text.
 

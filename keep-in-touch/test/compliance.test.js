@@ -12,7 +12,7 @@ function test(name, fn) {
 
 const settings = {
   businessAddress: '[VERIFY] 123 Main St, Zumbrota, MN 55992',
-  fromName: 'Mick at Mosaic Autos',
+  fromName: 'Mick at North Star Car Guy',
   mickPhoneDisplay: '(507) 555-0000'
 };
 const url = 'https://example.netlify.app/?u=abcdefghijklmnopqrstuvwxyz012345';
@@ -48,7 +48,7 @@ test('footer: starts with -- separator, ≤ 5 lines, plain text', () => {
 });
 test('footer: salesperson wording, not owner', () => {
   const f = C.emailFooter(settings, url);
-  assert.ok(f.includes('Mick, a salesperson at Mosaic Autos'));
+  assert.ok(f.includes('Mick Knies, North Star Car Guy, selling at Mosaic Autos'));
   assert.ok(!/\bowner\b|\bmy dealership\b|\bmy lot\b/i.test(f));
 });
 test('footer: says why they are getting it and that it is scheduled pre-approved words', () => {
@@ -66,16 +66,16 @@ test('footer: unsubscribe URL on its own line', () => {
 });
 test('footer: ends with the physical address line', () => {
   const lines = C.emailFooter(settings, url).split('\n');
-  assert.strictEqual(lines[lines.length - 1], 'Mosaic Autos · [VERIFY] 123 Main St, Zumbrota, MN 55992');
+  assert.strictEqual(lines[lines.length - 1], 'North Star Car Guy at Mosaic Autos · [VERIFY] 123 Main St, Zumbrota, MN 55992');
 });
 test('footer: address line still printed when address is empty or missing (never silently dropped)', () => {
   const a = C.emailFooter({ businessAddress: '' }, url).split('\n').pop();
-  assert.strictEqual(a, 'Mosaic Autos · ');
+  assert.strictEqual(a, 'North Star Car Guy at Mosaic Autos · ');
   const b = C.emailFooter({}, url).split('\n').pop();
-  assert.strictEqual(b, 'Mosaic Autos · ');
+  assert.strictEqual(b, 'North Star Car Guy at Mosaic Autos · ');
   const c = C.emailFooter(undefined, undefined).split('\n');
   assert.strictEqual(c[0], '--');
-  assert.strictEqual(c.pop(), 'Mosaic Autos · ');
+  assert.strictEqual(c.pop(), 'North Star Car Guy at Mosaic Autos · ');
 });
 test('footer: no exclamation points, no superlatives, no banned phrases', () => {
   const f = C.emailFooter(settings, url);
@@ -83,9 +83,9 @@ test('footer: no exclamation points, no superlatives, no banned phrases', () => 
   assert.ok(!/\b(best|greatest|top|#1|lowest|highest|cheapest|fastest|most|biggest|finest|perfect|premier)\b/i.test(f));
   assert.ok(!/just checking in|touching base|circling back|reaching out|i noticed you haven't|valued customer|at this time/i.test(f));
 });
-test('footer: never says "North Star" and never implies ownership', () => {
+test('footer: names the brand and never implies ownership', () => {
   const f = C.emailFooter(settings, url).toLowerCase();
-  assert.ok(!f.includes('north star'));
+  assert.ok(f.includes('north star car guy'));
   assert.ok(!f.includes('car guy'));
   assert.ok(!f.includes('my dealership'));
   assert.ok(!f.includes('i own'));
@@ -103,7 +103,6 @@ test('consent checkbox labels: ≤ 25 words each, plain, no !', () => {
     assert.ok(typeof s === 'string' && s.length > 0, k);
     assert.ok(s.trim().split(/\s+/).length <= 25, k + ' word count');
     assert.ok(!s.includes('!'), k);
-    assert.ok(!/north star/i.test(s), k);
   });
   assert.ok(/STOP/.test(C.consentLabels.sms));
 });

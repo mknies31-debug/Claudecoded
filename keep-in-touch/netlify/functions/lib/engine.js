@@ -381,8 +381,8 @@
   // ---------------------------------------------------------------- render
 
   var SIGNOFF = {
-    mick: '\n\nMick\nMosaic Autos\n{phone}',
-    ella: '\n\nElla, for Mick\nMosaic Autos\n{phone}'
+    mick: '\n\nMick\nNorth Star Car Guy\n{phone}',
+    ella: '\n\nElla, for Mick\nNorth Star Car Guy\n{phone}'
   };
   var STOP_LINE = ' Reply STOP to opt out.';
 

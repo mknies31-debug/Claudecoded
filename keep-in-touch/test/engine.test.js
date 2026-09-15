@@ -550,7 +550,7 @@ test('render fills placeholders, appends the exact Mick sign-off, footer and STO
   var r = KIT.render(tpl, c, SETTINGS, { sender: 'mick', footer: 'FOOTER LINE', firstText: true, season: 'fall' });
   assert.strictEqual(r.subject, 'How is the 2019 Silverado');
   assert.strictEqual(r.emailBody, 'Hi Dan, how is the 2019 Chevrolet Silverado on the gravel out by Goodhue?');
-  assert.strictEqual(r.emailFull, r.emailBody + '\n\nMick\nMosaic Autos\n(507) 555-0000\n\nFOOTER LINE');
+  assert.strictEqual(r.emailFull, r.emailBody + '\n\nMick\nNorth Star Car Guy\n(507) 555-0000\n\nFOOTER LINE');
   assert.strictEqual(r.textBody, 'Dan, 2019 Silverado still good on the gravel out by Goodhue?');
   assert.strictEqual(r.textFull, r.textBody + ' Reply STOP to opt out.');
   assert.deepStrictEqual(r.missing, []);
@@ -559,7 +559,7 @@ test('render fills placeholders, appends the exact Mick sign-off, footer and STO
 
 test('render: Ella sign-off, no footer, no STOP line when not first text', function () {
   var r = KIT.render({ slot: 'VALUE', subject: 's', emailBody: 'Body.', textBody: 'Text.' }, customer(), SETTINGS, { sender: 'ella' });
-  assert.strictEqual(r.emailFull, 'Body.\n\nElla, for Mick\nMosaic Autos\n(507) 555-0000');
+  assert.strictEqual(r.emailFull, 'Body.\n\nElla, for Mick\nNorth Star Car Guy\n(507) 555-0000');
   assert.strictEqual(r.textFull, 'Text.');
   assert.strictEqual(r.sender, 'ella');
 });
@@ -569,7 +569,7 @@ test('render: sender defaults to settings.senderMode, then mick; phone falls bac
   assert.ok(r.emailFull.indexOf('Ella, for Mick') !== -1);
   assert.ok(r.emailFull.indexOf('5075550000') !== -1);
   var r2 = KIT.render({ subject: 's', emailBody: 'B', textBody: 'T' }, customer(), {}, {});
-  assert.strictEqual(r2.emailFull, 'B\n\nMick\nMosaic Autos\n[phone]');
+  assert.strictEqual(r2.emailFull, 'B\n\nMick\nNorth Star Car Guy\n[phone]');
   assert.deepStrictEqual(r2.missing, ['phone']);
 });
 
