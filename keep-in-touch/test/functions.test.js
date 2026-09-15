@@ -419,6 +419,26 @@ function dailyDeps(db, kitOpts, envExtra) {
     assert.strictEqual(fetchLog.length, 1);
     assert.ok(fetchLog.every((f) => f.url === 'https://api.resend.com/emails'));
   });
+  await test('never auto-sends the one-time consent ASK, even if the customer somehow has consent and an email', async () => {
+    const db = memoryDb({
+      'settings/main': settingsDoc,
+      'customers/ask': customer({ name: 'Ask Me', _slot: 'ASK', nextTouchN: 0 }),
+      'customers/askNoConsent': customer({ name: 'Ask Plain', _slot: 'ASK', nextTouchN: 0, emailConsent: { given: false, at: '', how: '' } }),
+      'customers/due': customer({ name: 'Normal' }),
+    });
+    fetchLog.length = 0;
+    const r = await daily.handler({ httpMethod: 'POST', headers: {}, body: '' }, {}, dailyDeps(db, { hour: 9 }));
+    const out = json(r);
+    assert.deepStrictEqual(out.errors, []);
+    assert.strictEqual(out.sent, 1, 'only the normal customer');
+    assert.strictEqual(out.skipped, 2, 'both ASK customers skipped');
+    assert.strictEqual(fetchLog.length, 1);
+    assert.deepStrictEqual(JSON.parse(fetchLog[0].init.body).to, ['Normal <dan@example.com>']);
+    const touches = [...db.docs.entries()].filter(([k]) => k.startsWith('touches/')).map(([, t]) => t);
+    assert.ok(touches.every((t) => t.slot !== 'ASK'), 'no ASK touch written');
+    assert.strictEqual(db.docs.get('customers/ask').consentAskedAt, undefined, 'ask customer untouched');
+    assert.ok(/slot === 'ASK'/.test(fs.readFileSync(path.join(FN, 'daily.js'), 'utf8')), 'explicit ASK guard in daily.js');
+  });
   await test('missing service account: clear 500, nothing sent', async () => {
     const deps = dailyDeps(null, { hour: 9 }, { FIREBASE_SERVICE_ACCOUNT: '', FIREBASE_PROJECT_ID: '' });
     delete deps.db;

@@ -10,7 +10,7 @@ const FILE = process.argv[2] || path.join(__dirname, '..', 'templates.json');
 
 // ---------- rule tables ----------
 
-const SLOTS = ['THANKS', 'THANKS_REPEAT', 'VALUE', 'CHECKIN', 'REFERRAL',
+const SLOTS = ['ASK', 'THANKS', 'THANKS_REPEAT', 'VALUE', 'CHECKIN', 'REFERRAL',
   'ANNIVERSARY_REFERRAL', 'BIRTHDAY', 'REFERRAL_THANKS', 'GOODBYE'];
 const SEASONS = ['winter', 'spring', 'summer', 'fall', 'any'];
 const TONES = ['direct', 'softer', 'nepq'];
@@ -18,13 +18,13 @@ const FIELDS = ['id', 'slot', 'season', 'tone', 'principle', 'subject', 'emailBo
 
 // SPEC §5 minimums. VALUE is per season.
 const MIN = {
-  THANKS: 4, THANKS_REPEAT: 2, CHECKIN: 6, REFERRAL: 6, ANNIVERSARY_REFERRAL: 3,
+  ASK: 4, THANKS: 4, THANKS_REPEAT: 2, CHECKIN: 6, REFERRAL: 6, ANNIVERSARY_REFERRAL: 3,
   BIRTHDAY: 3, REFERRAL_THANKS: 3, GOODBYE: 2,
   'VALUE/fall': 4, 'VALUE/winter': 4, 'VALUE/spring': 4, 'VALUE/summer': 4, 'VALUE/any': 2,
 };
 
 const ID_PREFIX = {
-  THANKS: 'thanks', THANKS_REPEAT: 'thanks-repeat', CHECKIN: 'checkin', REFERRAL: 'referral',
+  ASK: 'ask', THANKS: 'thanks', THANKS_REPEAT: 'thanks-repeat', CHECKIN: 'checkin', REFERRAL: 'referral',
   ANNIVERSARY_REFERRAL: 'anniversary-referral', BIRTHDAY: 'birthday',
   REFERRAL_THANKS: 'referral-thanks', GOODBYE: 'goodbye',
 };
@@ -278,6 +278,18 @@ templates.forEach((t, i) => {
   const tb = t.textBody || '';
   const lastQ = email ? email.last : '';
   switch (t.slot) {
+    case 'ASK':
+      // The one-time ask to a past buyer: thanks for the {vehicle} they bought in {sale_year},
+      // the number, a plain reason the notes exist, and the one-word consent question.
+      if (!eb.includes('{phone}')) fail(id, 'ASK emailBody must include {phone}');
+      if (!eb.includes('{sale_year}')) fail(id, 'ASK emailBody must say when they bought it ({sale_year})');
+      if (!tb.includes('{sale_year}')) fail(id, 'ASK textBody must say when they bought it ({sale_year})');
+      if (!/\bthank/i.test(eb)) fail(id, 'ASK emailBody must actually say thank you');
+      if (!/{vehicle}/.test(eb)) fail(id, 'ASK emailBody must name the {vehicle}');
+      if (!/\b(okay|ok|good|fine|all right|alright)\b.*\bnote\b/i.test(lastQ)) fail(id, 'ASK closing question must be the consent question ("Okay if I send you a note...")');
+      if (!/\bseasonal\b/i.test(lastQ)) fail(id, 'ASK closing question must say what the notes are (seasonal stuff)');
+      if (/\b(trade|upgrade|new one|newer|inventory|on the lot|selling|for sale)\b/i.test(eb + ' ' + tb)) fail(id, 'ASK must not pitch (no trade / upgrade / inventory talk)');
+      break;
     case 'THANKS':
     case 'THANKS_REPEAT':
       if (!eb.includes('{phone}')) fail(id, 'THANKS emailBody must include {phone}');

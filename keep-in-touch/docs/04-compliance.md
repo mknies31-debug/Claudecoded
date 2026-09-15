@@ -32,6 +32,52 @@
 
 Mick reads the line to the customer in the driveway or at the desk, the customer says yes, Mick ticks the box, and the app stamps the time and requires him to pick how it was obtained. The consent summary shown on every customer's timeline reads, for example: `Email: yes (in person at sale, 2026-09-15) · SMS: no`.
 
+### The one-time ask to past customers
+
+Mick's decision (2026-09-15): the first message to everyone, including past
+buyers he never asked, is a thank-you note that ends by asking whether it is
+okay to keep sending seasonal notes. A customer with **no consent on file**
+gets exactly that one note (slot ASK) and nothing else until a yes is
+recorded. `COMPLIANCE.ASK_RULE` carries this paragraph in code.
+
+- **By email: CAN-SPAM's opt-out model.** CAN-SPAM does not require prior
+  consent for a commercial email; it requires an honest sender, a non-deceptive
+  subject, a physical address, and a working opt-out honored promptly. The ask
+  is sent to a person with a prior business relationship (they bought a vehicle
+  from Mick), from Mick's real address, with the full footer (who, why, the
+  Mosaic Autos address, the one-tap unsubscribe link) and the `List-Unsubscribe`
+  headers, exactly like every other email. It is never auto-sent: the daily
+  job has an explicit `slot !== 'ASK'` guard (tested) on top of its consent
+  gate, so Mick or Ella taps Send Email on the card. `canAskByEmail` allows it
+  only while the customer is active, has an email address, has no consent on
+  either channel, and has never been asked.
+- **By text: a hand-sent judgment call, flagged for the lawyer list.** The text
+  version is a single message from Mick's own phone to a person who bought a
+  vehicle from him, typed into Messages by the `sms:` link and sent by his
+  thumb. It carries "Reply STOP to opt out." because it is the first text.
+  TCPA treats texts more strictly than CAN-SPAM treats email, and the
+  prior-relationship / personal-phone / no-autodialer facts are exactly the
+  kind of thing section (g) asks a lawyer to confirm; until then, whether to
+  send the text version at all is Mick's call, made one customer at a time.
+  `canAskByText` has the same gate as email (phone present, no consent, never
+  asked). The app never sends it.
+- **What the app blocks after the ask.** `consentAskedAt` is stamped on the
+  first channel used; from then on `nextTouch` returns nothing, the queue and
+  the daily job skip the customer, `canAskByEmail`/`canAskByText` return false
+  (no second ask, ever), and the timeline shows "Waiting on their answer" with
+  two buttons. **They said yes** records consent on the channel(s) they said it
+  for, with how ("email reply", "text reply", "phone", "in person at sale"),
+  and the normal cadence starts 90 days later. **They said no**, a STOP, an
+  unsubscribe tap, or an opt-out reply marks do-not-contact on both channels
+  (reason "declined ask" / "STOP reply") and the goodbye rules above apply. An
+  inbound email reply whose first line is a plain yes (and not an opt-out) is
+  recorded as email consent by the webhook; anything ambiguous waits for Mick.
+  "Not now" on the card hides the ask for 90 days without sending anything.
+- **Consent summary wording** on the timeline and in the CSV: "Not asked yet",
+  "Asked 2026-09-15 · waiting", and two new CSV columns, Consent Asked Date and
+  Consent Ask Channel, so nothing about who was asked, when and how is only in
+  Mick's memory.
+
 ## (c) Email — CAN-SPAM checklist (15 U.S.C. § 7701 et seq.; 16 CFR Part 316)
 
 | Requirement | How this system meets it |

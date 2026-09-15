@@ -43,7 +43,10 @@
  *     needed) → find customer by lowercased email → write replies/{id}
  *   → if matched: link to latest sent touch ≤45 days (STATS.attributeReply),
  *     unreadReplies+1, applyEvent reply; if opt-out text → applyEvent optOut + ONE
- *     GOODBYE email via Resend → 200.
+ *     GOODBYE email via Resend → 200. If the customer is waiting on the one-time
+ *     consent ask (KIT.consentState === 'asked') and the first line reads as a yes
+ *     (not an opt-out) → applyEvent consentGiven {channel:'email', how:'email reply'}
+ *     and the reply doc gets consentGiven: true.
  *   Duplicate deliveries (same email_id) are acknowledged with 200 and not re-applied.
  *   Errors after auth are captured into the reply doc's `error` field and console.
  */
@@ -131,6 +134,22 @@ function stripQuoted(text) {
     kept.push(line);
   }
   return kept.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, SNIPPET_MAX);
+}
+
+// Fallbacks when the injected engine predates consentState / isYesText.
+const YES_RE = /\b(yes|yep|yeah|sure|ok|okay|fine|sounds good|go ahead|absolutely|you bet|that works|please do)\b/i;
+const NO_RE = /\b(no|nope|not|dont|do not|rather not|no thanks)\b/i;
+function consentStateOf(KIT, c) {
+  if (KIT && typeof KIT.consentState === 'function') return KIT.consentState(c);
+  if (!c || c.status === 'dnc') return 'dnc';
+  if ((c.emailConsent && c.emailConsent.given === true) || (c.smsConsent && c.smsConsent.given === true)) return 'given';
+  return c.consentAskedAt ? 'asked' : 'ask';
+}
+function isYes(KIT, s) {
+  if (KIT && typeof KIT.isYesText === 'function') return KIT.isYesText(s);
+  const head = String(s || '').slice(0, 80).replace(/[’']/g, '');
+  if (!head.trim() || (KIT && KIT.isOptOutText && KIT.isOptOutText(head))) return false;
+  return !NO_RE.test(head) && YES_RE.test(head);
 }
 
 function firstLine(text) {
@@ -365,9 +384,9 @@ function makeHandler(deps = {}) {
       customerId: '', customerName: '', touchId: '', slot: '', templateId: '',
       receivedAt, receivedDate, channel: 'email', source,
       from: String(msg.from || '').slice(0, 300), subject, snippet,
-      isOptOut: false, processed: false, createdAt: nowIso, error: ''
+      isOptOut: false, consentGiven: false, processed: false, createdAt: nowIso, error: ''
     };
-    const result = { ok: true, replyId, matched: false, optOut: false, goodbyeSent: false };
+    const result = { ok: true, replyId, matched: false, optOut: false, consentGiven: false, goodbyeSent: false };
 
     // ---- match customer
     let customer = null;
@@ -391,6 +410,10 @@ function makeHandler(deps = {}) {
 
       reply.isOptOut = !!(KIT.isOptOutText(subject) || KIT.isOptOutText(firstLine(snippet)));
       result.optOut = reply.isOptOut;
+      // A yes to the one-time consent ask, by email reply.
+      const waitingOnAsk = consentStateOf(KIT, customer) === 'asked';
+      reply.consentGiven = !reply.isOptOut && waitingOnAsk && isYes(KIT, firstLine(snippet));
+      result.consentGiven = reply.consentGiven;
 
       try {
         let updated = KIT.applyEvent(customer, { type: 'reply', date: receivedDate }, today);
@@ -398,6 +421,8 @@ function makeHandler(deps = {}) {
         updated.lastReplyAt = receivedAt;
         if (reply.isOptOut) {
           updated = KIT.applyEvent(updated, { type: 'optOut', reason: 'STOP reply', channel: 'email', at: nowIso }, today);
+        } else if (reply.consentGiven) {
+          updated = KIT.applyEvent(updated, { type: 'consentGiven', date: receivedDate, how: 'email reply', channel: 'email', at: nowIso }, today);
         }
         updated.updatedAt = nowIso;
         const fields = Object.assign({}, updated);

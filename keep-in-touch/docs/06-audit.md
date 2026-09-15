@@ -170,3 +170,35 @@ person and says no is fine), anniversary-referral-02/03, referral-thanks-01..03
   card, but a hand send is still possible.
 - Two devices editing the same customer offline resolve last-write-wins
   (documented in 07-builder.md).
+
+## 6. Post-audit change (2026-09-15): the one-time ask
+
+Mick decided after the audit that the first message for everyone, including
+past customers he has not asked yet, is a thank-you note that ends by asking
+whether it is okay to keep sending seasonal notes. Before this change the app
+drafted a THANKS card for an unconsented customer and greyed out both send
+buttons, a dead end. What changed: engine 1.2.0 (`consentState`, slot ASK,
+events `sentAsk` / `consentGiven` / `consentDeclined` / `askSkipped`,
+`isYesText`), compliance 1.1.0 (`canAskByEmail`, `canAskByText`, `ASK_RULE`,
+"Not asked yet" / "Asked … · waiting" in the summary, two new how options),
+four ASK templates (lint minimum 4, tone mix checked), the queue card, the
+timeline "Waiting on their answer" panel, the People chips, the CSV columns,
+an explicit `slot !== 'ASK'` guard in `daily.js`, and yes-reply handling in
+`inbound.js`. The opt-out detector block was not touched; the byte-identical
+check still passes.
+
+| Check | Result |
+|---|---|
+| `node test/engine.test.js` | 69 passed, 0 failed (was 59; +10: ask due date old/new, asked → null, consentGiven → touch 1 at +90, consentDeclined → dnc, sentAsk fields, previewTouches, buildQueue include/exclude, isYesText, askSkipped, legacy THANKS-before-ask) |
+| `node test/compliance.test.js` | 94 passed, 0 failed (was 91; +3: canAskBy*, summary strings, ASK_RULE) |
+| `node test/stats.test.js` | 32 passed |
+| `node test/functions.test.js` | 30 passed (was 29; +1: daily never sends an ASK, even with consent on file) |
+| `node test/inbound.test.js` | 28 passed (was 23; +5: yes → consentGiven, non-yes, "yes unsubscribe me" → opt-out, yes from a consented customer, yes from a never-asked customer) |
+| `node test/lint-templates.js` | PASS, 52 templates, ASK 4 (min 4) |
+| `node test/build-check.js` | OK, 238.0 KB |
+| `node test/audit.js` | 32 passed (was 31; +1: ASK pool + gates; detector byte-identical check still passes) |
+| `test/smoke.playwright.js` | OK, 13 screenshots: add customer with both boxes unticked → "Ask to keep in touch" card with Send Email enabled → Copy Text logs an ASK touch → People shows "waiting" → They said yes (Email) → next is touch 1 VALUE in 90 days |
+| `test/audit.playwright.js` | OK, 20 checks |
+
+Still for Mick and the lawyer: the hand-sent text version of the ask is a
+judgment call (docs/04-compliance.md, "The one-time ask to past customers").

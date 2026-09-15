@@ -29,11 +29,12 @@ console.log('compliance.js v' + C.VERSION);
 
 /* ---------------- exports ---------------- */
 test('exports per SPEC §7', () => {
-  ['emailFooter', 'canEmail', 'canText', 'consentSummary', 'isOptOutText', 'optOutReplyKind']
+  ['emailFooter', 'canEmail', 'canText', 'canAskByEmail', 'canAskByText', 'consentSummary', 'isOptOutText', 'optOutReplyKind']
     .forEach(k => assert.strictEqual(typeof C[k], 'function', k));
   assert.strictEqual(C.smsOptOutLine, 'Reply STOP to opt out.');
-  assert.deepStrictEqual(C.consentHowOptions, ['in person at sale', 'phone', 'text', 'email', 'web form']);
+  assert.deepStrictEqual(C.consentHowOptions, ['in person at sale', 'phone', 'text', 'email', 'web form', 'email reply', 'text reply']);
   assert.strictEqual(typeof C.OPT_OUT_RULE, 'string');
+  assert.strictEqual(typeof C.ASK_RULE, 'string');
   assert.ok(C.OPT_OUT_RULE.length > 50);
   assert.ok(/^\d+\.\d+\.\d+$/.test(C.VERSION));
 });
@@ -242,6 +243,42 @@ test('optOutReplyKind hints', () => {
   assert.strictEqual(C.optOutReplyKind('stop emailing me'), 'email');
   assert.strictEqual(C.optOutReplyKind('remove me'), '');
   assert.strictEqual(C.optOutReplyKind('sounds good'), '');
+});
+
+
+/* ---------------- the one-time ask ---------------- */
+const unasked = (over) => Object.assign(base(), { emailConsent: { given: false, at: '', how: '' }, smsConsent: { given: false, at: '', how: '' } }, over || {});
+test('canAskByEmail / canAskByText: active, contact present, no consent on either channel, never asked', () => {
+  assert.strictEqual(C.canAskByEmail(unasked()), true);
+  assert.strictEqual(C.canAskByText(unasked()), true);
+  assert.strictEqual(C.canEmail(unasked()), false, 'normal gate stays closed without consent');
+  assert.strictEqual(C.canText(unasked()), false);
+  assert.strictEqual(C.canAskByEmail(unasked({ email: '' })), false, 'no email address');
+  assert.strictEqual(C.canAskByText(unasked({ phone: '' })), false, 'no phone');
+  assert.strictEqual(C.canAskByText(unasked({ phone: '555' })), false, 'short phone');
+  assert.strictEqual(C.canAskByEmail(unasked({ consentAskedAt: '2026-09-15T14:00:00.000Z' })), false, 'already asked');
+  assert.strictEqual(C.canAskByText(unasked({ consentAskedAt: '2026-09-15T14:00:00.000Z' })), false, 'already asked');
+  assert.strictEqual(C.canAskByEmail(unasked({ status: 'dnc' })), false, 'dnc');
+  assert.strictEqual(C.canAskByEmail(base()), false, 'email consent already given: no ask needed');
+  assert.strictEqual(C.canAskByText(unasked({ smsConsent: { given: true, at: 'x', how: 'text' } })), false, 'sms consent given: no ask');
+  assert.strictEqual(C.canAskByEmail(unasked({ emailConsent: undefined, smsConsent: undefined })), true, 'missing blocks count as no consent');
+  assert.strictEqual(C.canAskByEmail(null), false);
+});
+test('consentSummary: "Not asked yet" / "Asked 2026-09-15 · waiting" only while no consent is on file', () => {
+  assert.strictEqual(C.consentSummary(unasked()), 'Email: no · SMS: no · Not asked yet');
+  assert.strictEqual(C.consentSummary(unasked({ consentAskedAt: '2026-09-15T14:03:00.000Z', consentAskDate: '2026-09-15' })), 'Email: no · SMS: no · Asked 2026-09-15 · waiting');
+  assert.strictEqual(C.consentSummary(unasked({ consentAskedAt: '2026-09-16T02:03:00.000Z' })), 'Email: no · SMS: no · Asked 2026-09-16 · waiting', 'falls back to the ISO date');
+  assert.strictEqual(C.consentSummary(base()), 'Email: yes (in person at sale, 2026-09-15) · SMS: no', 'unchanged when consent exists');
+  assert.strictEqual(C.consentSummary(unasked({ status: 'dnc', dnc: { at: '2026-09-20T00:00:00.000Z', reason: 'declined ask', channel: 'both' } })), 'Email: no · SMS: no · Do not contact (declined ask, 2026-09-20)', 'dnc: no waiting segment');
+});
+test('ASK_RULE: names CAN-SPAM opt-out basis for the email, the hand-sent text judgment call for the lawyer, and the block after the ask', () => {
+  const r = C.ASK_RULE;
+  assert.ok(/CAN-SPAM/.test(r) && /opt-out/.test(r) && /prior business relationship/.test(r), 'email basis');
+  assert.ok(/footer/.test(r) && /unsubscribe/i.test(r), 'footer + unsubscribe');
+  assert.ok(/never auto-sent/.test(r), 'hand send only');
+  assert.ok(/own phone/.test(r) && /Reply STOP to opt out\./.test(r) && /judgment call/.test(r) && /lawyer/.test(r), 'text = judgment call for the lawyer');
+  assert.ok(/nothing else goes out/.test(r) && /until a yes is recorded/.test(r), 'block after the ask');
+  assert.ok(!/!/.test(r), 'no exclamation point');
 });
 
 /* ---------------- UMD ---------------- */

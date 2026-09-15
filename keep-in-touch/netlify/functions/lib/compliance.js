@@ -19,7 +19,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   /* ------------------------------------------------------------------ */
   /* Fixed strings                                                       */
@@ -29,7 +29,20 @@
   var smsOptOutLine = 'Reply STOP to opt out.';
 
   // Values for customer.emailConsent.how / smsConsent.how (SPEC §3).
-  var consentHowOptions = ['in person at sale', 'phone', 'text', 'email', 'web form'];
+  // "email reply" / "text reply" are how a yes to the one-time ask is recorded.
+  var consentHowOptions = ['in person at sale', 'phone', 'text', 'email', 'web form', 'email reply', 'text reply'];
+
+  // The one-time ask to a past buyer who never ticked a consent box.
+  var ASK_RULE =
+    'A customer with no consent recorded gets exactly one message: a thank-you note that ends by asking ' +
+    'whether it is okay to keep sending seasonal notes. By EMAIL it goes out under CAN-SPAM\'s opt-out model ' +
+    '(a commercial message to someone with a prior business relationship: honest sender, full footer with the ' +
+    'Mosaic Autos address, one-tap unsubscribe and the List-Unsubscribe headers), and it is never auto-sent; ' +
+    'Mick or Ella taps Send. By TEXT it is a single hand-sent message from Mick\'s own phone to a person who bought ' +
+    'a vehicle from him, it carries "Reply STOP to opt out." because it is the first text, and whether to send it ' +
+    'at all is Mick\'s judgment call, flagged for the lawyer list (TCPA treats consent for texts more strictly than ' +
+    'CAN-SPAM treats email). After the ask nothing else goes out on either channel until a yes is recorded ' +
+    '(They said yes on the timeline, or an inbound email reply of yes); a no or a STOP marks do-not-contact.';
 
   // Exact checkbox wording shown in Add Customer (docs/04-compliance.md §b).
   // Each is ≤ 25 words, plain, and matches what the customer is agreeing to.
@@ -107,6 +120,21 @@
     return isActive(customer) && consentGiven(customer.smsConsent) && hasPhone(customer);
   }
 
+  // No consent on either channel and never asked: the one-time ask may go out.
+  function askable(c) {
+    return isActive(c) && !consentGiven(c.emailConsent) && !consentGiven(c.smsConsent) && !c.consentAskedAt;
+  }
+
+  /** active && email present && no consent on either channel && consentAskedAt empty */
+  function canAskByEmail(customer) {
+    return askable(customer) && hasEmail(customer);
+  }
+
+  /** active && phone present && no consent on either channel && consentAskedAt empty (hand-sent only) */
+  function canAskByText(customer) {
+    return askable(customer) && hasPhone(customer);
+  }
+
   /* ------------------------------------------------------------------ */
   /* Consent summary                                                     */
   /* ------------------------------------------------------------------ */
@@ -129,10 +157,16 @@
    * "Email: yes (in person at sale, 2026-09-15) · SMS: no"
    * A do-not-contact customer gets a third segment so the timeline is honest:
    * " · Do not contact (STOP reply, 2026-09-20)".
+   * An ACTIVE customer with no consent on either channel gets
+   * " · Not asked yet" or " · Asked 2026-09-15 · waiting".
    */
   function consentSummary(customer) {
     var c = customer || {};
     var out = describe('Email', c.emailConsent) + ' · ' + describe('SMS', c.smsConsent);
+    if (c.status === 'active' && !consentGiven(c.emailConsent) && !consentGiven(c.smsConsent)) {
+      var asked = ymd(c.consentAskDate) || ymd(c.consentAskedAt);
+      out += c.consentAskedAt ? ' · Asked' + (asked ? ' ' + asked : '') + ' · waiting' : ' · Not asked yet';
+    }
     if (c.status === 'dnc') {
       var d = c.dnc || {};
       var bits = [];
@@ -212,12 +246,15 @@
   return {
     VERSION: VERSION,
     OPT_OUT_RULE: OPT_OUT_RULE,
+    ASK_RULE: ASK_RULE,
     emailFooter: emailFooter,
     smsOptOutLine: smsOptOutLine,
     consentHowOptions: consentHowOptions,
     consentLabels: consentLabels,
     canEmail: canEmail,
     canText: canText,
+    canAskByEmail: canAskByEmail,
+    canAskByText: canAskByText,
     consentSummary: consentSummary,
     isOptOutText: isOptOutText,
     optOutReplyKind: optOutReplyKind

@@ -3,7 +3,7 @@
 // America/Chicago (so it runs once a day, year-round, through DST changes).
 // Processes unsubscribe opt-outs, then emails every customer whose touch is
 // due — only if Settings → Auto-send email is ON and the customer gave email
-// consent. Never sends a text. Always writes heartbeat/daily so the app can
+// consent. Never sends a text, and never sends the one-time consent ASK. Always writes heartbeat/daily so the app can
 // show a red banner when this job stops running.
 // Env vars: FIREBASE_PROJECT_ID, FIREBASE_SERVICE_ACCOUNT (raw JSON or base64),
 // RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO, SITE_URL, KIT_SECRET (for ?force=1).
@@ -180,6 +180,10 @@ async function run(ctx) {
     }
 
     try {
+      // The one-time consent ASK is never auto-sent: a person taps it. (An ASK
+      // customer has no consent, so canEmail would refuse anyway; this guard
+      // makes the rule explicit and survives any future change to canEmail.)
+      if (touch.slot === 'ASK') { heartbeat.skipped++; continue; }
       // Consent + channel gate. Texts are never sent here, full stop.
       const canEmail = COMPLIANCE && typeof COMPLIANCE.canEmail === 'function'
         ? COMPLIANCE.canEmail(customer)

@@ -139,7 +139,91 @@ function chicagoToday(offsetDays) {
   assert.ok(await page.locator('text=Physical address (Mosaic Autos lot, required in every email footer)').count(), 'address label');
   await shot('07-settings.png');
 
-  // 7. Public unsubscribe page.
+  // 7. The one-time ask: a past buyer with both consent boxes unticked.
+  await page.click('nav.tabs button[data-tab="add"]');
+  await page.waitForSelector('form[data-form="customer"]');
+  assert.ok(await page.locator("text=Past customer you haven't asked yet? Leave both unticked.").count(), 'helper line under the consent boxes');
+  await page.fill('input[name="name"]', 'Kay Olson');
+  await page.fill('input[name="phone"]', '5075559999');
+  await page.fill('input[name="email"]', 'kay@example.com');
+  await page.fill('input[name="year"]', '2017');
+  await page.fill('input[name="make"]', 'Ford');
+  await page.fill('input[name="model"]', 'Escape');
+  await page.fill('input[name="saleDate"]', '2021-03-01');
+  await page.click('form[data-form="customer"] button[type="submit"]');
+  await page.waitForSelector('text=Timeline');
+  assert.ok(await page.locator('text=Not asked yet').count(), 'consent summary / panel says not asked yet');
+  assert.ok(await page.locator('button[data-act="saidYes"]').count(), 'They said yes button on the timeline before the ask');
+  await shot('09-timeline-ask.png');
+
+  await page.click('nav.tabs button[data-tab="queue"]');
+  await page.waitForSelector('.card[data-key]:not(.done)');
+  if (await page.locator('.card.done button[data-act="dismiss"]').count()) { await page.click('.card.done button[data-act="dismiss"]'); await page.waitForTimeout(100); } // clear Dan's sent card so the shot shows the ask
+  const askCard = page.locator('.card[data-key]:not(.done)', { hasText: 'Kay Olson' });
+  assert.strictEqual(await askCard.count(), 1, 'one ASK card for Kay');
+  assert.ok(await askCard.locator('.chip.mag:has-text("Ask to keep in touch")').count(), 'ASK slot chip');
+  assert.strictEqual(await askCard.locator('.chip.amber').count(), 0, 'a 2021 sale entered today is not "late"');
+  assert.strictEqual(await askCard.locator('button[data-act="sendEmail"]').isDisabled(), false, 'Send Email enabled by canAskByEmail');
+  assert.ok(await askCard.locator('a[data-act="sendSms"]').count(), 'Send as Text enabled by canAskByText');
+  assert.ok(await askCard.locator('button[data-act="skip"]:has-text("Not now (90 days)")').count(), 'Skip reads Not now (90 days)');
+  const askHref = await askCard.locator('a[data-act="sendSms"]').getAttribute('href');
+  const askBody = decodeURIComponent(askHref.split('body=')[1]);
+  assert.ok(/2021/.test(askBody) && /2017 Escape/.test(askBody) && /Kay/.test(askBody), 'ask text names the sale year and vehicle: ' + askBody);
+  assert.ok(/Reply STOP to opt out\.$/.test(askBody), 'ask text carries the STOP line');
+  const askEmail = await askCard.locator('textarea[data-field="email"]').inputValue();
+  assert.ok(/[Tt]hank/.test(askEmail) && /2021/.test(askEmail) && /\(507\) 555-0000/.test(askEmail), 'ask email thanks them for the sale year and has the number');
+  assert.ok(/seasonal stuff worth knowing about the 2017 Escape\?\n\nMick/.test(askEmail), 'ask email ends with the consent question then the sign-off');
+  assert.ok(await page.locator('button[data-act="approveAll"]:has-text("(1 email)")').count(), 'Approve All counts the ask (Dan is already sent)');
+  await shot('10-queue-ask.png');
+
+  await askCard.locator('button[data-act="copyText"]').click();
+  await page.waitForSelector('.card.done:has-text("Kay Olson")');
+  const asked = await page.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('kit.db'));
+    const c = Object.values(d.customers).find((x) => x.name === 'Kay Olson');
+    const t = Object.values(d.touches).find((x) => x.customerId === c.id);
+    return { askedAt: c.consentAskedAt, askDate: c.consentAskDate, chans: c.consentAskChannels, nextTouchN: c.nextTouchN, firstText: c.firstTextSentAt, emailGiven: c.emailConsent.given, touch: t && { status: t.status, channels: t.channels, touchN: t.touchN, slot: t.slot } };
+  });
+  assert.ok(asked.askedAt && asked.askDate === chicagoToday(0), 'consentAskedAt/Date stamped');
+  assert.deepStrictEqual(asked.chans, ['sms']);
+  assert.deepStrictEqual(asked.touch, { status: 'sent', channels: ['sms'], touchN: 0, slot: 'ASK' });
+  assert.strictEqual(asked.nextTouchN, 0, 'the ask does not advance the ladder');
+  assert.ok(asked.firstText, 'firstTextSentAt stamped by the ask text');
+  assert.strictEqual(asked.emailGiven, false, 'no consent yet');
+
+  await page.click('nav.tabs button[data-tab="people"]');
+  await page.waitForSelector('.item');
+  const kayRow = page.locator('.item', { hasText: 'Kay Olson' });
+  assert.ok(await kayRow.locator('.chip:has-text("waiting")').count(), 'People shows "waiting" for state asked');
+  assert.ok(await kayRow.locator('text=waiting on their answer').count(), 'People row says waiting on their answer');
+  await shot('11-people-waiting.png');
+
+  await kayRow.click();
+  await page.waitForSelector('.askpanel');
+  assert.ok(await page.locator('.askpanel .title:has-text("Waiting on their answer")').count(), 'magenta waiting panel');
+  assert.ok(await page.locator('text=Asked ' + chicagoToday(0) + ' · waiting').count(), 'consent summary shows Asked <date> · waiting');
+  assert.strictEqual(await page.locator('.card[data-key]').count(), 0);
+  await page.click('button[data-act="saidYes"]');
+  await page.waitForSelector('form[data-form="consentYes"]');
+  assert.ok(await page.locator('form[data-form="consentYes"] .seg button.on:has-text("Text")').count(), 'defaults to the channel the ask went out on (text)');
+  await page.click('form[data-form="consentYes"] .seg button[data-v="email"]');
+  await page.waitForSelector('form[data-form="consentYes"] .seg button.on:has-text("Email")');
+  await page.selectOption('form[data-form="consentYes"] select[name="how"]', 'phone');
+  await shot('12-timeline-said-yes.png');
+  await page.click('form[data-form="consentYes"] button[type="submit"]');
+  await page.waitForSelector('text=Email: yes (phone, ' + chicagoToday(0) + ')');
+  assert.strictEqual(await page.locator('.askpanel').count(), 0, 'panel gone once consent is recorded');
+  const yes = await page.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('kit.db'));
+    const c = Object.values(d.customers).find((x) => x.name === 'Kay Olson');
+    return { emailGiven: c.emailConsent.given, how: c.emailConsent.how, smsGiven: c.smsConsent.given, nextTouchN: c.nextTouchN, anchorDate: c.anchorDate, anchorTouchN: c.anchorTouchN };
+  });
+  assert.deepStrictEqual(yes, { emailGiven: true, how: 'phone', smsGiven: false, nextTouchN: 1, anchorDate: chicagoToday(0), anchorTouchN: 0 });
+  const nextLine = await page.locator('.note:has-text("Next:")').textContent();
+  assert.ok(/Value · touch 1/.test(nextLine) && /in 90 days/.test(nextLine), 'next touch is touch 1 VALUE 90 days out: ' + nextLine);
+  await shot('13-timeline-consented.png');
+
+  // 8. Public unsubscribe page.
   await page.goto(BASE + '/?u=abcdefghijklmnopqrstuvwxyz', { waitUntil: 'load' });
   await page.waitForSelector('text=You\'re off the list.');
   assert.strictEqual(await page.locator('nav.tabs').count(), 0, 'no tab bar on the unsubscribe page');

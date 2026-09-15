@@ -134,6 +134,28 @@ unmatched tokens are deleted too.
 - Timeline "Send next note now" pins that customer's next touch into the queue
   even if it is not due yet (the DEPLOY_CHECKLIST first-run test).
 
+## The one-time ask (added 2026-09-15)
+
+- `cardCanEmail(it, c)` / `cardCanText(it, c)` gate a queue card: slot ASK
+  uses `COMPLIANCE.canAskByEmail/canAskByText`, everything else `canEmail/canText`.
+  Approve All, Send Email, Send as Text and Copy Text all go through them.
+- A send/copy on an ASK card writes the touch (`touchN 0`, `slot 'ASK'`) and
+  applies `{type:'sentAsk', sentDate, sentAt, channels, templateId, touchId}`;
+  a second channel on the same card is appended to `consentAskChannels`.
+  The Skip button reads "Not now (90 days)" and applies `{type:'askSkipped'}`
+  (no touch doc). Snooze 7d is unchanged.
+- Timeline: `renderAskPanel(c)` shows the magenta panel while
+  `KIT.consentState(c)` is `ask` or `asked`. They said yes opens an inline
+  form (`data-form="consentYes"`, channel segment defaulting to the ask's
+  channel, how select) → `{type:'consentGiven', date: today, how, channel, at}`.
+  They said no → confirm → `{type:'consentDeclined'}`. `ui.yesOpen` holds the
+  open sheet and is never persisted.
+- Log a reply on such a customer: `KIT.isYesText(text)` logs the reply and
+  opens the yes sheet pre-filled from the reply channel; an opt-out applies
+  `consentDeclined` (reason "declined ask") instead of `optOut`.
+- People chips: "ask" (amber) / "waiting" (magenta). CSV: Consent Asked Date,
+  Consent Ask Channel. The Templates tab lists the ASK pool like any other.
+
 ## Placeholders / things Mick must fill in
 
 - `<meta name="kit-firebase">` (above).

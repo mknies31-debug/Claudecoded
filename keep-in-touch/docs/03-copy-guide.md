@@ -1,6 +1,6 @@
 # Agent 3 — Copy Strategist: the template library and when to edit it
 
-The library is `templates.json` (48 email/text pairs, one id per pair). Every
+The library is `templates.json` (52 email/text pairs, one id per pair). Every
 one passes `node test/lint-templates.js`: five sentences or fewer per email, two
 or fewer per text, exactly one question and it is the last thing on the page,
 no exclamation points, no dollar figures, no banned phrases, no superlatives,
@@ -13,6 +13,7 @@ never carry them.
 
 | Pool | Pairs | Tones |
 |---|---|---|
+| ASK (one-time, no consent on file) | 4 | direct, softer, nepq, direct |
 | THANKS (touch 0) | 4 | direct, softer, nepq |
 | THANKS_REPEAT | 2 | direct, softer |
 | VALUE fall / winter / spring / summer | 4 each | direct, softer, nepq in every season |
@@ -28,6 +29,25 @@ With 90-day spacing and least-recently-used picking, a customer does not see a
 repeat inside any pool for well over 18 months.
 
 ## When you would edit one before sending (by slot)
+
+**ASK (the one-time ask to a past customer).** This is the first message for
+anyone with no consent on file, so it does the work of a thank-you and a
+permission slip in five sentences: a genuine thank-you for the {vehicle} they
+bought back in {sale_year}, "here's my number", one plain reason the notes
+exist (seasonal stuff worth knowing for that vehicle, never a pitch), and the
+closing question they can answer with one word. Edit it more than any other
+note. Add the one thing you remember from that sale after the first sentence
+(what they traded, who was with them); if you know what they use it for,
+name it; swap the example tip for whatever season it is now. Do not add a
+trade-in line or anything about inventory; the lint rejects "trade",
+"upgrade", "inventory" and "for sale" in this pool. The closing question
+stays as written. After it goes out nothing else drafts until you record
+their answer on the timeline.
+
+- ask-01 (direct): thank you, the number, "what road salt does to brake lines", one word ends it.
+- ask-02 (softer): a late thank-you, "rings me and not a front desk", deer at dusk and a brittle block heater cord.
+- ask-03 (nepq): restates the job they bought it for, "sells you nothing, asks for nothing".
+- ask-04 (direct): "in case you lost it", the battery-before-the-freeze tip, "no sales pitch".
 
 **THANKS (sale + 3 days).** This is the one to spend a minute on. Add the one
 detail from the sale day: the dog in the back seat, what they traded, the kid
@@ -67,6 +87,9 @@ is that it is short and asks for nothing.
 
 ## The principle behind each pool
 
+- **ASK: reciprocity before permission.** A real thank-you and a real number
+  come first; the question is honest about what the notes are and easy to
+  decline. Nothing is asked twice: the app never drafts a second ask.
 - **THANKS: peak-end.** The last strong memory of the sale is this note, three
   days after, when the new-car feeling is still there. It is the highest-effort
   message in the system so the rest can be short.

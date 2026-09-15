@@ -15,7 +15,7 @@ worded so it is clear Mick sells there and does not own it.
 |---|---|---|---|
 | 1 | Architect | Data model, provider choice and cost, security model, straight talk on constraints | `docs/01-architect.md` |
 | 2 | Cadence engine | The rule that picks each message, worked example, tests | `docs/02-cadence.md`, `netlify/functions/lib/engine.js`, `test/engine.test.js` |
-| 3 | Copy | 48 email/text template pairs, edit guide | `templates.json`, `docs/03-copy-guide.md`, `test/lint-templates.js` |
+| 3 | Copy | 52 email/text template pairs (incl. 4 one-time asks), edit guide | `templates.json`, `docs/03-copy-guide.md`, `test/lint-templates.js` |
 | 4 | Compliance | Consent model, footer, opt-out rule, dealership approval one-pager (launch gate) | `docs/04-compliance.md`, `netlify/functions/lib/compliance.js` |
 | 5 | Inbox and attribution | Reply capture (two tiers), referral tracking, reply rate by slot and template | `docs/05-inbox-attribution.md`, `netlify/functions/inbound.js`, `netlify/functions/lib/stats.js` |
 | 6 | Auditor | Pass/fail table, fixes, what could not be verified | `docs/06-audit.md`, `test/audit.js` |
@@ -59,6 +59,22 @@ node test/audit.js
 - **Tier 2 (opt-in):** the daily function sends due emails at 9:00 AM Central
   and writes a heartbeat; the app shows a red banner if it has not run in 36
   hours. Texts are never automated.
+
+### First message for everyone
+
+The first note anyone gets is a thank-you that ends by asking whether it is
+okay to keep sending seasonal notes. If a customer ticked a consent box at
+the sale, that is the THANKS note three days later. If they have **no consent
+on file**, including past customers you have not asked yet, leave both boxes
+unticked and the queue drafts a one-time **Ask to keep in touch** instead:
+thanks for the vehicle they bought back in that year, your number, one plain
+reason the notes exist, and a question they can answer with one word. Send
+Email works (CAN-SPAM opt-out model, full footer and unsubscribe; never
+auto-sent), Send as Text is your call from your own phone (it carries the STOP
+line). After that nothing else drafts until you tap **They said yes** on their
+timeline (or paste a yes into Log a reply, or the inbox sees a plain yes by
+email), which starts the normal cadence 90 days later. **They said no** or a
+STOP marks them do-not-contact. "Not now" hides the ask for 90 days.
 
 ## Launch gate
 

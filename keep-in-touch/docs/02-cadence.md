@@ -22,6 +22,36 @@ mix works out to half useful tips, a quarter check-ins, a quarter referral asks.
 | 8 | sale + 720 | REFERRAL (anniversary-flavored) |
 | … | +90 each | pattern repeats every four touches |
 
+## The first message for everyone: the ask
+
+Mick's decision (2026-09-15): the first note anyone gets is a thank-you that
+ends by asking whether it is okay to keep sending seasonal notes. For a
+customer who ticked a consent box at the sale, that is the THANKS note above
+(it already ends with that question). For anyone with **no consent on file**,
+including past customers Mick has not asked yet, the engine drafts a one-time
+**ASK** instead, and then nothing else until they answer.
+
+`KIT.consentState(customer)` is one of:
+
+| State | Meaning | What `nextTouch` returns |
+|---|---|---|
+| `given` | email or SMS consent recorded | the normal ladder above |
+| `ask` | active, no consent, never asked | `{n: 0, slot: 'ASK', dueDate}` where dueDate = max(sale + 3, the day the customer was entered). A buyer from five years ago entered today is due today, not "1,800 days late". |
+| `asked` | the ask went out (`consentAskedAt` set), no answer yet | `null`, so the queue and the daily job draft nothing |
+| `dnc` | do-not-contact | `null` |
+
+Events: `sentAsk` (stamps `consentAskedAt`, `consentAskDate`,
+`consentAskChannels`, the template used, `lastSentDate`, and `firstTextSentAt`
+if it went by text); `consentGiven {date, how, channel}` (records consent on
+the named channel(s), leaves the other alone, and restarts the ladder with the
+ask as touch 0: `anchorDate = date`, `nextTouchN = 1`, so touch 1 VALUE is due
+90 days after the yes; it works whether or not an ask was ever sent, for the
+verbal yes); `consentDeclined` (do-not-contact, reason "declined ask");
+`askSkipped` ("Not now" on the card: hides the ask for 90 days, nothing goes
+out, the customer stays in `ask`). `resolveSlot` never returns ASK; only
+`nextTouch` does. `previewTouches` for an `ask` customer shows the ASK first
+and then the ladder as it would run if they said yes the day it goes out.
+
 ## The 50 / 25 / 25 math
 
 Every odd touch (1, 3, 5, 7 …) is VALUE. Every even touch alternates CHECK-IN,
@@ -129,3 +159,5 @@ you a glance.
 9. Placeholders the engine cannot fill render as `[name]` and are listed in `render().missing`, so a blank hook or phone is visible before anything is sent.
 10. Opt-out detection is stricter than "keyword anywhere in the first 80 characters" (SPEC §4) to avoid flipping a customer who wrote "stop by Friday"; the exact rule is in the engine comment and above.
 11. `applyEvent` throws on an unknown event type rather than silently returning the customer unchanged.
+12. The ASK is touch 0 whatever `nextTouchN` says (a customer who got a THANKS before this feature and never had consent recorded still gets one ask); `consentGiven` then sets `nextTouchN = 1`.
+13. `isYesText` is narrower than the raw yes-regex: it refuses anything that is an opt-out or that has "no / not / don't / rather not" in its first 80 characters, so "I'd rather not, but yes I love the truck" is left for Mick to read.

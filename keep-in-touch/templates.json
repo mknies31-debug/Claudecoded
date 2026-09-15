@@ -15,6 +15,50 @@
   ],
   "templates": [
     {
+      "id": "ask-01",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "direct",
+      "principle": "Reciprocity and autonomy - a real thank you, a real number, and a yes-or-no question they can decline without a word of explanation",
+      "subject": "thank you, a while later",
+      "emailBody": "{first}, this is Mick, North Star Car Guy, and I owe you a thank you for buying the {vehicle} from me back in {sale_year}. Here is my number, {phone}, and it goes straight to me if anything on it ever needs a second opinion. I have started sending the people I sold to a short note every few months, seasonal stuff like what road salt does to brake lines and when to get the battery tested before the cold sets in. It is not a pitch, and one word back ends it any time. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, Mick here, North Star Car Guy, and thank you again for the {vehicle} back in {sale_year}, this is my number if it ever needs a second opinion. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "Add the one thing you remember from that sale (what they traded, who was with them) after the first sentence; a real memory is what earns the yes."
+    },
+    {
+      "id": "ask-02",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "softer",
+      "principle": "Peak-end and autonomy - a late thank you, no pressure, an easy no",
+      "subject": "still glad it went home with you",
+      "emailBody": "It has been a while since {sale_year}, {first}, and I still think about the {vehicle} going home with you. I never said a proper thank you after the paperwork, so here it is, along with my number, {phone}, which rings me and not a front desk. Lately I write a short note to the folks I sold to a few times a year, whatever is worth knowing that season, like deer on the shoulder at dusk or a block heater cord gone brittle. Nothing to buy, and you can end it with one word whenever you like. Okay if I send you a note now and then with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, Mick, North Star Car Guy, with a late thank you for the {vehicle} back in {sale_year} and my number in case it ever needs one. Okay if I send you a note now and then with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "If you know what they use it for (the commute, the trailer, the kids), name it in the first sentence instead of 'going home with you'."
+    },
+    {
+      "id": "ask-03",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "nepq",
+      "principle": "Consistency and specific-person - restates what they bought it for, so the yes is about their vehicle and not about Mick",
+      "subject": "one question about the {vehicle}",
+      "emailBody": "{first}, when you took the {vehicle} home in {sale_year}, the part I cared about was whether it would do the job you bought it for, and I would still like to know. Thank you for that, by the way, and my number is {phone}, saved under North Star Car Guy, and it goes to my own phone. Here is why I am writing: the people who bought from me get a short note a few times a year, seasonal things like when to swap to the winter blades or what the first warm rain does to a windshield full of salt. It sells you nothing, asks for nothing, and one word from you ends it. Okay if I send a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, Mick, North Star Car Guy, and I still want to know whether the {vehicle} from {sale_year} is doing the job you bought it for, so this number is mine. Okay if I send a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "Replace 'the job you bought it for' with the job they told you about (hauling, the Rochester run, a first car)."
+    },
+    {
+      "id": "ask-04",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "direct",
+      "principle": "Reciprocity - one useful tip given before anything is asked, then a low-friction yes or no",
+      "subject": "my number, in case you lost it",
+      "emailBody": "Short one, {first}. Thank you for buying the {vehicle} back in {sale_year}, and here is my number again, {phone}, in case it never made it into your phone. A few times a year I send my past buyers one useful thing for the season, like getting the battery tested before the first freeze, since a dead battery in January is a lousy way to remember who you bought it from. No sales pitch, and one word stops it. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "Short one, {first}, this is Mick, North Star Car Guy, with a thank you for the {vehicle} back in {sale_year} and my number in case it never made it into your phone. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "Swap the battery tip for whatever season it is now (wiper blades before the first snow, a tire pressure check after the first cold snap)."
+    },
+    {
       "id": "thanks-01",
       "slot": "THANKS",
       "season": "any",

@@ -129,10 +129,10 @@ referredByName  string | ""              (denormalized for display)
 attributedTouchId  string | ""           (last touch sent to the referrer in the 60 days before this customer was added; auto-filled)
 hook            string | ""              ("the gravel road out by Goodhue") — one short phrase used by CHECK-IN copy via {hook|...}
 notes           string
-emailConsent    { given: bool, at: ISO|"", how: "in person at sale"|"phone"|"text"|"email"|"web form"|"" }
+emailConsent    { given: bool, at: ISO|"", how: "in person at sale"|"phone"|"text"|"email"|"web form"|"email reply"|"text reply"|"" }
 smsConsent      { given: bool, at: ISO|"", how: same }
 status          "active" | "dnc"
-dnc             { at: ISO, reason: "STOP reply"|"unsubscribe link"|"manual"|"", channel: "email"|"sms"|"both" } | null
+dnc             { at: ISO, reason: "STOP reply"|"unsubscribe link"|"manual"|"declined ask"|"", channel: "email"|"sms"|"both" } | null
 anchorDate      YYYY-MM-DD   (= saleDate initially; = reply date after a reply)
 anchorTouchN    int          (0 initially; = touch number that was replied to)
 nextTouchN      int          (0 initially)
@@ -144,6 +144,11 @@ lastSentDate    YYYY-MM-DD | ""
 lastReplyAt     ISO | ""
 lastReplyDate   YYYY-MM-DD | ""
 firstTextSentAt ISO | ""     (STOP notice appended to a text only when this is empty)
+consentAskedAt  ISO | ""     (the one-time ASK went out; while set and no consent is given, nothing drafts)
+consentAskDate  YYYY-MM-DD | ""
+consentAskChannels ["email"] | ["sms"] | ["email","sms"] | []
+consentAskSkippedAt ISO | "" ("Not now" on the ASK card; snoozedUntil = today + 90)
+consentGivenDate YYYY-MM-DD | "" (the yes; anchorDate is set to it and nextTouchN to 1)
 usedTemplateIds string[]     (for no-repeat selection)
 unreadReplies   int
 unsubscribeToken string      (32+ chars, random, client generated)
@@ -208,7 +213,8 @@ UMD: works as `const KIT = require('./lib/engine.js')` in Node AND as a browser
 global `window.KIT` when inlined. Pure functions, no I/O, no Date.now() except in
 `todayChicago()`.
 
-Slot names: `THANKS` (touch 0), `THANKS_REPEAT` (touch 0 of a repeat purchase),
+Slot names: `ASK` (touch 0, one-time consent ask for a customer with no consent on file),
+`THANKS` (touch 0), `THANKS_REPEAT` (touch 0 of a repeat purchase),
 `VALUE`, `CHECKIN`, `REFERRAL`, `ANNIVERSARY_REFERRAL`, `BIRTHDAY`,
 `REFERRAL_THANKS` (immediate, out-of-cadence), `GOODBYE` (opt-out confirmation).
 
@@ -225,10 +231,17 @@ KIT.resolveSlot(customer, n, dueDate)    -> { slot, carried: bool }
             if effective REFERRAL and referralCredit -> VALUE
             if effective REFERRAL and dueDate within ±30 days of a saleDate anniversary -> ANNIVERSARY_REFERRAL
             if birthday set and dueDate within ±14 days of the birthday (nearest occurrence) and n ≥ 1 -> BIRTHDAY, carried=true
-KIT.nextTouch(customer, today)           -> null if status dnc; else
+KIT.consentState(customer)              -> 'given' (email or SMS consent) | 'ask' (active, no consent, consentAskedAt empty)
+                                            | 'asked' (consentAskedAt set, still no consent) | 'dnc'
+KIT.askDueDate(customer, today)          -> max(saleDate + 3, customer.createdDate || date part of createdAt || today)
+KIT.isYesText(str)                       -> true for a plain yes (yes/yep/yeah/sure/ok/okay/fine/sounds good/go ahead/absolutely/
+                                            you bet/that works/please do, first 80 chars) that is not an opt-out and has no no/not/don't
+KIT.nextTouch(customer, today)           -> null if status dnc or consentState 'asked'; for 'ask':
+                                            { n: 0, slot: 'ASK', dueDate: askDueDate, isDue, isLate, daysLate, snoozed, ask: true }; else
      { n, dueDate, slot, carried, isDue, isLate, daysLate, snoozed }
      isDue = dueDate <= today && (!snoozedUntil || snoozedUntil <= today)
-KIT.previewTouches(customer, count=8, today) -> simulated list applying carries
+KIT.previewTouches(customer, count=8, today) -> simulated list applying carries (an 'ask' customer: ASK first, then the ladder
+                                            as if they said yes the day it goes out; 'asked': empty)
 KIT.buildQueue(customers, today)         -> due items sorted oldest dueDate first, then name; one per customer
 KIT.pickTemplate(pool, usedTemplateIds, seed) -> least-recently-used template (unused first, then oldest use), deterministic tiebreak
 KIT.templatePool(library, overrides, slot, season) -> array of live templates (retired removed, overrides merged); VALUE pulls season pool + "any"
@@ -249,6 +262,13 @@ KIT.applyEvent(customer, event, today)   -> NEW customer object (pure). Events:
      {type:"referralReceived", date}     → referralCredit = true  (the immediate REFERRAL_THANKS is an out-of-cadence touch: queue shows it as an "extra" item; it does not consume a touch number)
      {type:"optOut", reason, channel, at} → status dnc, dnc {...}
      {type:"repeatPurchase", saleDate, vehicle} → purchases push, saleDate/anchor reset, nextTouchN 0, slotOffset 0, vehicle updated, status active
+     {type:"sentAsk", sentDate, sentAt, channels, templateId} → consentAskedAt/consentAskDate/consentAskChannels, usedTemplateIds push,
+                                            lastSentDate/At, firstTextSentAt if channels include sms and it was empty; nextTouchN unchanged
+     {type:"consentGiven", date, how, channel:"email"|"sms"|"both", at} → emailConsent/smsConsent {given:true, at, how} on the named
+                                            channel(s) only; anchorDate = date, anchorTouchN = 0, nextTouchN = 1 (the ask was touch 0),
+                                            floorDate/snoozedUntil cleared. Works with or without a prior sentAsk (verbal yes).
+     {type:"consentDeclined", date, at, channel, reason?} → status dnc, dnc {at, reason: reason || "declined ask", channel}
+     {type:"askSkipped", today, at, days?=90} → consentAskSkippedAt, snoozedUntil = today + 90 (nothing sent, state stays 'ask')
 KIT.isOptOutText(str)                    -> true for stop/unsubscribe/opt out/remove me/quit/cancel/end (whole word, any case, anywhere in the first 80 chars)
      {type:"sentExtra", sentDate, channels, templateId} → REFERRAL_THANKS went out: pendingThanks=null, lastSentDate, min-gap floor applies
      {type:"skippedExtra"}               → REFERRAL_THANKS skipped: pendingThanks=null, nothing else changes
@@ -282,7 +302,8 @@ touch number 0..N appears exactly once as sent/skipped).
   ]
 }
 ```
-Minimums: THANKS 4, THANKS_REPEAT 2, VALUE 4 per season (16) + 2 any, CHECKIN 6,
+Minimums: ASK 4 (one-time consent ask: thanks for the {vehicle} bought in {sale_year}, the number, why the notes
+exist, the one-word consent question; season "any"), THANKS 4, THANKS_REPEAT 2, VALUE 4 per season (16) + 2 any, CHECKIN 6,
 REFERRAL 6, ANNIVERSARY_REFERRAL 3, BIRTHDAY 3, REFERRAL_THANKS 3, GOODBYE 2
 (GOODBYE = two-sentence goodbye that leaves the door open, one channel each: email + text; the
 "exactly one question" rule does NOT apply to GOODBYE — it must contain no question).
@@ -311,6 +332,10 @@ Resend REST with `reply_to` = MAIL_REPLY_TO and headers
 `List-Unsubscribe: <unsubscribeUrl>` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`.
 Plain text only (no HTML). Returns `{ ok, id }`. Never touches Firestore (Tier 1 has
 no service account). Also rejects GET, missing fields, and bodies > 20 KB.
+
+`daily.js` never sends an ASK (explicit `slot !== 'ASK'` guard on top of the consent gate). `inbound.js`: an email
+from a customer in state 'asked' whose first line is a yes (`KIT.isYesText`, not an opt-out) applies
+`consentGiven {channel:'email', how:'email reply'}` and writes `consentGiven: true` on the reply doc.
 
 `daily.js` (scheduled `0 14,15 * * *`): exit unless `KIT.nowChicagoHour() === 9`
 (or `event.headers['x-kit-secret']` matches AND `?force=1` for manual test).
@@ -344,10 +369,15 @@ UMD exporting:
 ```
 COMPLIANCE.emailFooter(settings, unsubscribeUrl) -> string (plain text, ≤ 5 lines)
 COMPLIANCE.smsOptOutLine -> "Reply STOP to opt out."
-COMPLIANCE.consentHowOptions -> ["in person at sale", "phone", "text", "email", "web form"]
+COMPLIANCE.consentHowOptions -> ["in person at sale", "phone", "text", "email", "web form", "email reply", "text reply"]
 COMPLIANCE.canEmail(customer)  -> bool (active && emailConsent.given && email)
 COMPLIANCE.canText(customer)   -> bool (active && smsConsent.given && phone)
+COMPLIANCE.canAskByEmail(customer) -> bool (active && email && no consent on either channel && consentAskedAt empty)
+COMPLIANCE.canAskByText(customer)  -> bool (active && phone && same) — hand-sent only, never by the daily job
 COMPLIANCE.consentSummary(customer) -> "Email: yes (in person at sale, 2026-09-15) · SMS: no"
+                                       active with no consent: "… · Not asked yet" | "… · Asked 2026-09-15 · waiting"
+COMPLIANCE.ASK_RULE            -> string: the one-time ask (CAN-SPAM opt-out basis for the email with full footer and unsubscribe;
+                                  the hand-sent text is Mick's judgment call flagged for the lawyer; nothing else goes out until a yes)
 COMPLIANCE.isOptOutText(str)   -> same regex as engine (single source: compliance may just re-export)
 ```
 Footer must: identify Mick as North Star Car Guy, selling at Mosaic Autos (not owner), say why
@@ -380,6 +410,10 @@ Bottom tab bar (mobile): Queue · Add · Customers · Referrals · Templates · 
    AND autoSendEmail is on. Amber banner when offline. Every send/text/copy logs
    a touch with the channels used; the second channel on the same touch updates
    the same touch doc.
+   Queue card for slot ASK: chip "Ask to keep in touch"; Send Email gated by
+   `canAskByEmail`, Send as Text / Copy Text by `canAskByText`; send/copy writes
+   a touch (touchN 0, slot ASK) and applies `sentAsk`; "Not now (90 days)"
+   applies `askSkipped`. Approve All includes ASK cards that can go by email.
 2. **Add Customer** — one screen; saleDate defaults today; consent checkboxes
    auto-stamp `at` and require `how`; "Repeat buyer?" toggle picks an existing
    customer; "Referred by" picker with search. Save < 60s.
@@ -387,6 +421,15 @@ Bottom tab bar (mobile): Queue · Add · Customers · Referrals · Templates · 
    summary, buttons: Log a phone call (one tap, writes replies doc channel phone,
    resets clock), Log a reply (paste), Mark do-not-contact, Edit. Timeline shows
    touches + replies newest first. Preview next 8 touches.
+   While consentState is 'ask' or 'asked': a magenta panel "Waiting on their
+   answer" with **They said yes** (channel Email/Text/Both, defaulting to the
+   ask's channel; how = email reply / text reply / phone / in person at sale →
+   `consentGiven`, date today) and **They said no** (confirm → `consentDeclined`).
+   Log a reply on such a customer: a yes (`KIT.isYesText`) pre-selects They said
+   yes for a one-tap confirm; an opt-out applies `consentDeclined`. People list
+   chips: "ask" (state ask) / "waiting" (state asked). Add Customer shows, under
+   the consent boxes: "Past customer you haven't asked yet? Leave both unticked.
+   The app will draft a one-time ask and nothing else until they say yes."
 4. **Referrals** — network list, per-customer counts, monthly table (referrals,
    repeats), reply rate by slot and by template (with "retire?" flag).
 5. **Templates** — library grouped by slot/season, edit → saved as override,
@@ -395,7 +438,7 @@ Bottom tab bar (mobile): Queue · Add · Customers · Referrals · Templates · 
    send secret, auto-send email toggle (SMS shown locked with the TCPA reason),
    heartbeat status, minGapDays, Export CSV (customers with VinSolutions-friendly
    columns: First, Last, Phone, Email, Year, Make, Model, Trim, Sale Date, Referred By,
-   Email Consent, Email Consent Date, SMS Consent, SMS Consent Date, Status, Notes),
+   Email Consent, Email Consent Date, SMS Consent, SMS Consent Date, Consent Asked Date, Consent Ask Channel, Status, Notes),
    and a second CSV of touches+replies.
 
 Public route: `/?u=TOKEN` → unsubscribe page (no login); writes optouts doc;

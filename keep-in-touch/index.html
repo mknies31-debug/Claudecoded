@@ -81,6 +81,14 @@ p { margin: 6px 0; }
 .badge { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px; background: var(--mag); color: #fff; font-size: 11px; font-weight: 700; text-align: center; padding: 0 5px; }
 .warn { background: #fff8e1; border: 1px solid var(--amber); color: #7a3a00; border-radius: 8px; padding: 6px 10px; font-size: 14px; margin: 8px 0; }
 .note { background: var(--g1); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+.askpanel { background: var(--mag); color: #fff; border-radius: var(--radius); padding: 12px; margin-top: 10px; }
+.askpanel .title { font-weight: 700; font-size: 17px; }
+.askpanel .btns > button { background: #fff; color: var(--mag); border-color: #fff; font-weight: 700; }
+.askpanel .btns > button.ghost { background: transparent; color: #fff; border-color: #fff; font-weight: 400; }
+.askpanel form { background: #fff; color: var(--black); border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
+.askpanel .seg { border-color: var(--black); background: #fff; }
+.askpanel form .btns > button { background: var(--mag); color: #fff; border-color: var(--mag); }
+.askpanel form .btns > button.ghost { background: #fff; color: var(--black); border-color: var(--g2); }
 .pre { white-space: pre-wrap; word-break: break-word; font-size: 14px; }
 mark { background: #ffe58a; color: #000; }
 /* ============================================================ 4. Controls */
@@ -182,6 +190,12 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
  * See SPEC.md §4 for the contract and docs/02-cadence.md for the plain-English
  * explanation of the rules.
  *
+ * Consent states (consentState): 'given' (normal cadence), 'ask' (no consent
+ * recorded and never asked: the next touch is a one-time ASK, touch 0),
+ * 'asked' (ask went out, still waiting: nextTouch is null, nothing drafts),
+ * 'dnc'. Events sentAsk / consentGiven / consentDeclined / askSkipped move a
+ * customer between them; consentGiven restarts the ladder at touch 1 = date + 90.
+ *
  * render() placeholders: {first} {name} {vehicle} {year} {make} {model}
  * {phone} {sale_year} {season} {hook|fallback} {referred|fallback}.
  * {referred} is the first name of the person a customer sent in (REFERRAL_THANKS):
@@ -198,9 +212,10 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
 
   var SLOTS = [
+    'ASK',                 // one-time consent ask (touch 0) for anyone with no consent recorded
     'THANKS',              // touch 0
     'THANKS_REPEAT',       // touch 0 of a repeat purchase
     'VALUE',               // odd touches
@@ -217,6 +232,7 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
   var BIRTHDAY_WINDOW_DAYS = 14;
   var ANNIVERSARY_WINDOW_DAYS = 30;
   var DEFAULT_MIN_GAP_DAYS = 21;
+  var ASK_SKIP_DAYS = 90;
   var MS_PER_DAY = 86400000;
 
   // ---------------------------------------------------------------- dates
@@ -408,15 +424,70 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
     return seasonFor(isYmd(today) && today > dueDate ? today : dueDate);
   }
 
+  // ------------------------------------------------------------- consent
+
+  function consentOn(block) {
+    return !!(block && block.given === true);
+  }
+
+  // 'given' | 'ask' | 'asked' | 'dnc'
+  //   given: email or SMS consent recorded -> normal cadence
+  //   ask:   active, no consent, never asked -> next touch is the one-time ASK
+  //   asked: the ask went out, no answer yet -> nothing drafts until a yes
+  function consentState(customer) {
+    if (!customer || customer.status === 'dnc') return 'dnc';
+    if (consentOn(customer.emailConsent) || consentOn(customer.smsConsent)) return 'given';
+    return customer.consentAskedAt ? 'asked' : 'ask';
+  }
+
+  // The day the customer was entered, as YYYY-MM-DD: createdDate if present,
+  // else the date part of createdAt, else today.
+  function createdDateOf(customer, today) {
+    if (isYmd(customer.createdDate)) return customer.createdDate;
+    var iso = String(customer.createdAt || '');
+    if (isYmd(iso.slice(0, 10))) return iso.slice(0, 10);
+    return today;
+  }
+
+  // The ASK is due at sale + 3, but never before the day the customer was
+  // entered: a buyer from five years ago is due today, not "1,800 days late".
+  function askDueDate(customer, today) {
+    return maxYmd(addDays(customer.saleDate, TOUCH0_OFFSET_DAYS), createdDateOf(customer, today));
+  }
+
+  // Yes-detection for a reply to the ask. Deliberately narrow: a clear yes
+  // word in the first 80 characters and no "no / not / don't / rather not"
+  // next to it, and never an opt-out. Mick confirms in the app anyway; the
+  // inbound function uses it to record an email reply of "yes" on its own.
+  var YES_RE = /\b(yes|yep|yeah|sure|ok|okay|fine|sounds good|go ahead|absolutely|you bet|that works|please do)\b/i;
+  var NO_RE = /\b(no|nope|not|dont|do not|rather not|no thanks)\b/i;
+
+  function isYesText(str) {
+    if (typeof str !== 'string') return false;
+    var head = str.slice(0, 80).replace(/[’']/g, '');
+    if (!head.trim() || isOptOutText(head)) return false;
+    if (NO_RE.test(head)) return false;
+    return YES_RE.test(head);
+  }
+
   function nextTouch(customer, today) {
     if (!customer || customer.status === 'dnc') return null;
     if (!isYmd(customer.saleDate)) return null;
     today = isYmd(today) ? today : todayChicago();
-    var n = typeof customer.nextTouchN === 'number' ? customer.nextTouchN : 0;
-    var dueDate = touchDate(customer, n);
-    var r = resolveSlot(customer, n, dueDate);
+    var state = consentState(customer);
+    if (state === 'asked') return null;
     var snoozedUntil = isYmd(customer.snoozedUntil) ? customer.snoozedUntil : '';
     var snoozed = !!snoozedUntil && snoozedUntil > today;
+    var n, dueDate, r;
+    if (state === 'ask') {
+      n = 0;
+      dueDate = askDueDate(customer, today);
+      r = { slot: 'ASK', carried: false, base: 'ASK', viaCredit: false, anniversaryYear: 0 };
+    } else {
+      n = typeof customer.nextTouchN === 'number' ? customer.nextTouchN : 0;
+      dueDate = touchDate(customer, n);
+      r = resolveSlot(customer, n, dueDate);
+    }
     var isLate = dueDate < today;
     return {
       n: n,
@@ -431,7 +502,8 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
       daysLate: isLate ? diffDays(dueDate, today) : 0,
       snoozed: snoozed,
       snoozedUntil: snoozedUntil,
-      season: sendSeason(dueDate, today)
+      season: sendSeason(dueDate, today),
+      ask: state === 'ask'
     };
   }
 
@@ -448,7 +520,12 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
       if (!nt) break;
       out.push({ n: nt.n, dueDate: nt.dueDate, slot: nt.slot, carried: nt.carried, season: nt.season });
       var sentDate = maxYmd(nt.dueDate, today);
-      sim = applyEvent(sim, { type: 'sent', n: nt.n, dueDate: nt.dueDate, sentDate: sentDate, channels: [] }, today);
+      if (nt.slot === 'ASK') {
+        // Simulate "they say yes the day the ask goes out": touch 1 = that day + 90.
+        sim = applyEvent(sim, { type: 'consentGiven', date: sentDate, channel: 'email', how: 'preview' }, today);
+      } else {
+        sim = applyEvent(sim, { type: 'sent', n: nt.n, dueDate: nt.dueDate, sentDate: sentDate, channels: [] }, today);
+      }
     }
     return out;
   }
@@ -748,6 +825,63 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
         c.dnc = null;
         break;
       }
+      case 'sentAsk': {
+        // The one-time consent ask went out (touch 0, slot ASK). Nothing else
+        // drafts until consentGiven (or consentDeclined) is applied.
+        var askDate = isYmd(event.sentDate) ? event.sentDate : today;
+        var askChannels = Array.isArray(event.channels) ? event.channels.slice() : [];
+        c.consentAskedAt = event.sentAt || (askDate + 'T12:00:00.000Z');
+        c.consentAskDate = askDate;
+        c.consentAskChannels = askChannels;
+        c.consentAskSkippedAt = '';
+        c.lastSentDate = askDate;
+        if (event.sentAt) c.lastSentAt = event.sentAt;
+        c.snoozedUntil = '';
+        pushUsed(c, event.templateId);
+        if (askChannels.indexOf('sms') !== -1 && !c.firstTextSentAt) {
+          c.firstTextSentAt = event.sentAt || askDate;
+        }
+        break;
+      }
+      case 'askSkipped': {
+        // "Not now": hide the ask for 90 days. Nothing went out, nothing changes
+        // on the ladder; the customer stays in the 'ask' state.
+        var skipFrom = isYmd(event.today) ? event.today : today;
+        c.consentAskSkippedAt = event.at || (skipFrom + 'T12:00:00.000Z');
+        c.snoozedUntil = addDays(skipFrom, typeof event.days === 'number' ? event.days : ASK_SKIP_DAYS);
+        break;
+      }
+      case 'consentGiven': {
+        // They said yes (to the ask, or in person, or on the phone). Records
+        // consent on the named channel(s) and restarts the ladder: the ask
+        // served as touch 0, so touch 1 (VALUE) is due 90 days after the yes.
+        var yesDate = isYmd(event.date) ? event.date : today;
+        var yesAt = event.at || (yesDate + 'T12:00:00.000Z');
+        var how = event.how || '';
+        var chan = event.channel === 'sms' || event.channel === 'both' || event.channel === 'email' ? event.channel : 'email';
+        if (chan === 'email' || chan === 'both') c.emailConsent = { given: true, at: yesAt, how: how };
+        if (chan === 'sms' || chan === 'both') c.smsConsent = { given: true, at: yesAt, how: how };
+        c.consentGivenDate = yesDate;
+        c.anchorDate = yesDate;
+        c.anchorTouchN = 0;
+        c.nextTouchN = 1;
+        c.floorDate = '';
+        c.snoozedUntil = '';
+        c.consentAskSkippedAt = '';
+        break;
+      }
+      case 'consentDeclined': {
+        // They said no to the ask: do-not-contact on both channels.
+        c.status = 'dnc';
+        c.dnc = {
+          at: event.at || ((isYmd(event.date) ? event.date : today) + 'T12:00:00.000Z'),
+          reason: event.reason || 'declined ask',
+          channel: event.channel || 'both'
+        };
+        c.snoozedUntil = '';
+        c.pendingThanks = null;
+        break;
+      }
       case 'repeatPurchase': {
         var sale = isYmd(event.saleDate) ? event.saleDate : today;
         var veh = event.vehicle || c.vehicle || {};
@@ -858,6 +992,9 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
     resolveSlot: resolveSlot,
     daysToBirthday: daysToBirthday,
     nearestAnniversary: nearestAnniversary,
+    consentState: consentState,
+    askDueDate: askDueDate,
+    isYesText: isYesText,
     nextTouch: nextTouch,
     previewTouches: previewTouches,
     buildQueue: buildQueue,
@@ -893,7 +1030,7 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   /* ------------------------------------------------------------------ */
   /* Fixed strings                                                       */
@@ -903,7 +1040,20 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
   var smsOptOutLine = 'Reply STOP to opt out.';
 
   // Values for customer.emailConsent.how / smsConsent.how (SPEC §3).
-  var consentHowOptions = ['in person at sale', 'phone', 'text', 'email', 'web form'];
+  // "email reply" / "text reply" are how a yes to the one-time ask is recorded.
+  var consentHowOptions = ['in person at sale', 'phone', 'text', 'email', 'web form', 'email reply', 'text reply'];
+
+  // The one-time ask to a past buyer who never ticked a consent box.
+  var ASK_RULE =
+    'A customer with no consent recorded gets exactly one message: a thank-you note that ends by asking ' +
+    'whether it is okay to keep sending seasonal notes. By EMAIL it goes out under CAN-SPAM\'s opt-out model ' +
+    '(a commercial message to someone with a prior business relationship: honest sender, full footer with the ' +
+    'Mosaic Autos address, one-tap unsubscribe and the List-Unsubscribe headers), and it is never auto-sent; ' +
+    'Mick or Ella taps Send. By TEXT it is a single hand-sent message from Mick\'s own phone to a person who bought ' +
+    'a vehicle from him, it carries "Reply STOP to opt out." because it is the first text, and whether to send it ' +
+    'at all is Mick\'s judgment call, flagged for the lawyer list (TCPA treats consent for texts more strictly than ' +
+    'CAN-SPAM treats email). After the ask nothing else goes out on either channel until a yes is recorded ' +
+    '(They said yes on the timeline, or an inbound email reply of yes); a no or a STOP marks do-not-contact.';
 
   // Exact checkbox wording shown in Add Customer (docs/04-compliance.md §b).
   // Each is ≤ 25 words, plain, and matches what the customer is agreeing to.
@@ -981,6 +1131,21 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
     return isActive(customer) && consentGiven(customer.smsConsent) && hasPhone(customer);
   }
 
+  // No consent on either channel and never asked: the one-time ask may go out.
+  function askable(c) {
+    return isActive(c) && !consentGiven(c.emailConsent) && !consentGiven(c.smsConsent) && !c.consentAskedAt;
+  }
+
+  /** active && email present && no consent on either channel && consentAskedAt empty */
+  function canAskByEmail(customer) {
+    return askable(customer) && hasEmail(customer);
+  }
+
+  /** active && phone present && no consent on either channel && consentAskedAt empty (hand-sent only) */
+  function canAskByText(customer) {
+    return askable(customer) && hasPhone(customer);
+  }
+
   /* ------------------------------------------------------------------ */
   /* Consent summary                                                     */
   /* ------------------------------------------------------------------ */
@@ -1003,10 +1168,16 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
    * "Email: yes (in person at sale, 2026-09-15) · SMS: no"
    * A do-not-contact customer gets a third segment so the timeline is honest:
    * " · Do not contact (STOP reply, 2026-09-20)".
+   * An ACTIVE customer with no consent on either channel gets
+   * " · Not asked yet" or " · Asked 2026-09-15 · waiting".
    */
   function consentSummary(customer) {
     var c = customer || {};
     var out = describe('Email', c.emailConsent) + ' · ' + describe('SMS', c.smsConsent);
+    if (c.status === 'active' && !consentGiven(c.emailConsent) && !consentGiven(c.smsConsent)) {
+      var asked = ymd(c.consentAskDate) || ymd(c.consentAskedAt);
+      out += c.consentAskedAt ? ' · Asked' + (asked ? ' ' + asked : '') + ' · waiting' : ' · Not asked yet';
+    }
     if (c.status === 'dnc') {
       var d = c.dnc || {};
       var bits = [];
@@ -1086,12 +1257,15 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
   return {
     VERSION: VERSION,
     OPT_OUT_RULE: OPT_OUT_RULE,
+    ASK_RULE: ASK_RULE,
     emailFooter: emailFooter,
     smsOptOutLine: smsOptOutLine,
     consentHowOptions: consentHowOptions,
     consentLabels: consentLabels,
     canEmail: canEmail,
     canText: canText,
+    canAskByEmail: canAskByEmail,
+    canAskByText: canAskByText,
     consentSummary: consentSummary,
     isOptOutText: isOptOutText,
     optOutReplyKind: optOutReplyKind
@@ -1517,6 +1691,50 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
     "{referred|…}"
   ],
   "templates": [
+    {
+      "id": "ask-01",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "direct",
+      "principle": "Reciprocity and autonomy - a real thank you, a real number, and a yes-or-no question they can decline without a word of explanation",
+      "subject": "thank you, a while later",
+      "emailBody": "{first}, this is Mick, North Star Car Guy, and I owe you a thank you for buying the {vehicle} from me back in {sale_year}. Here is my number, {phone}, and it goes straight to me if anything on it ever needs a second opinion. I have started sending the people I sold to a short note every few months, seasonal stuff like what road salt does to brake lines and when to get the battery tested before the cold sets in. It is not a pitch, and one word back ends it any time. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, Mick here, North Star Car Guy, and thank you again for the {vehicle} back in {sale_year}, this is my number if it ever needs a second opinion. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "Add the one thing you remember from that sale (what they traded, who was with them) after the first sentence; a real memory is what earns the yes."
+    },
+    {
+      "id": "ask-02",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "softer",
+      "principle": "Peak-end and autonomy - a late thank you, no pressure, an easy no",
+      "subject": "still glad it went home with you",
+      "emailBody": "It has been a while since {sale_year}, {first}, and I still think about the {vehicle} going home with you. I never said a proper thank you after the paperwork, so here it is, along with my number, {phone}, which rings me and not a front desk. Lately I write a short note to the folks I sold to a few times a year, whatever is worth knowing that season, like deer on the shoulder at dusk or a block heater cord gone brittle. Nothing to buy, and you can end it with one word whenever you like. Okay if I send you a note now and then with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, Mick, North Star Car Guy, with a late thank you for the {vehicle} back in {sale_year} and my number in case it ever needs one. Okay if I send you a note now and then with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "If you know what they use it for (the commute, the trailer, the kids), name it in the first sentence instead of 'going home with you'."
+    },
+    {
+      "id": "ask-03",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "nepq",
+      "principle": "Consistency and specific-person - restates what they bought it for, so the yes is about their vehicle and not about Mick",
+      "subject": "one question about the {vehicle}",
+      "emailBody": "{first}, when you took the {vehicle} home in {sale_year}, the part I cared about was whether it would do the job you bought it for, and I would still like to know. Thank you for that, by the way, and my number is {phone}, saved under North Star Car Guy, and it goes to my own phone. Here is why I am writing: the people who bought from me get a short note a few times a year, seasonal things like when to swap to the winter blades or what the first warm rain does to a windshield full of salt. It sells you nothing, asks for nothing, and one word from you ends it. Okay if I send a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "{first}, Mick, North Star Car Guy, and I still want to know whether the {vehicle} from {sale_year} is doing the job you bought it for, so this number is mine. Okay if I send a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "Replace 'the job you bought it for' with the job they told you about (hauling, the Rochester run, a first car)."
+    },
+    {
+      "id": "ask-04",
+      "slot": "ASK",
+      "season": "any",
+      "tone": "direct",
+      "principle": "Reciprocity - one useful tip given before anything is asked, then a low-friction yes or no",
+      "subject": "my number, in case you lost it",
+      "emailBody": "Short one, {first}. Thank you for buying the {vehicle} back in {sale_year}, and here is my number again, {phone}, in case it never made it into your phone. A few times a year I send my past buyers one useful thing for the season, like getting the battery tested before the first freeze, since a dead battery in January is a lousy way to remember who you bought it from. No sales pitch, and one word stops it. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "textBody": "Short one, {first}, this is Mick, North Star Car Guy, with a thank you for the {vehicle} back in {sale_year} and my number in case it never made it into your phone. Okay if I send you a note every few months with seasonal stuff worth knowing about the {vehicle}?",
+      "editHint": "Swap the battery tip for whatever season it is now (wiper blades before the first snow, a tire pressure check after the first cold snap)."
+    },
     {
       "id": "thanks-01",
       "slot": "THANKS",
@@ -2074,7 +2292,7 @@ nav.tabs .badge { position: absolute; top: 4px; left: 50%; margin-left: 6px; }
 var LS = { db: 'kit.db', fb: 'kit.firebase', auth: 'kit.auth', outbox: 'kit.outbox', lib: 'kit.library', ui: 'kit.ui' };
 var ALPHA62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 var ALPHA64 = ALPHA62 + '_-';
-var SLOT_LABEL = { THANKS: 'Thanks', THANKS_REPEAT: 'Thanks · repeat', VALUE: 'Value', CHECKIN: 'Check-in', REFERRAL: 'Referral', ANNIVERSARY_REFERRAL: 'Anniversary referral', BIRTHDAY: 'Birthday', REFERRAL_THANKS: 'Referral thanks', GOODBYE: 'Goodbye' };
+var SLOT_LABEL = { ASK: 'Ask to keep in touch', THANKS: 'Thanks', THANKS_REPEAT: 'Thanks · repeat', VALUE: 'Value', CHECKIN: 'Check-in', REFERRAL: 'Referral', ANNIVERSARY_REFERRAL: 'Anniversary referral', BIRTHDAY: 'Birthday', REFERRAL_THANKS: 'Referral thanks', GOODBYE: 'Goodbye' };
 var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var HEARTBEAT_STALE_MS = 36 * 3600 * 1000;
 var TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
@@ -2625,6 +2843,10 @@ function queueItems() {
   return items;
 }
 function cardKey(item) { return item.customer.id + ':' + (item.extra ? 'x' : item.n) + ':' + item.dueDate; }
+// The one-time ASK card goes to people with NO consent, so it is gated by the
+// ask rules (email present / phone present, never asked) instead of canEmail/canText.
+function cardCanEmail(it, c) { return it.slot === 'ASK' ? COMPLIANCE.canAskByEmail(c) : COMPLIANCE.canEmail(c); }
+function cardCanText(it, c) { return it.slot === 'ASK' ? COMPLIANCE.canAskByText(c) : COMPLIANCE.canText(c); }
 
 // Build (or reuse) the editable draft for a queue item.
 function draftFor(item) {
@@ -2663,7 +2885,7 @@ function renderQueue() {
   var s = settings();
   var doneCards = Object.keys(cardState).map(function (k) { return cardState[k]; }).filter(function (st) { return st.done && !st.dismissed; });
   var live = items.filter(function (it) { var st = cardState[cardKey(it)]; return !(st && st.done); });
-  var sendable = live.filter(function (it) { var st = draftFor(it); return COMPLIANCE.canEmail(it.customer) && !st.missing.length && !st.noTemplate; }).length;
+  var sendable = live.filter(function (it) { var st = draftFor(it); return cardCanEmail(it, it.customer) && !st.missing.length && !st.noTemplate; }).length;
   var sender = currentSender();
   var out = [];
   out.push(html`<div class="row between">
@@ -2688,7 +2910,8 @@ function renderQueue() {
 function renderCard(st, done) {
   var it = st.item;
   var c = getCustomer(st.customerId) || it.customer;
-  var canE = COMPLIANCE.canEmail(c), canT = COMPLIANCE.canText(c);
+  var isAsk = it.slot === 'ASK';
+  var canE = cardCanEmail(it, c), canT = cardCanText(it, c);
   var hasE = st.channels.indexOf('email') !== -1, hasT = st.channels.indexOf('sms') !== -1;
   var late = it.daysLate > 0;
   var chips = [
@@ -2700,14 +2923,15 @@ function renderCard(st, done) {
     html`<span class="chip ${canT ? '' : 'grey'}">text ${canT ? 'yes' : 'no'}</span>`
   ];
   var verify = /\[VERIFY[^\]]*\]/.test(st.email + st.text + st.subject);
-  var emailReason = !canE ? (c.status === 'dnc' ? 'do not contact' : !(c.emailConsent && c.emailConsent.given) ? 'no email consent' : 'no email address') : '';
-  var textReason = !canT ? (c.status === 'dnc' ? 'do not contact' : !(c.smsConsent && c.smsConsent.given) ? 'no text consent' : 'no phone') : '';
+  var emailReason = !canE ? (c.status === 'dnc' ? 'do not contact' : isAsk ? (c.consentAskedAt ? 'already asked' : 'no email address') : !(c.emailConsent && c.emailConsent.given) ? 'no email consent' : 'no email address') : '';
+  var textReason = !canT ? (c.status === 'dnc' ? 'do not contact' : isAsk ? (c.consentAskedAt ? 'already asked' : 'no phone') : !(c.smsConsent && c.smsConsent.given) ? 'no text consent' : 'no phone') : '';
   return html`<div class="card ${done ? 'done' : ''}" data-key="${st.key}">
     <div class="row between">
       <div><span class="title" data-act="open" data-id="${c.id}" role="link">${c.name}</span><div class="muted">${c.vehicleLabel || ''}${it.extra && it.referredName ? ' · sent ' + it.referredName : ''}</div></div>
       ${done ? html`<span class="chip black">sent ${st.channels.map(function (x) { return x === 'sms' ? 'text' : x; }).join(' + ')}</span>` : ''}
     </div>
     <div class="row" style="margin:8px 0">${chips}</div>
+    ${isAsk && !done ? html`<div class="note">One-time ask. No consent is on file, so this is the only note that drafts until they say yes (record it on their timeline). The text version is hand-sent from your phone and carries the STOP line.</div>` : ''}
     ${st.noTemplate ? html`<div class="warn">No live template for this slot. Un-retire one on the Templates tab.</div>` : ''}
     ${st.missing.length ? html`<div class="warn">Fill in: ${st.missing.join(', ')} — the draft shows it as [${st.missing[0]}].</div>` : ''}
     ${verify ? html`<div class="warn">Contains <mark>[VERIFY NUMBER]</mark> — replace it before sending.</div>` : ''}
@@ -2724,8 +2948,8 @@ function renderCard(st, done) {
       ${hasT ? html`<button type="button" disabled>Text sent</button>` : (canT && !st.noTemplate
         ? html`<a class="btn" href="${smsHref(c, st.text)}" data-act="sendSms" data-key="${st.key}">Send as Text</a>`
         : html`<a class="btn disabled" aria-disabled="true">Send as Text · ${textReason}</a>`)}
-      <button type="button" data-act="copyText" data-key="${st.key}" ${st.noTemplate ? 'disabled' : ''}>Copy Text</button>
-      ${done ? html`<button type="button" class="ghost" data-act="dismiss" data-key="${st.key}">Done</button>` : html`<button type="button" class="ghost" data-act="skip" data-key="${st.key}">Skip</button>`}
+      <button type="button" data-act="copyText" data-key="${st.key}" ${st.noTemplate || (isAsk && !canT && !hasT) ? 'disabled' : ''}>Copy Text</button>
+      ${done ? html`<button type="button" class="ghost" data-act="dismiss" data-key="${st.key}">Done</button>` : html`<button type="button" class="ghost" data-act="skip" data-key="${st.key}">${isAsk ? 'Not now (90 days)' : 'Skip'}</button>`}
       ${done || it.extra ? '' : html`<button type="button" class="ghost" data-act="snooze" data-key="${st.key}">Snooze 7d</button>`}
     </div>
   </div>`;
@@ -2767,7 +2991,9 @@ function recordChannel(st, ch, extra) {
     store.save('touches', touch.id, touch);
     var ev = it.extra
       ? { type: 'sentExtra', sentDate: t, sentAt: iso, templateId: st.templateId, channels: [ch], minGapDays: s.minGapDays }
-      : { type: 'sent', n: it.n, dueDate: it.dueDate, slot: it.slot, carried: !!it.carried, channels: [ch], sentDate: t, sentAt: iso, templateId: st.templateId, minGapDays: s.minGapDays, touchId: touch.id };
+      : it.slot === 'ASK'
+        ? { type: 'sentAsk', sentDate: t, sentAt: iso, channels: [ch], templateId: st.templateId, touchId: touch.id }
+        : { type: 'sent', n: it.n, dueDate: it.dueDate, slot: it.slot, carried: !!it.carried, channels: [ch], sentDate: t, sentAt: iso, templateId: st.templateId, minGapDays: s.minGapDays, touchId: touch.id };
     var updated = KIT.applyEvent(c, ev, t);
     updated.lastSentAt = iso;
     saveCustomer(updated);
@@ -2777,7 +3003,10 @@ function recordChannel(st, ch, extra) {
     if (ch === 'sms') touch.textBody = st.text;
     touch.updatedAt = iso;
     store.save('touches', touch.id, touch);
-    if (ch === 'sms' && !c.firstTextSentAt) { c.firstTextSentAt = iso; c.lastSentAt = iso; saveCustomer(c); }
+    var changed = false;
+    if (ch === 'sms' && !c.firstTextSentAt) { c.firstTextSentAt = iso; c.lastSentAt = iso; changed = true; }
+    if (it.slot === 'ASK' && Array.isArray(c.consentAskChannels) && c.consentAskChannels.indexOf(ch) === -1) { c.consentAskChannels.push(ch); changed = true; }
+    if (changed) saveCustomer(c);
   }
   if (st.channels.indexOf(ch) === -1) st.channels.push(ch);
   st.done = true;
@@ -2797,7 +3026,7 @@ function postSend(payload) {
 
 function sendEmailFor(st) {
   var c = getCustomer(st.customerId);
-  if (!c || !COMPLIANCE.canEmail(c)) return Promise.reject(new Error('Cannot email ' + (c ? c.name : 'this customer')));
+  if (!c || !cardCanEmail(st.item, c)) return Promise.reject(new Error('Cannot email ' + (c ? c.name : 'this customer')));
   if (st.channels.indexOf('email') !== -1) return Promise.resolve();
   if (!st.touchId) st.touchId = newId();
   return postSend({
@@ -2826,6 +3055,8 @@ ACTIONS.sendSms = function (t) {
 ACTIONS.copyText = function (t) {
   var st = cardState[t.dataset.key];
   if (!st) return;
+  var cc = getCustomer(st.customerId);
+  if (cc && st.item.slot === 'ASK' && !cardCanText(st.item, cc) && st.channels.indexOf('sms') === -1) { toast('Cannot text the ask to ' + cc.name, 'err'); return; }
   return copyToClipboard(st.text).then(function () {
     if (st.channels.indexOf('sms') === -1) recordChannel(st, 'sms');
     toast('Text copied and logged');
@@ -2849,6 +3080,15 @@ ACTIONS.skip = function (t) {
   var c = getCustomer(st.customerId);
   if (!c) return;
   var it = st.item, tday = today(), iso = nowIso();
+  if (it.slot === 'ASK') {
+    // "Not now": nothing goes out and nothing is skipped on the ladder; the ask hides for 90 days.
+    saveCustomer(KIT.applyEvent(c, { type: 'askSkipped', today: tday, at: iso }, tday));
+    delete cardState[st.key];
+    if (ui.forceCustomer === c.id) ui.forceCustomer = '';
+    toast('Ask for ' + c.name + ' put off until ' + fmtDate(KIT.addDays(tday, 90)));
+    render();
+    return;
+  }
   var touch = {
     id: newId(), customerId: c.id, customerName: c.name || '', touchN: it.extra ? -1 : it.n, slot: it.slot, templateId: st.templateId,
     season: it.season || 'any', dueDate: it.dueDate, status: 'skipped', sentAt: '', sentDate: '', channels: [], sentBy: st.sender,
@@ -2880,7 +3120,7 @@ ACTIONS.approveAll = function (t) {
   var ready = [], skipped = [];
   live.forEach(function (it) {
     var st = draftFor(it);
-    if (!COMPLIANCE.canEmail(it.customer)) return;
+    if (!cardCanEmail(it, it.customer)) return;
     if (st.missing.length || st.noTemplate || /\[VERIFY[^\]]*\]/.test(st.email + st.subject)) skipped.push(it.customer.name); else ready.push(st);
   });
   if (!ready.length) { toast(skipped.length ? 'Nothing ready: fill in placeholders first (' + skipped.join(', ') + ')' : 'Nothing to email', 'err'); return; }
@@ -2951,6 +3191,7 @@ function renderAdd() {
     <label>How (email)</label><select name="emailHow">${howOptions(c.emailConsent && c.emailConsent.how)}</select>
     <label class="check"><input type="checkbox" name="smsGiven" data-on-change="consentStamp" data-at="${(c.smsConsent && c.smsConsent.at) || ''}" ${c.smsConsent && c.smsConsent.given ? 'checked' : ''}> <span>${COMPLIANCE.consentLabels.sms}</span></label>
     <label>How (text)</label><select name="smsHow">${howOptions(c.smsConsent && c.smsConsent.how)}</select>
+    <p class="small muted">Past customer you haven't asked yet? Leave both unticked. The app will draft a one-time ask and nothing else until they say yes.</p>
     <div class="btns" style="margin-top:16px">
       <button type="submit" class="primary" style="flex:1 1 100%">${editing ? 'Save changes' : (ui.repeatMode ? 'Save repeat purchase' : 'Save customer')}</button>
       ${editing ? html`<button type="button" class="ghost" data-act="open" data-id="${editing.id}">Cancel</button>` : ''}
@@ -3077,6 +3318,9 @@ FORMS.customer = function (f) {
   if (referrer) {
     saveCustomer(KIT.applyEvent(referrer, { type: 'referralReceived', date: t, referredName: firstNameOf(c.name) }, t));
     toast('Saved ' + c.name + '. A thank-you for ' + referrer.name + ' is in the queue.');
+  } else if (KIT.consentState(c) === 'ask') {
+    var askNt = KIT.nextTouch(c, t);
+    toast('Saved ' + c.name + '. No consent on file, so a one-time ask is ' + (askNt && askNt.isDue ? 'in the queue now.' : 'due ' + fmtDate(askNt ? askNt.dueDate : KIT.addDays(o.saleDate, 3)) + '.'));
   } else toast('Saved ' + c.name + '. First note is due ' + fmtDate(KIT.addDays(o.saleDate, 3)) + '.');
   openCustomer(id);
 };
@@ -3084,6 +3328,9 @@ FORMS.customer = function (f) {
 /* ============================================================ 7. People + timeline */
 function statusChip(c, nt) {
   if (c.status === 'dnc') return html`<span class="chip red">do not contact</span>`;
+  var cs = KIT.consentState(c);
+  if (cs === 'asked') return html`<span class="chip mag">waiting</span>`;
+  if (cs === 'ask') return html`<span class="chip amber">ask</span>`;
   if (nt && nt.snoozed) return html`<span class="chip grey">snoozed</span>`;
   if (nt && nt.isDue) return html`<span class="chip mag">due</span>`;
   return html`<span class="chip">active</span>`;
@@ -3101,7 +3348,7 @@ function renderPeople() {
   <input type="search" placeholder="Search name, phone, vehicle" value="${ui.search || ''}" data-on-input="peopleSearch" autocomplete="off">
   <div class="list">${list.length ? list.map(function (c) {
     var nt = c.status === 'dnc' ? null : KIT.nextTouch(c, t);
-    var next = nt ? (SLOT_LABEL[nt.slot] || nt.slot) + ' · ' + fmtDate(nt.dueDate) + (nt.isLate ? ' · ' + nt.daysLate + 'd late' : '') : 'no more notes';
+    var next = nt ? (SLOT_LABEL[nt.slot] || nt.slot) + ' · ' + fmtDate(nt.dueDate) + (nt.isLate ? ' · ' + nt.daysLate + 'd late' : '') : (c.status !== 'dnc' && KIT.consentState(c) === 'asked' ? 'waiting on their answer' : 'no more notes');
     return html`<div class="item" data-act="open" data-id="${c.id}" role="button">
       <div class="l"><div class="name">${c.name} ${c.unreadReplies ? html`<span class="badge">${c.unreadReplies}</span>` : ''}</div><div class="sub">${c.vehicleLabel || 'no vehicle'} · ${next}</div></div>
       <div>${statusChip(c, nt)}</div></div>`;
@@ -3159,6 +3406,7 @@ function renderTimeline(c) {
     <div class="small" style="margin-top:6px">${COMPLIANCE.consentSummary(c)}</div>
     ${nt ? html`<div class="note" style="margin-top:8px"><b>Next:</b> ${SLOT_LABEL[nt.slot] || nt.slot} · touch ${nt.n} · ${fmtDate(nt.dueDate)} ${nt.isLate ? html`<span class="chip amber">${nt.daysLate}d late</span>` : ''} ${nt.snoozed ? html`<span class="chip grey">snoozed to ${fmtDate(nt.snoozedUntil)}</span>` : ''} ${!nt.isLate && !nt.snoozed ? html`<span class="muted">in ${KIT.diffDays(t, nt.dueDate)} days</span>` : ''}</div>` : ''}
     ${c.pendingThanks ? html`<div class="note" style="margin-top:6px">Referral thank-you waiting in the queue (for sending ${c.pendingThanks.referredName || 'somebody'}).</div>` : ''}
+    ${renderAskPanel(c)}
     ${c.notes ? html`<div class="pre muted" style="margin-top:6px">${c.notes}</div>` : ''}
     <div class="btns">
       ${c.status === 'dnc' ? html`<button type="button" data-act="reactivate" data-id="${c.id}">Reactivate</button>` : html`<button type="button" class="primary" data-act="logCall" data-id="${c.id}">Log a phone call</button>
@@ -3187,7 +3435,83 @@ function renderTimeline(c) {
   <h3>Timeline</h3>
   <div class="tl">${entries.length ? entries.map(renderEntry) : html`<p class="muted">Nothing yet. The first note is due ${fmtDate(KIT.addDays(c.saleDate, 3))}.</p>`}</div>`;
 }
-ACTIONS.backPeople = function () { ui.customerId = null; ui.replyOpen = null; go('people'); };
+// Consent answer panel: shown while a customer has no consent on file (state
+// 'ask' = the ask is still to go out, 'asked' = it went out, waiting).
+function askedChannelDefault(c) {
+  var chs = Array.isArray(c.consentAskChannels) ? c.consentAskChannels : [];
+  if (chs.indexOf('email') !== -1 && chs.indexOf('sms') !== -1) return 'both';
+  if (chs.indexOf('sms') !== -1) return 'sms';
+  return 'email';
+}
+function howForChannel(replyChannel) {
+  return replyChannel === 'email' ? 'email reply' : replyChannel === 'sms' ? 'text reply' : replyChannel === 'phone' ? 'phone' : 'in person at sale';
+}
+var YES_HOW = ['email reply', 'text reply', 'phone', 'in person at sale'];
+function renderAskPanel(c) {
+  if (c.status === 'dnc') return '';
+  var cs = KIT.consentState(c);
+  if (cs !== 'asked' && cs !== 'ask') return '';
+  var y = ui.yesOpen && ui.yesOpen.id === c.id ? ui.yesOpen : null;
+  var chan = y ? y.channel : askedChannelDefault(c);
+  var how = y ? y.how : (chan === 'sms' ? 'text reply' : 'email reply');
+  var askedLine = cs === 'asked'
+    ? 'Ask sent ' + (fmtDate(c.consentAskDate) || fmtIso(c.consentAskedAt)) + (Array.isArray(c.consentAskChannels) && c.consentAskChannels.length ? ' by ' + c.consentAskChannels.map(function (x) { return x === 'sms' ? 'text' : x; }).join(' + ') : '') + '. Nothing else drafts until you record their answer.'
+    : 'No consent on file. The one-time ask is in the queue; if they already said yes in person or on the phone, record it here.';
+  return html`<div class="askpanel">
+    <div class="title">${cs === 'asked' ? 'Waiting on their answer' : 'Not asked yet'}</div>
+    <div class="small">${askedLine}</div>
+    ${y ? html`<form data-form="consentYes" data-id="${c.id}">
+      ${y.note ? html`<div class="note" style="margin-bottom:6px">${y.note}</div>` : ''}
+      <label>Okay to send by</label>
+      <div class="seg" role="group" aria-label="Channel">
+        <button type="button" class="${chan === 'email' ? 'on' : ''}" data-act="yesChannel" data-id="${c.id}" data-v="email">Email</button>
+        <button type="button" class="${chan === 'sms' ? 'on' : ''}" data-act="yesChannel" data-id="${c.id}" data-v="sms">Text</button>
+        <button type="button" class="${chan === 'both' ? 'on' : ''}" data-act="yesChannel" data-id="${c.id}" data-v="both">Both</button>
+      </div>
+      <input type="hidden" name="channel" value="${chan}">
+      <label>How they said it</label>
+      <select name="how">${raw(YES_HOW.map(function (h) { return '<option value="' + esc(h) + '"' + (h === how ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join(''))}</select>
+      <div class="btns"><button type="submit" class="primary" data-autofocus>Record the yes</button><button type="button" class="ghost" data-act="yesCancel" data-id="${c.id}">Cancel</button></div>
+    </form>` : html`<div class="btns">
+      <button type="button" data-act="saidYes" data-id="${c.id}">They said yes</button>
+      <button type="button" class="ghost" data-act="saidNo" data-id="${c.id}">They said no</button>
+    </div>`}
+  </div>`;
+}
+ACTIONS.saidYes = function (t) {
+  var c = getCustomer(t.dataset.id);
+  if (!c) return;
+  var chan = askedChannelDefault(c);
+  ui.yesOpen = { id: c.id, channel: chan, how: chan === 'sms' ? 'text reply' : 'email reply', note: '' };
+  render();
+};
+ACTIONS.yesChannel = function (t) { if (ui.yesOpen && ui.yesOpen.id === t.dataset.id) { ui.yesOpen.channel = t.dataset.v; var f = t.closest('form'); if (f) ui.yesOpen.how = f.how.value; render(); } };
+ACTIONS.yesCancel = function () { ui.yesOpen = null; render(); };
+FORMS.consentYes = function (f) {
+  var c = getCustomer(f.dataset.id);
+  if (!c) return;
+  var t = today(), iso = nowIso();
+  var chan = f.channel.value === 'sms' || f.channel.value === 'both' ? f.channel.value : 'email';
+  if ((chan === 'email' || chan === 'both') && !c.email) { toast('No email address on file; add one first or pick Text.', 'err'); return; }
+  if ((chan === 'sms' || chan === 'both') && !c.phone) { toast('No phone on file; add one first or pick Email.', 'err'); return; }
+  var up = KIT.applyEvent(c, { type: 'consentGiven', date: t, how: f.how.value, channel: chan, at: iso }, t);
+  saveCustomer(up);
+  Object.keys(cardState).forEach(function (k) { if (cardState[k].customerId === c.id && !cardState[k].done) delete cardState[k]; });
+  ui.yesOpen = null;
+  var nt = KIT.nextTouch(up, t);
+  toast('Consent recorded for ' + c.name + '. Next note: ' + (nt ? (SLOT_LABEL[nt.slot] || nt.slot) + ' on ' + fmtDate(nt.dueDate) : 'none') + '.');
+  render();
+};
+ACTIONS.saidNo = function (t) {
+  var c = getCustomer(t.dataset.id);
+  if (!c || !confirm(c.name + ' said no? They go on the do-not-contact list and nothing else drafts.')) return;
+  saveCustomer(KIT.applyEvent(c, { type: 'consentDeclined', date: today(), at: nowIso(), channel: 'both' }, today()));
+  Object.keys(cardState).forEach(function (k) { if (cardState[k].customerId === c.id && !cardState[k].done) delete cardState[k]; });
+  ui.yesOpen = null;
+  toast(c.name + ' marked do-not-contact (declined the ask).');
+  render();
+};
+ACTIONS.backPeople = function () { ui.customerId = null; ui.replyOpen = null; ui.yesOpen = null; go('people'); };
 ACTIONS.edit = function (t) { go('add', { editId: t.dataset.id, repeatMode: false, repeatOf: '' }); };
 ACTIONS.toggleReply = function (t) { ui.replyOpen = ui.replyOpen === t.dataset.id ? null : t.dataset.id; render(); };
 ACTIONS.sendNow = function (t) { ui.forceCustomer = t.dataset.id; go('queue'); };
@@ -3209,7 +3533,9 @@ function logReply(c, channel, text, opts) {
   if (att) { reply.touchId = att.id || ''; reply.slot = att.slot || ''; reply.templateId = att.templateId || ''; }
   store.save('replies', reply.id, reply);
   var up = opts.isOptOut
-    ? KIT.applyEvent(c, { type: 'optOut', reason: 'STOP reply', channel: opts.optChannel || 'both', at: iso }, t)
+    ? (opts.declinedAsk
+      ? KIT.applyEvent(c, { type: 'consentDeclined', date: t, at: iso, channel: opts.optChannel || 'both', reason: 'declined ask' }, t)
+      : KIT.applyEvent(c, { type: 'optOut', reason: 'STOP reply', channel: opts.optChannel || 'both', at: iso }, t))
     : KIT.applyEvent(c, { type: 'reply', date: t, at: iso }, t);
   up.unreadReplies = 0;
   saveCustomer(up);
@@ -3228,14 +3554,26 @@ FORMS.reply = function (f) {
   var text = f.text.value.trim();
   var ch = f.channel.value;
   if (!text) { toast('Type what they said', 'err'); return; }
+  var cs = KIT.consentState(c);
+  var waiting = cs === 'asked' || cs === 'ask';
   if (KIT.isOptOutText(text)) {
     if (confirm('This reads like an opt-out. Mark ' + c.name + ' do-not-contact on both channels?')) {
-      logReply(c, ch, text, { isOptOut: true, optChannel: ch === 'sms' ? 'sms' : ch === 'email' ? 'email' : 'both' });
+      logReply(c, ch, text, { isOptOut: true, declinedAsk: waiting, optChannel: ch === 'sms' ? 'sms' : ch === 'email' ? 'email' : 'both' });
       ui.replyOpen = null;
       toast(c.name + ' is now do-not-contact. A goodbye note is ready on their timeline.');
       render();
       return;
     }
+  }
+  if (waiting && KIT.isYesText(text)) {
+    // A yes to the consent ask: log the reply, then pre-select "They said yes" so one tap records it.
+    logReply(c, ch, text);
+    ui.replyOpen = null;
+    var yChan = ch === 'sms' ? 'sms' : ch === 'email' ? 'email' : askedChannelDefault(c);
+    ui.yesOpen = { id: c.id, channel: yChan, how: howForChannel(ch), note: 'This reads like a yes. Check the channel and tap Record the yes.' };
+    toast('Reply logged. Confirm the yes below.');
+    render();
+    return;
   }
   logReply(c, ch, text);
   ui.replyOpen = null;
@@ -3594,7 +3932,7 @@ function download(name, text) {
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 ACTIONS.exportCustomers = function () {
-  var rows = [['First', 'Last', 'Phone', 'Email', 'Year', 'Make', 'Model', 'Trim', 'Sale Date', 'Referred By', 'Email Consent', 'Email Consent Date', 'SMS Consent', 'SMS Consent Date', 'Status', 'Notes']];
+  var rows = [['First', 'Last', 'Phone', 'Email', 'Year', 'Make', 'Model', 'Trim', 'Sale Date', 'Referred By', 'Email Consent', 'Email Consent Date', 'SMS Consent', 'SMS Consent Date', 'Consent Asked Date', 'Consent Ask Channel', 'Status', 'Notes']];
   customersArr().sort(byName).forEach(function (c) {
     var parts = String(c.name || '').trim().split(/\s+/);
     var first = parts.shift() || '', last = parts.join(' ');
@@ -3602,6 +3940,7 @@ ACTIONS.exportCustomers = function () {
     rows.push([first, last, fmtPhone(c.phone), c.email || '', v.year || '', v.make || '', v.model || '', v.trim || '', c.saleDate || '', c.referredByName || '',
       c.emailConsent && c.emailConsent.given ? 'Yes' : 'No', c.emailConsent && c.emailConsent.at ? String(c.emailConsent.at).slice(0, 10) : '',
       c.smsConsent && c.smsConsent.given ? 'Yes' : 'No', c.smsConsent && c.smsConsent.at ? String(c.smsConsent.at).slice(0, 10) : '',
+      c.consentAskDate || (c.consentAskedAt ? String(c.consentAskedAt).slice(0, 10) : ''), (c.consentAskChannels || []).map(function (x) { return x === 'sms' ? 'text' : x; }).join('+'),
       c.status === 'dnc' ? 'Do Not Contact' : 'Active', (c.notes || '') + (c.hook ? (c.notes ? ' | ' : '') + 'Hook: ' + c.hook : '')]);
   });
   download('kit-customers-' + today() + '.csv', csv(rows));

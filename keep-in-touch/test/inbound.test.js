@@ -29,10 +29,17 @@ const OPT_OUT_RE = /\b(stop|unsubscribe|opt[ -]?out|remove me|quit|cancel|end)\b
 const KIT = {
   todayChicago: () => '2026-09-15',
   isOptOutText: (s) => OPT_OUT_RE.test(String(s || '').slice(0, 80)),
+  consentState: (c) => (c.status === 'dnc' ? 'dnc' : ((c.emailConsent && c.emailConsent.given) || (c.smsConsent && c.smsConsent.given)) ? 'given' : (c.consentAskedAt ? 'asked' : 'ask')),
+  isYesText: (s) => !OPT_OUT_RE.test(String(s || '').slice(0, 80)) && !/\b(no|not|dont)\b/i.test(String(s || '').slice(0, 80)) && /\b(yes|yep|yeah|sure|ok|okay|fine|sounds good|go ahead|absolutely|you bet|that works|please do)\b/i.test(String(s || '').slice(0, 80)),
   applyEvent(customer, ev) {
     const c = Object.assign({}, customer);
     if (ev.type === 'reply') { c.anchorDate = ev.date; c.anchorTouchN = Math.max(0, (c.nextTouchN || 0) - 1); c.snoozedUntil = ''; c.lastReplyDate = ev.date; }
     if (ev.type === 'optOut') { c.status = 'dnc'; c.dnc = { at: ev.at, reason: ev.reason, channel: ev.channel }; }
+    if (ev.type === 'consentGiven') {
+      if (ev.channel === 'email' || ev.channel === 'both') c.emailConsent = { given: true, at: ev.at, how: ev.how };
+      if (ev.channel === 'sms' || ev.channel === 'both') c.smsConsent = { given: true, at: ev.at, how: ev.how };
+      c.anchorDate = ev.date; c.anchorTouchN = 0; c.nextTouchN = 1; c.floorDate = ''; c.snoozedUntil = '';
+    }
     return c;
   },
   templatePool: (library, overrides, slot) => library.filter((t) => t.slot === slot && !(overrides[t.id] && overrides[t.id].retired)),
@@ -330,6 +337,75 @@ test('works with the real lib/firestore.js row shape ({id, data} from runQuery/l
   assert.strictEqual(inner.docs['customers/c_dan'].unreadReplies, 3);
   assert.ok(!('id' in inner.docs['customers/c_dan']));
   assert.ok(!('data' in inner.docs['customers/c_dan']));
+});
+
+// ---- the one-time consent ask: an email reply of "yes" records email consent
+const ASKED = { name: 'Kay Olson', first: 'Kay', email: 'kay@example.com', phone: '5075559999', status: 'active', nextTouchN: 0, anchorDate: '2021-03-01', anchorTouchN: 0, unreadReplies: 0, usedTemplateIds: ['ask-01'], unsubscribeToken: 'tok_kay',
+  emailConsent: { given: false, at: '', how: '' }, smsConsent: { given: false, at: '', how: '' }, consentAskedAt: '2026-09-10T14:00:00.000Z', consentAskDate: '2026-09-10', consentAskChannels: ['email'] };
+const askSeed = (over) => Object.assign({}, SEED, { 'customers/c_ask': Object.assign({}, ASKED, over || {}), 'touches/t_kay_ask': { customerId: 'c_ask', touchN: 0, slot: 'ASK', templateId: 'ask-01', status: 'sent', sentDate: '2026-09-10' } });
+const kayMail = (text, id = 'em_kay') => ({ [id]: { id, from: 'Kay Olson <kay@example.com>', subject: 'Re: thank you, a while later', text, html: null } });
+
+test('ask reply "Yes, go ahead" from a customer in state asked -> consentGiven {email, "email reply"}, ladder at touch 1, reply doc consentGiven: true', async () => {
+  const { handler, db, fetchFn } = setup({ seed: askSeed(), received: kayMail('Yes, go ahead.\n\nOn Thu, Sep 10, 2026 Mick wrote:\n> Okay if I send you a note') });
+  const body = envelope({ email_id: 'em_kay', from: 'Kay Olson <kay@example.com>', subject: 'Re: thank you, a while later' });
+  const r = await handler(post(body, sign(body)));
+  assert.strictEqual(r.statusCode, 200);
+  const res = JSON.parse(r.body);
+  assert.strictEqual(res.matched, true);
+  assert.strictEqual(res.consentGiven, true);
+  assert.strictEqual(res.optOut, false);
+  assert.strictEqual(res.goodbyeSent, false);
+  const c = db.docs['customers/c_ask'];
+  assert.deepStrictEqual(c.emailConsent, { given: true, at: new Date(NOW).toISOString(), how: 'email reply' });
+  assert.strictEqual(c.smsConsent.given, false, 'text consent untouched');
+  assert.deepStrictEqual([c.anchorDate, c.anchorTouchN, c.nextTouchN], ['2026-09-15', 0, 1]);
+  assert.strictEqual(c.status, 'active');
+  assert.strictEqual(c.unreadReplies, 1);
+  const reply = db.docs['replies/in_em_kay'];
+  assert.strictEqual(reply.consentGiven, true);
+  assert.strictEqual(reply.isOptOut, false);
+  assert.strictEqual(reply.touchId, 't_kay_ask', 'linked to the ask touch');
+  assert.strictEqual(reply.slot, 'ASK');
+  assert.strictEqual(fetchFn.calls.filter((x) => /\/emails$/.test(x.url)).length, 0, 'no email sent back');
+});
+
+test('ask reply that is not a yes ("Thanks for the note") logs the reply only; consent stays unrecorded', async () => {
+  const { handler, db } = setup({ seed: askSeed(), received: kayMail('Thanks for the note, still driving it.') });
+  const body = envelope({ email_id: 'em_kay', from: 'Kay Olson <kay@example.com>' });
+  const res = JSON.parse((await handler(post(body, sign(body)))).body);
+  assert.strictEqual(res.consentGiven, false);
+  const c = db.docs['customers/c_ask'];
+  assert.strictEqual(c.emailConsent.given, false);
+  assert.strictEqual(c.nextTouchN, 0);
+  assert.strictEqual(db.docs['replies/in_em_kay'].consentGiven, false);
+});
+
+test('ask reply "yes unsubscribe me" is an opt-out, not a yes: dnc + goodbye, no consent', async () => {
+  const { handler, db } = setup({ seed: askSeed(), received: kayMail('yes unsubscribe me') });
+  const body = envelope({ email_id: 'em_kay', from: 'Kay Olson <kay@example.com>' });
+  const res = JSON.parse((await handler(post(body, sign(body)))).body);
+  assert.strictEqual(res.optOut, true);
+  assert.strictEqual(res.consentGiven, false);
+  assert.strictEqual(db.docs['customers/c_ask'].status, 'dnc');
+  assert.strictEqual(db.docs['customers/c_ask'].emailConsent.given, false);
+});
+
+test('a "yes" from a customer who already has consent (state given) changes nothing about consent', async () => {
+  const { handler, db } = setup({ received: { em_001: { id: 'em_001', from: 'Dan Halvorson <Dan@Example.com>', subject: 'Re: Deer season', text: 'Yes, they are thick out here.', html: null } } });
+  const body = envelope();
+  const res = JSON.parse((await handler(post(body, sign(body)))).body);
+  assert.strictEqual(res.consentGiven, false);
+  const c = db.docs['customers/c_dan'];
+  assert.deepStrictEqual(c.emailConsent, DAN.emailConsent);
+  assert.strictEqual(c.nextTouchN, 5, 'reply reset only, no ladder restart');
+});
+
+test('a "yes" from a customer never asked (state ask, no ask sent) is not treated as consent', async () => {
+  const { handler, db } = setup({ seed: askSeed({ consentAskedAt: '', consentAskDate: '', consentAskChannels: [] }), received: kayMail('Yes') });
+  const body = envelope({ email_id: 'em_kay', from: 'Kay Olson <kay@example.com>' });
+  const res = JSON.parse((await handler(post(body, sign(body)))).body);
+  assert.strictEqual(res.consentGiven, false);
+  assert.strictEqual(db.docs['customers/c_ask'].emailConsent.given, false);
 });
 
 test('non email.received events are acknowledged and ignored', async () => {

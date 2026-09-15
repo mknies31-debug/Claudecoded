@@ -12,6 +12,12 @@
  * See SPEC.md §4 for the contract and docs/02-cadence.md for the plain-English
  * explanation of the rules.
  *
+ * Consent states (consentState): 'given' (normal cadence), 'ask' (no consent
+ * recorded and never asked: the next touch is a one-time ASK, touch 0),
+ * 'asked' (ask went out, still waiting: nextTouch is null, nothing drafts),
+ * 'dnc'. Events sentAsk / consentGiven / consentDeclined / askSkipped move a
+ * customer between them; consentGiven restarts the ladder at touch 1 = date + 90.
+ *
  * render() placeholders: {first} {name} {vehicle} {year} {make} {model}
  * {phone} {sale_year} {season} {hook|fallback} {referred|fallback}.
  * {referred} is the first name of the person a customer sent in (REFERRAL_THANKS):
@@ -28,9 +34,10 @@
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
 
   var SLOTS = [
+    'ASK',                 // one-time consent ask (touch 0) for anyone with no consent recorded
     'THANKS',              // touch 0
     'THANKS_REPEAT',       // touch 0 of a repeat purchase
     'VALUE',               // odd touches
@@ -47,6 +54,7 @@
   var BIRTHDAY_WINDOW_DAYS = 14;
   var ANNIVERSARY_WINDOW_DAYS = 30;
   var DEFAULT_MIN_GAP_DAYS = 21;
+  var ASK_SKIP_DAYS = 90;
   var MS_PER_DAY = 86400000;
 
   // ---------------------------------------------------------------- dates
@@ -238,15 +246,70 @@
     return seasonFor(isYmd(today) && today > dueDate ? today : dueDate);
   }
 
+  // ------------------------------------------------------------- consent
+
+  function consentOn(block) {
+    return !!(block && block.given === true);
+  }
+
+  // 'given' | 'ask' | 'asked' | 'dnc'
+  //   given: email or SMS consent recorded -> normal cadence
+  //   ask:   active, no consent, never asked -> next touch is the one-time ASK
+  //   asked: the ask went out, no answer yet -> nothing drafts until a yes
+  function consentState(customer) {
+    if (!customer || customer.status === 'dnc') return 'dnc';
+    if (consentOn(customer.emailConsent) || consentOn(customer.smsConsent)) return 'given';
+    return customer.consentAskedAt ? 'asked' : 'ask';
+  }
+
+  // The day the customer was entered, as YYYY-MM-DD: createdDate if present,
+  // else the date part of createdAt, else today.
+  function createdDateOf(customer, today) {
+    if (isYmd(customer.createdDate)) return customer.createdDate;
+    var iso = String(customer.createdAt || '');
+    if (isYmd(iso.slice(0, 10))) return iso.slice(0, 10);
+    return today;
+  }
+
+  // The ASK is due at sale + 3, but never before the day the customer was
+  // entered: a buyer from five years ago is due today, not "1,800 days late".
+  function askDueDate(customer, today) {
+    return maxYmd(addDays(customer.saleDate, TOUCH0_OFFSET_DAYS), createdDateOf(customer, today));
+  }
+
+  // Yes-detection for a reply to the ask. Deliberately narrow: a clear yes
+  // word in the first 80 characters and no "no / not / don't / rather not"
+  // next to it, and never an opt-out. Mick confirms in the app anyway; the
+  // inbound function uses it to record an email reply of "yes" on its own.
+  var YES_RE = /\b(yes|yep|yeah|sure|ok|okay|fine|sounds good|go ahead|absolutely|you bet|that works|please do)\b/i;
+  var NO_RE = /\b(no|nope|not|dont|do not|rather not|no thanks)\b/i;
+
+  function isYesText(str) {
+    if (typeof str !== 'string') return false;
+    var head = str.slice(0, 80).replace(/[’']/g, '');
+    if (!head.trim() || isOptOutText(head)) return false;
+    if (NO_RE.test(head)) return false;
+    return YES_RE.test(head);
+  }
+
   function nextTouch(customer, today) {
     if (!customer || customer.status === 'dnc') return null;
     if (!isYmd(customer.saleDate)) return null;
     today = isYmd(today) ? today : todayChicago();
-    var n = typeof customer.nextTouchN === 'number' ? customer.nextTouchN : 0;
-    var dueDate = touchDate(customer, n);
-    var r = resolveSlot(customer, n, dueDate);
+    var state = consentState(customer);
+    if (state === 'asked') return null;
     var snoozedUntil = isYmd(customer.snoozedUntil) ? customer.snoozedUntil : '';
     var snoozed = !!snoozedUntil && snoozedUntil > today;
+    var n, dueDate, r;
+    if (state === 'ask') {
+      n = 0;
+      dueDate = askDueDate(customer, today);
+      r = { slot: 'ASK', carried: false, base: 'ASK', viaCredit: false, anniversaryYear: 0 };
+    } else {
+      n = typeof customer.nextTouchN === 'number' ? customer.nextTouchN : 0;
+      dueDate = touchDate(customer, n);
+      r = resolveSlot(customer, n, dueDate);
+    }
     var isLate = dueDate < today;
     return {
       n: n,
@@ -261,7 +324,8 @@
       daysLate: isLate ? diffDays(dueDate, today) : 0,
       snoozed: snoozed,
       snoozedUntil: snoozedUntil,
-      season: sendSeason(dueDate, today)
+      season: sendSeason(dueDate, today),
+      ask: state === 'ask'
     };
   }
 
@@ -278,7 +342,12 @@
       if (!nt) break;
       out.push({ n: nt.n, dueDate: nt.dueDate, slot: nt.slot, carried: nt.carried, season: nt.season });
       var sentDate = maxYmd(nt.dueDate, today);
-      sim = applyEvent(sim, { type: 'sent', n: nt.n, dueDate: nt.dueDate, sentDate: sentDate, channels: [] }, today);
+      if (nt.slot === 'ASK') {
+        // Simulate "they say yes the day the ask goes out": touch 1 = that day + 90.
+        sim = applyEvent(sim, { type: 'consentGiven', date: sentDate, channel: 'email', how: 'preview' }, today);
+      } else {
+        sim = applyEvent(sim, { type: 'sent', n: nt.n, dueDate: nt.dueDate, sentDate: sentDate, channels: [] }, today);
+      }
     }
     return out;
   }
@@ -578,6 +647,63 @@
         c.dnc = null;
         break;
       }
+      case 'sentAsk': {
+        // The one-time consent ask went out (touch 0, slot ASK). Nothing else
+        // drafts until consentGiven (or consentDeclined) is applied.
+        var askDate = isYmd(event.sentDate) ? event.sentDate : today;
+        var askChannels = Array.isArray(event.channels) ? event.channels.slice() : [];
+        c.consentAskedAt = event.sentAt || (askDate + 'T12:00:00.000Z');
+        c.consentAskDate = askDate;
+        c.consentAskChannels = askChannels;
+        c.consentAskSkippedAt = '';
+        c.lastSentDate = askDate;
+        if (event.sentAt) c.lastSentAt = event.sentAt;
+        c.snoozedUntil = '';
+        pushUsed(c, event.templateId);
+        if (askChannels.indexOf('sms') !== -1 && !c.firstTextSentAt) {
+          c.firstTextSentAt = event.sentAt || askDate;
+        }
+        break;
+      }
+      case 'askSkipped': {
+        // "Not now": hide the ask for 90 days. Nothing went out, nothing changes
+        // on the ladder; the customer stays in the 'ask' state.
+        var skipFrom = isYmd(event.today) ? event.today : today;
+        c.consentAskSkippedAt = event.at || (skipFrom + 'T12:00:00.000Z');
+        c.snoozedUntil = addDays(skipFrom, typeof event.days === 'number' ? event.days : ASK_SKIP_DAYS);
+        break;
+      }
+      case 'consentGiven': {
+        // They said yes (to the ask, or in person, or on the phone). Records
+        // consent on the named channel(s) and restarts the ladder: the ask
+        // served as touch 0, so touch 1 (VALUE) is due 90 days after the yes.
+        var yesDate = isYmd(event.date) ? event.date : today;
+        var yesAt = event.at || (yesDate + 'T12:00:00.000Z');
+        var how = event.how || '';
+        var chan = event.channel === 'sms' || event.channel === 'both' || event.channel === 'email' ? event.channel : 'email';
+        if (chan === 'email' || chan === 'both') c.emailConsent = { given: true, at: yesAt, how: how };
+        if (chan === 'sms' || chan === 'both') c.smsConsent = { given: true, at: yesAt, how: how };
+        c.consentGivenDate = yesDate;
+        c.anchorDate = yesDate;
+        c.anchorTouchN = 0;
+        c.nextTouchN = 1;
+        c.floorDate = '';
+        c.snoozedUntil = '';
+        c.consentAskSkippedAt = '';
+        break;
+      }
+      case 'consentDeclined': {
+        // They said no to the ask: do-not-contact on both channels.
+        c.status = 'dnc';
+        c.dnc = {
+          at: event.at || ((isYmd(event.date) ? event.date : today) + 'T12:00:00.000Z'),
+          reason: event.reason || 'declined ask',
+          channel: event.channel || 'both'
+        };
+        c.snoozedUntil = '';
+        c.pendingThanks = null;
+        break;
+      }
       case 'repeatPurchase': {
         var sale = isYmd(event.saleDate) ? event.saleDate : today;
         var veh = event.vehicle || c.vehicle || {};
@@ -688,6 +814,9 @@
     resolveSlot: resolveSlot,
     daysToBirthday: daysToBirthday,
     nearestAnniversary: nearestAnniversary,
+    consentState: consentState,
+    askDueDate: askDueDate,
+    isYesText: isYesText,
     nextTouch: nextTouch,
     previewTouches: previewTouches,
     buildQueue: buildQueue,

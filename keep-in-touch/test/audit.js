@@ -566,6 +566,37 @@ const post = (body, headers) => ({ httpMethod: 'POST', headers: headers || {}, b
     assert.strictEqual(problems.length, 0, '\n' + problems.join('\n'));
   });
 
+  test('ASK pool: thanks + {sale_year} + {phone}, consent question is the closer, first text carries STOP, no pitch; engine drafts it only for unconsented customers and never auto-sends', () => {
+    const asks = LIBRARY.templates.filter((t) => t.slot === 'ASK');
+    assert.strictEqual(asks.length, 4);
+    assert.deepStrictEqual(new Set(asks.map((t) => t.tone)), new Set(['direct', 'softer', 'nepq']));
+    const old = customer({ saleDate: '2019-06-14', createdAt: '2026-09-15T14:00:00.000Z', emailConsent: { given: false, at: '', how: '' }, smsConsent: { given: false, at: '', how: '' } });
+    for (const t of asks) {
+      assert.ok(/thank/i.test(t.emailBody), t.id + ' says thank you');
+      assert.ok(t.emailBody.includes('{sale_year}') && t.emailBody.includes('{phone}') && t.emailBody.includes('{vehicle}'), t.id + ' placeholders');
+      assert.ok(/\b(okay|ok)\b.*\bnote\b.*\bseasonal\b/i.test(t.emailBody.split(/(?<=[.?!])\s+/).pop()), t.id + ' closing consent question');
+      assert.ok(!/\b(trade|upgrade|inventory|for sale|selling)\b/i.test(t.emailBody + ' ' + t.textBody), t.id + ' no pitch');
+      const r = KIT.render(t, old, sampleSettings, { sender: 'mick', footer, firstText: true, date: '2026-09-15' });
+      assert.ok(/2019/.test(r.emailBody) && /2019 Silverado/.test(r.emailBody), t.id + ' renders sale year and vehicle');
+      assert.ok(r.textFull.endsWith(' Reply STOP to opt out.'), t.id + ' first text carries STOP');
+      assert.ok(r.emailFull.endsWith(footer), t.id + ' footer with unsubscribe on the email ask');
+      assert.strictEqual(r.missing.length, 0, t.id + ' nothing unfilled');
+    }
+    // engine + compliance gates
+    const nt = KIT.nextTouch(old, '2026-09-15');
+    assert.deepStrictEqual([nt.slot, nt.n, nt.dueDate, nt.daysLate], ['ASK', 0, '2026-09-15', 0], 'old buyer entered today: ASK due today');
+    assert.strictEqual(KIT.nextTouch(customer({ saleDate: '2019-06-14' }), '2026-09-15').slot, 'THANKS', 'consented buyer: normal ladder (touch 0 is THANKS, never ASK)');
+    assert.strictEqual(COMPLIANCE.canEmail(old), false); assert.strictEqual(COMPLIANCE.canAskByEmail(old), true);
+    assert.strictEqual(COMPLIANCE.canText(old), false); assert.strictEqual(COMPLIANCE.canAskByText(old), true);
+    const asked = KIT.applyEvent(old, { type: 'sentAsk', sentDate: '2026-09-15', channels: ['email'], templateId: 'ask-01' }, '2026-09-15');
+    assert.strictEqual(KIT.nextTouch(asked, '2027-01-01'), null, 'nothing drafts after the ask');
+    assert.strictEqual(COMPLIANCE.canAskByEmail(asked), false, 'cannot ask twice');
+    assert.strictEqual(KIT.buildQueue([asked], '2027-01-01').length, 0);
+    const daily = fs.readFileSync(path.join(FN, 'daily.js'), 'utf8');
+    assert.ok(/touch\.slot === 'ASK'/.test(daily), 'daily.js has the explicit ASK guard');
+    assert.ok(/canEmail/.test(daily) && !/canAskByEmail/.test(daily), 'daily.js never uses the ask gate');
+  });
+
   test('no customer-facing string says "my dealership" / "my lot" / "we at Mosaic" / "our dealership" (templates, sign-off, footer, consent labels)', () => {
     const OWN = /\bmy (dealership|lot|store|showroom)\b|\bwe at mosaic\b|\bour (dealership|lot|store)\b|\bowner\b/i;
     const strings = [footer, COMPLIANCE.consentLabels.email, COMPLIANCE.consentLabels.sms, COMPLIANCE.smsOptOutLine];
@@ -640,7 +671,7 @@ const post = (body, headers) => ({ httpMethod: 'POST', headers: headers || {}, b
   section('K. templates.json counts and tone mix (SPEC §5)');
 
   test('pool minimums met and every pool of 3+ has direct/softer/nepq', () => {
-    const MIN = { THANKS: 4, THANKS_REPEAT: 2, CHECKIN: 6, REFERRAL: 6, ANNIVERSARY_REFERRAL: 3, BIRTHDAY: 3, REFERRAL_THANKS: 3, GOODBYE: 2, 'VALUE/fall': 4, 'VALUE/winter': 4, 'VALUE/spring': 4, 'VALUE/summer': 4, 'VALUE/any': 2 };
+    const MIN = { ASK: 4, THANKS: 4, THANKS_REPEAT: 2, CHECKIN: 6, REFERRAL: 6, ANNIVERSARY_REFERRAL: 3, BIRTHDAY: 3, REFERRAL_THANKS: 3, GOODBYE: 2, 'VALUE/fall': 4, 'VALUE/winter': 4, 'VALUE/spring': 4, 'VALUE/summer': 4, 'VALUE/any': 2 };
     const pools = {};
     for (const t of LIBRARY.templates) { const k = t.slot === 'VALUE' ? 'VALUE/' + t.season : t.slot; (pools[k] = pools[k] || []).push(t); }
     for (const [k, min] of Object.entries(MIN)) assert.ok((pools[k] || []).length >= min, k + ' has ' + (pools[k] || []).length + ' (min ' + min + ')');
@@ -650,8 +681,8 @@ const post = (body, headers) => ({ httpMethod: 'POST', headers: headers || {}, b
       if (['GOODBYE', 'THANKS_REPEAT'].includes(k)) assert.ok(tones.size >= 2, k + ' has two tones');
       else for (const tone of ['direct', 'softer', 'nepq']) assert.ok(tones.has(tone), k + ' missing ' + tone);
     }
-    assert.strictEqual(LIBRARY.templates.length, 48);
-    assert.strictEqual(new Set(LIBRARY.templates.map((t) => t.id)).size, 48, 'ids unique');
+    assert.strictEqual(LIBRARY.templates.length, 52);
+    assert.strictEqual(new Set(LIBRARY.templates.map((t) => t.id)).size, 52, 'ids unique');
   });
 
   test('lint-templates.js passes (Agent 3 lint re-run)', () => {

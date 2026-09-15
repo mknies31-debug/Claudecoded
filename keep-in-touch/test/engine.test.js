@@ -30,11 +30,21 @@ function customer(over) {
     hook: '', notes: '', status: 'active', dnc: null,
     anchorDate: '2026-09-15', anchorTouchN: 0, nextTouchN: 0, slotOffset: 0,
     referralCredit: false, snoozedUntil: '', lastSentDate: '', firstTextSentAt: '',
+    emailConsent: { given: true, at: '2026-09-15T15:00:00.000Z', how: 'in person at sale' },
+    smsConsent: { given: false, at: '', how: '' },
     usedTemplateIds: [], purchases: [{ saleDate: '2026-09-15', vehicle: { year: 2019, model: 'Silverado' }, vehicleLabel: '2019 Silverado' }]
   };
   for (var k in over) base[k] = over[k];
   if (over && over.saleDate && !over.anchorDate) base.anchorDate = over.saleDate;
   return base;
+}
+
+// A customer with no consent on either channel (consent state 'ask').
+function unasked(over) {
+  var c = customer(over);
+  c.emailConsent = { given: false, at: '', how: '' };
+  c.smsConsent = { given: false, at: '', how: '' };
+  return c;
 }
 
 function slotsOf(list) { return list.map(function (t) { return t.slot; }); }
@@ -734,6 +744,141 @@ test('applyEvent sentExtra (contrast): clears pendingThanks AND applies the min-
   assert.strictEqual(after.pendingThanks, null);
   assert.strictEqual(after.lastSentDate, '2026-06-25');
   assert.strictEqual(KIT.nextTouch(after, '2026-06-25').dueDate, '2026-07-16', 'touch 2 (Jun 30) floored to Jun 25 + 21');
+});
+
+
+// ------------------------------------------------------------ consent ask
+
+test('consentState: given / ask / asked / dnc', function () {
+  assert.strictEqual(KIT.consentState(customer()), 'given');
+  assert.strictEqual(KIT.consentState(customer({ emailConsent: { given: false }, smsConsent: { given: true, at: 'x', how: 'text' } })), 'given');
+  assert.strictEqual(KIT.consentState(unasked()), 'ask');
+  assert.strictEqual(KIT.consentState(unasked({ consentAskedAt: '2026-09-15T14:00:00.000Z' })), 'asked');
+  assert.strictEqual(KIT.consentState(unasked({ status: 'dnc' })), 'dnc');
+  assert.strictEqual(KIT.consentState(customer({ status: 'dnc' })), 'dnc');
+  assert.strictEqual(KIT.consentState({}), 'ask', 'missing consent blocks = never asked');
+  assert.strictEqual(KIT.consentState(null), 'dnc');
+  assert.ok(KIT.SLOTS.indexOf('ASK') !== -1, 'ASK is a slot');
+});
+
+test('ask state: a buyer from five years ago entered today is due today, not 1,800 days late', function () {
+  var c = unasked({ saleDate: '2021-03-01', createdAt: '2026-09-15T14:00:00.000Z' });
+  var nt = KIT.nextTouch(c, '2026-09-15');
+  assert.deepStrictEqual([nt.n, nt.slot, nt.dueDate, nt.isDue, nt.isLate, nt.daysLate, nt.ask], [0, 'ASK', '2026-09-15', true, false, 0, true]);
+  assert.strictEqual(KIT.askDueDate(c, '2026-09-15'), '2026-09-15');
+  // createdDate (YYYY-MM-DD) wins over createdAt
+  var c2 = unasked({ saleDate: '2021-03-01', createdDate: '2026-09-10', createdAt: '2026-09-15T14:00:00.000Z' });
+  assert.strictEqual(KIT.nextTouch(c2, '2026-09-15').dueDate, '2026-09-10');
+  assert.strictEqual(KIT.nextTouch(c2, '2026-09-15').daysLate, 5);
+  // no created stamp at all: due today
+  var c3 = unasked({ saleDate: '2021-03-01' });
+  delete c3.createdAt;
+  assert.strictEqual(KIT.nextTouch(c3, '2026-09-15').dueDate, '2026-09-15');
+});
+
+test('ask state: a customer sold yesterday is due at sale + 3 like a THANKS, slot ASK', function () {
+  var c = unasked({ saleDate: '2026-09-14', createdAt: '2026-09-14T20:00:00.000Z' });
+  var nt = KIT.nextTouch(c, '2026-09-15');
+  assert.deepStrictEqual([nt.n, nt.slot, nt.dueDate, nt.isDue], [0, 'ASK', '2026-09-17', false]);
+  assert.strictEqual(KIT.nextTouch(c, '2026-09-17').isDue, true);
+  assert.strictEqual(KIT.resolveSlot(c, 0, '2026-09-17').slot, 'THANKS', 'resolveSlot never returns ASK');
+  assert.strictEqual(KIT.nextTouch(customer({ saleDate: '2026-09-14' }), '2026-09-17').slot, 'THANKS', 'with consent the first touch is still THANKS');
+});
+
+test('asked state: nextTouch is null and buildQueue excludes them; ask state is included when due', function () {
+  var waiting = unasked({ name: 'Waiting', saleDate: '2020-01-01', createdAt: '2026-09-01T00:00:00.000Z', consentAskedAt: '2026-09-01T14:00:00.000Z' });
+  var due = unasked({ name: 'Askme', saleDate: '2020-01-01', createdAt: '2026-09-01T00:00:00.000Z' });
+  var normal = customer({ name: 'Normal', saleDate: '2026-09-12' });
+  assert.strictEqual(KIT.nextTouch(waiting, '2026-09-15'), null);
+  var q = KIT.buildQueue([waiting, due, normal], '2026-09-15');
+  assert.deepStrictEqual(q.map(function (i) { return i.customer.name + ':' + i.slot + ':' + i.n; }), ['Askme:ASK:0', 'Normal:THANKS:0']);
+  assert.strictEqual(q[0].daysLate, 14, 'ask entered Sep 1 is 14 days late on Sep 15');
+});
+
+test('applyEvent sentAsk: stamps consentAskedAt/Date/Channels, usedTemplateIds, lastSent, firstTextSentAt; customer moves to asked', function () {
+  var c = unasked({ saleDate: '2020-01-01', createdAt: '2026-09-15T00:00:00.000Z' });
+  var before = JSON.stringify(c);
+  var after = KIT.applyEvent(c, { type: 'sentAsk', sentDate: '2026-09-15', sentAt: '2026-09-15T14:03:00.000Z', channels: ['sms'], templateId: 'ask-01' }, '2026-09-15');
+  assert.strictEqual(JSON.stringify(c), before, 'input not mutated');
+  assert.strictEqual(after.consentAskedAt, '2026-09-15T14:03:00.000Z');
+  assert.strictEqual(after.consentAskDate, '2026-09-15');
+  assert.deepStrictEqual(after.consentAskChannels, ['sms']);
+  assert.deepStrictEqual(after.usedTemplateIds, ['ask-01']);
+  assert.strictEqual(after.lastSentDate, '2026-09-15');
+  assert.strictEqual(after.lastSentAt, '2026-09-15T14:03:00.000Z');
+  assert.strictEqual(after.firstTextSentAt, '2026-09-15T14:03:00.000Z');
+  assert.strictEqual(after.nextTouchN, 0, 'the ask does not advance the ladder');
+  assert.strictEqual(KIT.consentState(after), 'asked');
+  assert.strictEqual(KIT.nextTouch(after, '2026-09-16'), null, 'nothing drafts while waiting');
+  var byEmail = KIT.applyEvent(c, { type: 'sentAsk', sentDate: '2026-09-15', channels: ['email'], templateId: 'ask-02' }, '2026-09-15');
+  assert.strictEqual(byEmail.firstTextSentAt, '', 'email ask does not stamp firstTextSentAt');
+  assert.ok(/^2026-09-15T/.test(byEmail.consentAskedAt), 'consentAskedAt derived from sentDate when sentAt missing');
+});
+
+test('applyEvent consentGiven: sets the named channel(s), ladder restarts at touch 1 = date + 90 (VALUE), floor and snooze cleared', function () {
+  var c = unasked({ saleDate: '2020-01-01', createdAt: '2026-09-01T00:00:00.000Z', snoozedUntil: '2026-12-01', floorDate: '2026-10-01' });
+  c = KIT.applyEvent(c, { type: 'sentAsk', sentDate: '2026-09-01', channels: ['email'], templateId: 'ask-01' }, '2026-09-01');
+  var yes = KIT.applyEvent(c, { type: 'consentGiven', date: '2026-09-15', how: 'email reply', channel: 'email', at: '2026-09-15T16:00:00.000Z' }, '2026-09-15');
+  assert.deepStrictEqual(yes.emailConsent, { given: true, at: '2026-09-15T16:00:00.000Z', how: 'email reply' });
+  assert.deepStrictEqual(yes.smsConsent, { given: false, at: '', how: '' }, 'other channel left alone');
+  assert.deepStrictEqual([yes.anchorDate, yes.anchorTouchN, yes.nextTouchN, yes.floorDate, yes.snoozedUntil], ['2026-09-15', 0, 1, '', '']);
+  assert.strictEqual(KIT.consentState(yes), 'given');
+  var nt = KIT.nextTouch(yes, '2026-09-15');
+  assert.deepStrictEqual([nt.n, nt.slot, nt.dueDate], [1, 'VALUE', '2026-12-14']);
+  assert.deepStrictEqual(slotsOf(KIT.previewTouches(yes, 4, '2026-09-15')), ['VALUE', 'CHECKIN', 'VALUE', 'REFERRAL']);
+  // both channels, and a verbal yes with no ask ever sent
+  var both = KIT.applyEvent(unasked({ saleDate: '2024-05-05' }), { type: 'consentGiven', date: '2026-09-15', how: 'phone', channel: 'both', at: 'x' }, '2026-09-15');
+  assert.strictEqual(both.emailConsent.given, true); assert.strictEqual(both.smsConsent.given, true);
+  assert.strictEqual(both.emailConsent.how, 'phone');
+  assert.strictEqual(both.consentAskedAt, undefined, 'no ask was sent; that is fine');
+  assert.strictEqual(KIT.nextTouch(both, '2026-09-15').dueDate, '2026-12-14');
+  var sms = KIT.applyEvent(unasked(), { type: 'consentGiven', date: '2026-09-15', channel: 'sms', how: 'text reply' }, '2026-09-15');
+  assert.strictEqual(sms.emailConsent.given, false); assert.strictEqual(sms.smsConsent.given, true);
+  var bad = KIT.applyEvent(unasked(), { type: 'consentGiven', date: '2026-09-15', channel: 'fax' }, '2026-09-15');
+  assert.strictEqual(bad.emailConsent.given, true, 'unknown channel defaults to email');
+});
+
+test('applyEvent consentDeclined: dnc with reason "declined ask"; askSkipped hides the ask 90 days', function () {
+  var c = unasked({ saleDate: '2020-01-01', consentAskedAt: '2026-09-01T14:00:00.000Z' });
+  var no = KIT.applyEvent(c, { type: 'consentDeclined', date: '2026-09-15', at: '2026-09-15T16:00:00.000Z', channel: 'email' }, '2026-09-15');
+  assert.strictEqual(no.status, 'dnc');
+  assert.deepStrictEqual(no.dnc, { at: '2026-09-15T16:00:00.000Z', reason: 'declined ask', channel: 'email' });
+  assert.strictEqual(KIT.consentState(no), 'dnc');
+  assert.strictEqual(KIT.nextTouch(no, '2026-09-15'), null);
+  var later = KIT.applyEvent(unasked({ saleDate: '2020-01-01', createdAt: '2026-09-15T00:00:00.000Z' }), { type: 'askSkipped', today: '2026-09-15', at: '2026-09-15T16:00:00.000Z' }, '2026-09-15');
+  assert.strictEqual(later.consentAskSkippedAt, '2026-09-15T16:00:00.000Z');
+  assert.strictEqual(later.snoozedUntil, '2026-12-14');
+  assert.strictEqual(KIT.consentState(later), 'ask', 'still unasked');
+  assert.strictEqual(KIT.nextTouch(later, '2026-09-16').isDue, false);
+  assert.strictEqual(KIT.nextTouch(later, '2026-12-14').isDue, true);
+  assert.strictEqual(KIT.buildQueue([later], '2026-10-01').length, 0);
+});
+
+test('previewTouches for an ask customer: ASK first, then the ladder from "if they say yes today"', function () {
+  var c = unasked({ saleDate: '2021-03-01', createdAt: '2026-09-15T00:00:00.000Z' });
+  var p = KIT.previewTouches(c, 5, '2026-09-15');
+  assert.deepStrictEqual(slotsOf(p), ['ASK', 'VALUE', 'CHECKIN', 'VALUE', 'REFERRAL']);
+  assert.deepStrictEqual(p.map(function (x) { return x.n; }), [0, 1, 2, 3, 4]);
+  assert.deepStrictEqual(datesOf(p).slice(0, 3), ['2026-09-15', '2026-12-14', '2027-03-14']);
+  assert.deepStrictEqual(KIT.previewTouches(unasked({ consentAskedAt: 'x' }), 5, '2026-09-15'), [], 'asked: nothing to preview');
+  assert.strictEqual(KIT.consentState(c), 'ask', 'preview did not mutate the customer');
+});
+
+test('isYesText: one clear yes word, not an opt-out, no "no/not" next to it', function () {
+  ['Yes', 'yes please', 'Yep, go ahead', 'Sure', 'ok', 'Okay by me', 'sounds good', 'That works', 'Absolutely', 'You bet', 'Fine with me', 'Please do'].forEach(function (s) {
+    assert.strictEqual(KIT.isYesText(s), true, s);
+  });
+  ['No', 'no thanks', 'Not really', "I'd rather not, but yes I love the truck", 'STOP', 'yes unsubscribe me', 'Stop, yes remove me', '', null, 'Thanks for the note', 'Yesterday was cold'].forEach(function (s) {
+    assert.strictEqual(KIT.isYesText(s), false, JSON.stringify(s));
+  });
+});
+
+test('ask customer with a sent THANKS from before this feature: ASK is still touch 0 and consentGiven puts touch 1 next', function () {
+  var c = unasked({ saleDate: '2026-06-01', createdAt: '2026-06-01T00:00:00.000Z', nextTouchN: 1, usedTemplateIds: ['thanks-01'] });
+  var nt = KIT.nextTouch(c, '2026-09-15');
+  assert.deepStrictEqual([nt.n, nt.slot], [0, 'ASK']);
+  var yes = KIT.applyEvent(c, { type: 'consentGiven', date: '2026-09-15', channel: 'email', how: 'phone' }, '2026-09-15');
+  assert.deepStrictEqual([yes.nextTouchN, KIT.nextTouch(yes, '2026-09-15').slot, KIT.nextTouch(yes, '2026-09-15').dueDate], [1, 'VALUE', '2026-12-14']);
 });
 
 // ----------------------------------------------------------------- done
