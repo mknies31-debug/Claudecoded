@@ -86,7 +86,6 @@ test('footer: no exclamation points, no superlatives, no banned phrases', () => 
 test('footer: names the brand and never implies ownership', () => {
   const f = C.emailFooter(settings, url).toLowerCase();
   assert.ok(f.includes('north star car guy'));
-  assert.ok(!f.includes('car guy'));
   assert.ok(!f.includes('my dealership'));
   assert.ok(!f.includes('i own'));
 });

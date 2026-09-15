@@ -40,7 +40,7 @@ Mick reads the line to the customer in the driveway or at the desk, the customer
 | Non-deceptive subject line | Subjects are plain ("Deer season and your headlights"). The copy lint in `test/lint-templates.js` and the Auditor reject urgency, scarcity, dollar figures and superlatives. |
 | Identify the sender honestly | Footer line: *"…from me, Mick Knies, North Star Car Guy, selling at Mosaic Autos…"* Nothing anywhere implies Mick owns Mosaic. North Star Car Guy is Mick's own brand (his decision 2026-09-15); Mosaic Autos is named as the physical location. |
 | Identify the message as what it is | Footer says the reader is getting it because they bought a vehicle and said keeping in touch was okay, and that these are Mick's own pre-approved words sent on a schedule. |
-| Physical postal address in every email | Last footer line: `Mosaic Autos · {businessAddress}`. The address comes from Settings and is printed on every email without exception — if it is blank or still says [VERIFY], the line prints anyway so the gap is visible, and the deploy checklist blocks go-live until it is the real Mosaic Autos street address. |
+| Physical postal address in every email | Last footer line: `North Star Car Guy at Mosaic Autos · {businessAddress}`. The address comes from Settings and is printed on every email without exception — if it is blank or still says [VERIFY], the line prints anyway so the gap is visible, and the deploy checklist blocks go-live until it is the real Mosaic Autos street address. |
 | Working opt-out mechanism, clear and conspicuous | Footer line: *"Don't want these? One tap and you're off: https://…/?u=TOKEN"*. Public page, no login, no form, no "are you sure". One tap writes an opt-out record. |
 | Honor opt-outs within 10 business days | Ours is instant on the next app open or scheduled run (whichever is first) and always before any send: the daily job processes opt-outs **before** it builds the send list. |
 | No sending after opt-out | `canEmail()` returns false for any customer with status `dnc`; the queue, the Approve All button and the scheduled job all go through it. |
@@ -54,7 +54,7 @@ Mick reads the line to the customer in the driveway or at the desk, the customer
 --
 You're getting this because you bought a vehicle from me, Mick Knies, North Star Car Guy, selling at Mosaic Autos, and said it was okay for me to keep in touch. These are my own words, written and approved by me ahead of time and sent on a schedule.
 Don't want these? One tap and you're off: https://<site>/?u=<token>
-Mosaic Autos · <business address from Settings>
+North Star Car Guy at Mosaic Autos · <business address from Settings>
 ```
 
 ## (d) Texts — TCPA (47 U.S.C. § 227; 47 CFR § 64.1200)
