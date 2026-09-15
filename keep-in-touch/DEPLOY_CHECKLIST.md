@@ -110,7 +110,7 @@ Keep a scratch note open. You'll copy six things into it along the way:
    Git path above; it is the reliable one.
 
 **Fallback path — drag and drop (Tier 1 only):** open https://app.netlify.com/drop
-in a browser, drag the whole `keep-in-touch` folder onto it. Then do steps 3
+in a browser, drag `keep-in-touch-deploy.zip` (or the whole `keep-in-touch` folder) onto it. Then do steps 3
 and 5. Hand-sending from the app works. The 9 AM scheduled job may not register
 this way (see `docs/01-architect.md` section E); use Git-connect for Tier 2.
 
