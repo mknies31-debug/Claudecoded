@@ -38,14 +38,16 @@
   };
 
   var OPT_OUT_RULE =
-    'Normalize: lowercase, trim, strip punctuation, collapse spaces. ' +
-    'Opt-out is TRUE if (a) the message contains any of: "unsubscribe", "opt out", ' +
-    '"remove me", "do not contact", "don\'t contact", "stop texting", "stop emailing", ' +
-    '"take me off" anywhere; or (b) the first word is one of stop, quit, cancel, end, ' +
-    'unsubscribe; or (c) the message is 3 words or fewer and contains stop, quit, cancel ' +
-    'or end as a whole word. Otherwise FALSE. ' +
-    'Bias is deliberate: a false positive costs one customer Mick can reactivate with a ' +
-    'tap; a false negative is a legal exposure.';
+    'Look at the first 80 characters, case-insensitive. Opt-out is TRUE if (1) a clear ' +
+    'phrase appears anywhere (unsubscribe, opt out, remove me, take me off, do not contact, ' +
+    'do not text/email/message, stop texting/emailing/messaging/contacting/sending, no more ' +
+    'texts/emails/messages, leave me alone); or (2) the FIRST word is stop, quit, cancel, end ' +
+    'or unsubscribe and it is followed by punctuation, a line break or the end of the message ' +
+    '("STOP", "Stop!!", "Stop, I do not want these" match; "Stop by the lot Friday" does not); ' +
+    'or (3) the message is three words or fewer, contains one of those keywords as a whole ' +
+    'word, and every other word is filler (please, it, now, texts...). Otherwise FALSE. ' +
+    'A false positive silently loses a customer; a false negative means Mick reads the reply ' +
+    'himself and taps do-not-contact. Same rule as engine.js, kept identical.';
 
   /* ------------------------------------------------------------------ */
   /* Email footer                                                        */
@@ -145,47 +147,45 @@
   /* Opt-out detection                                                   */
   /* ------------------------------------------------------------------ */
 
-  var PHRASES = [
-    'unsubscribe',
-    'opt out',
-    'remove me',
-    'do not contact',
-    "don't contact",
-    'dont contact',
-    'stop texting',
-    'stop emailing',
-    'take me off'
+  // ---- Opt-out detection: BYTE-FOR-BYTE COPY of engine.js isOptOutText ----
+  // Single source of truth is netlify/functions/lib/engine.js. The Auditor
+  // (test/audit.js) checks the two copies match. Do not edit here; edit engine.js
+  // and re-copy.
+  var OPTOUT_PHRASES = [
+    'unsubscribe', 'opt out', 'opt-out', 'optout', 'remove me', 'take me off',
+    'do not contact', 'dont contact', 'do not text', 'dont text', 'do not email', 'dont email',
+    'do not message', 'dont message', 'stop texting', 'stop emailing', 'stop messaging',
+    'stop contacting', 'stop sending', 'no more texts', 'no more emails', 'no more messages',
+    'leave me alone', 'stop these', 'end these', 'cancel these', 'quit sending', 'stop all',
+    'stop the emails', 'stop the texts', 'end the emails', 'end the texts'
   ];
-  var FIRST_WORDS = ['stop', 'quit', 'cancel', 'end', 'unsubscribe'];
-  var SHORT_WORDS = ['stop', 'quit', 'cancel', 'end'];
+  var OPTOUT_KEYWORDS = ['stop', 'quit', 'cancel', 'end', 'unsubscribe'];
+  var OPTOUT_FILLER = ['please', 'pls', 'plz', 'now', 'it', 'this', 'these', 'me', 'all', 'thanks',
+    'thank', 'you', 'ok', 'okay', 'yes', 'just', 'texts', 'text', 'emails', 'email', 'messages',
+    'msgs', 'sending', 'them', 'the', 'to', 'my', 'number', 'contacting', 'texting', 'emailing'];
 
-  function normalize(str) {
-    if (str == null) return '';
-    var s = String(str).toLowerCase();
-    s = s.replace(/[‘’ʼ]/g, "'");          // curly apostrophes → '
-    s = s.replace(/[^a-z0-9'\s]/g, ' ');                   // strip punctuation (hyphen → space, so "opt-out" → "opt out")
-    s = s.replace(/\s+/g, ' ').trim();
-    return s;
-  }
-
-  /**
-   * True when a reply reads as an opt-out. See OPT_OUT_RULE. Identical to the
-   * engine's rule (Agent 2) — if the two ever differ, this one wins for the
-   * inbox and the engine must be brought in line.
-   */
   function isOptOutText(str) {
-    var s = normalize(str);
-    if (!s) return false;
-    var padded = ' ' + s + ' ';
-    for (var i = 0; i < PHRASES.length; i++) {
-      if (padded.indexOf(PHRASES[i]) !== -1) return true;
+    if (typeof str !== 'string') return false;
+    var head = str.slice(0, 80).toLowerCase().replace(/[’']/g, '');
+    var norm = head.replace(/[^a-z]+/g, ' ').trim();
+    if (!norm) return false;
+    for (var i = 0; i < OPTOUT_PHRASES.length; i++) {
+      var p = OPTOUT_PHRASES[i].replace(/[^a-z]+/g, ' ');
+      if ((' ' + norm + ' ').indexOf(' ' + p + ' ') !== -1) return true;
     }
-    var words = s.split(' ');
-    if (FIRST_WORDS.indexOf(words[0]) !== -1) return true;
+    // Rule 2: first word is a keyword, followed by end-of-message, a newline,
+    // or punctuation (a bare space followed by another word does NOT count,
+    // so "Stop by the lot Friday" is a visit, not an opt-out).
+    var lead = head.trim().match(/^([a-z]+)([\s\S]*)$/);
+    if (lead && OPTOUT_KEYWORDS.indexOf(lead[1]) !== -1 && /^(\s*$|[ \t]*[^a-z0-9\s]|[ \t]*\r?\n)/.test(lead[2])) return true;
+    var words = norm.split(' ');
     if (words.length <= 3) {
-      for (var j = 0; j < words.length; j++) {
-        if (SHORT_WORDS.indexOf(words[j]) !== -1) return true;
+      var hasKeyword = false, allFiller = true;
+      for (var w = 0; w < words.length; w++) {
+        if (OPTOUT_KEYWORDS.indexOf(words[w]) !== -1) hasKeyword = true;
+        else if (OPTOUT_FILLER.indexOf(words[w]) === -1) allFiller = false;
       }
+      if (hasKeyword && allFiller) return true;
     }
     return false;
   }
@@ -195,6 +195,10 @@
    * "" when the text is not an opt-out or gives no channel clue. The app
    * still flips BOTH channels to do-not-contact regardless of this hint.
    */
+  function normalize(str) {
+    return String(str == null ? '' : str).toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
   function optOutReplyKind(str) {
     if (!isOptOutText(str)) return '';
     var s = ' ' + normalize(str) + ' ';

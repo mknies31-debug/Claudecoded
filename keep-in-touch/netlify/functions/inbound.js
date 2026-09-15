@@ -163,6 +163,13 @@ function docIdOf(doc) {
   return '';
 }
 
+// lib/firestore.js list()/runQuery() return { id, data } rows; also accept flat docs.
+function flattenRow(row) {
+  if (!row || typeof row !== 'object') return null;
+  if (row.data && typeof row.data === 'object' && !Array.isArray(row.data)) return Object.assign({ id: row.id || docIdOf(row) }, row.data);
+  return row.id ? row : Object.assign({ id: docIdOf(row) }, row);
+}
+
 function json(statusCode, body) {
   return { statusCode, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
 }
@@ -251,7 +258,7 @@ function makeHandler(deps = {}) {
     let overrides = {};
     try {
       const list = await db.list('templates');
-      if (Array.isArray(list)) for (const t of list) { const id = docIdOf(t); if (id) overrides[id] = t; }
+      if (Array.isArray(list)) for (const row of list) { const t = flattenRow(row); if (t && t.id) overrides[t.id] = t; }
       else if (list && typeof list === 'object') overrides = list;
     } catch (e) { l.warn('inbound: could not load template overrides: ' + e.message); }
     let pool;
@@ -367,10 +374,7 @@ function makeHandler(deps = {}) {
     try {
       if (addr) {
         const rows = await db.runQuery('customers', [['email', 'EQUAL', addr]]);
-        if (Array.isArray(rows) && rows.length) {
-          customer = rows[0];
-          if (!customer.id) customer.id = docIdOf(customer);
-        }
+        if (Array.isArray(rows) && rows.length) customer = flattenRow(rows[0]);
       } else errors.push('no sender address in payload');
     } catch (e) { errors.push('customer lookup: ' + e.message); }
 
@@ -381,7 +385,7 @@ function makeHandler(deps = {}) {
       // link to the latest sent touch within 45 days
       try {
         const touches = await db.runQuery('touches', [['customerId', 'EQUAL', customer.id]]);
-        const t = STATS.attributeReply({ customerId: customer.id, receivedDate }, Array.isArray(touches) ? touches.map((x) => (x.id ? x : Object.assign({ id: docIdOf(x) }, x))) : []);
+        const t = STATS.attributeReply({ customerId: customer.id, receivedDate }, Array.isArray(touches) ? touches.map(flattenRow).filter(Boolean) : []);
         if (t) { reply.touchId = t.id || ''; reply.slot = t.slot || ''; reply.templateId = t.templateId || ''; }
       } catch (e) { errors.push('touch lookup: ' + e.message); }
 
@@ -437,4 +441,4 @@ function makeHandler(deps = {}) {
 
 exports.makeHandler = makeHandler;
 exports.handler = makeHandler();
-exports._internal = { verifySvix, parseAddress, stripQuoted, htmlToText, normalizePayload, chicagoDate, safeEqual };
+exports._internal = { verifySvix, parseAddress, stripQuoted, htmlToText, normalizePayload, chicagoDate, safeEqual, flattenRow };

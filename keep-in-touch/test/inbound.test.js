@@ -309,6 +309,29 @@ test('x-kit-secret manual forward with a bare {from, subject, text} body (no Res
   assert.strictEqual(db.docs['customers/c_dan'].unreadReplies, 3);
 });
 
+test('works with the real lib/firestore.js row shape ({id, data} from runQuery/list, null from get on 404)', async () => {
+  const inner = makeDb(SEED);
+  const db = Object.assign({}, inner, {
+    async get(p) { inner.calls.push(['get', p]); return p in inner.docs ? Object.assign({}, inner.docs[p]) : null; },
+    async runQuery(c, w) { return (await inner.runQuery(c, w)).map((d) => { const { id, ...data } = d; return { id, data }; }); },
+    async list(c) { return (await inner.list(c)).map((d) => { const { id, ...data } = d; return { id, data }; }); }
+  });
+  const fetchFn = makeFetch({ em_001: { text: 'STOP', html: null } });
+  const handler = makeHandler({ env: { KIT_SECRET, RESEND_API_KEY: 're_test', FIREBASE_PROJECT_ID: 'p', FIREBASE_SERVICE_ACCOUNT: 'x', MAIL_FROM: 'M <m@x.com>', SITE_URL: 'https://s' }, fetch: fetchFn, now: () => NOW, KIT, COMPLIANCE, STATS, templates, makeClient: () => db, console: { log() {}, warn() {}, error() {} } });
+  const r = await handler(post(envelope({ subject: 'STOP' }), { 'x-kit-secret': KIT_SECRET }));
+  const res = JSON.parse(r.body);
+  assert.strictEqual(res.ok, true, r.body);
+  assert.strictEqual(res.matched, true);
+  assert.strictEqual(res.goodbyeSent, true);
+  const reply = inner.docs['replies/in_em_001'];
+  assert.strictEqual(reply.customerId, 'c_dan');
+  assert.strictEqual(reply.touchId, 't_dan_4');
+  assert.strictEqual(inner.docs['customers/c_dan'].status, 'dnc');
+  assert.strictEqual(inner.docs['customers/c_dan'].unreadReplies, 3);
+  assert.ok(!('id' in inner.docs['customers/c_dan']));
+  assert.ok(!('data' in inner.docs['customers/c_dan']));
+});
+
 test('non email.received events are acknowledged and ignored', async () => {
   const { handler, db } = setup();
   const body = JSON.stringify({ type: 'email.delivered', created_at: '2026-09-15T15:00:00.000Z', data: { email_id: 'x' } });

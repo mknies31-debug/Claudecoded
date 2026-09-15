@@ -206,13 +206,13 @@ const OPT_OUT_TRUE = [
   'do not contact me', "Don't contact me again", 'Dont contact me',
   'stop texting me', 'Please stop emailing me, thanks',
   'take me off the list', 'Take me off',
-  'stop please', 'Stop it', 'the stop sign', 'stop, thanks',
+  'stop please', 'Stop it', 'stop, thanks',
   'Quit sending these', 'End these emails now please',
   'Cancel this', 'STOP ALL', 'stop\n', 'Stop!!!', '“Stop”'
 ];
 const OPT_OUT_FALSE = [
   '', null, undefined, '   ', 'yes', 'No', 'Sure',
-  'I stopped by the lot',
+  'I stopped by the lot', 'the stop sign', 'Stop by the lot Friday', 'Cancel that, I will come Tuesday',
   'Can you stop by Tuesday? I have questions about the truck',
   'The truck is running great, thanks for the tip',
   'Not yet, but my nephew is looking this spring',
@@ -233,7 +233,7 @@ OPT_OUT_FALSE.forEach(s => test('isOptOutText false: ' + JSON.stringify(s), () =
 test('isOptOutText: non-string input coerces safely', () => {
   assert.strictEqual(C.isOptOutText(0), false);
   assert.strictEqual(C.isOptOutText({}), false);
-  assert.strictEqual(C.isOptOutText(['stop']), true); // String(['stop']) === 'stop'
+  assert.strictEqual(C.isOptOutText(['stop']), false); // non-strings are never opt-outs (engine rule)
 });
 
 /* ---------------- optOutReplyKind ---------------- */

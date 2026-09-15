@@ -157,8 +157,9 @@ proof:
   `resend/resend-node` SDK source and `resend/resend-skills` doc mirror (URLs in
   `inbound.js`). Dashboard click paths above are from the same sources and
   general Resend UI; button labels may differ slightly.
-- Firestore documents returned by `lib/firestore.js` `runQuery`/`list` carry
-  their id as `id` (fallback: `_id`, or parsed from the `name` path).
+- `lib/firestore.js` `runQuery`/`list` return `{ id, data }` rows and `get`
+  returns `null` on 404 (checked against Agent 1's file); `inbound.js` flattens
+  rows to `{ id, ...data }` and also accepts flat docs, so either shape works.
 - The reply doc id is `in_<email_id>` for webhook mail (idempotent retries) and
   a 20-char random id for manual forwards.
 - Missing lib/env → 500 (retry) is a deliberate deviation from "always 200

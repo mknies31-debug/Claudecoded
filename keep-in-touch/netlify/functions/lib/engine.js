@@ -601,6 +601,7 @@
    *   Look at the first 80 characters, case-insensitive.
    *   1. Any of these phrases anywhere → opt-out: unsubscribe, opt out / opt-out
    *      / optout, remove me, take me off, do not contact / don't contact,
+   *      stop these / end these / cancel these, quit sending, stop all,
    *      do not text / don't text, do not email / don't email, stop texting /
    *      stop emailing / stop messaging / stop contacting, no more texts /
    *      emails / messages, leave me alone.
@@ -620,7 +621,8 @@
     'do not contact', 'dont contact', 'do not text', 'dont text', 'do not email', 'dont email',
     'do not message', 'dont message', 'stop texting', 'stop emailing', 'stop messaging',
     'stop contacting', 'stop sending', 'no more texts', 'no more emails', 'no more messages',
-    'leave me alone'
+    'leave me alone', 'stop these', 'end these', 'cancel these', 'quit sending', 'stop all',
+    'stop the emails', 'stop the texts', 'end the emails', 'end the texts'
   ];
   var OPTOUT_KEYWORDS = ['stop', 'quit', 'cancel', 'end', 'unsubscribe'];
   var OPTOUT_FILLER = ['please', 'pls', 'plz', 'now', 'it', 'this', 'these', 'me', 'all', 'thanks',
