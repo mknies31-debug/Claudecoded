@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lot Life</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=Permanent+Marker&display=swap">
+<style>
+/* Layout: a dealership sales desk. Pennant string up top, window sticker on the left, the up sheet in the middle, the deal jacket underneath. */
+:root{
+  --bg:#e7eaee;        /* showroom floor tile */
+  --surface:#ffffff;
+  --ink:#14171b;
+  --muted:#5a636e;
+  --line:#c9cfd6;
+  --red:#c42e27;       /* pennant red / sale tag */
+  --yellow:#efb417;    /* pennant yellow */
+  --blue:#1c4d9a;      /* pennant blue */
+  --manila:#f2e2b6;    /* deal jacket */
+  --manila-ink:#4a3a12;
+  --good:#23783a;
+  --shadow:#14171b;
+  --display:"Alfa Slab One", "Rockwell", "Roboto Slab", Georgia, serif;
+  --body:"Barlow", "Helvetica Neue", Arial, sans-serif;
+  --cond:"Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --marker:"Permanent Marker", "Comic Sans MS", "Marker Felt", cursive;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1c1f23; --ink:#ecebe6; --muted:#9ca5af; --line:#353a41;
+    --red:#ff5f52; --yellow:#f6c646; --blue:#7aa4f2; --manila:#2a2517; --manila-ink:#e9d9a8;
+    --good:#6fd384; --shadow:#000000; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1c1f23; --ink:#ecebe6; --muted:#9ca5af; --line:#353a41;
+  --red:#ff5f52; --yellow:#f6c646; --blue:#7aa4f2; --manila:#2a2517; --manila-ink:#e9d9a8;
+  --good:#6fd384; --shadow:#000000; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;padding-inline:16px;padding-block:0 32px}
+.pennants{height:16px;margin-inline:-16px;
+  background:
+    conic-gradient(from 135deg at top, var(--red) 90deg, transparent 0) 0 0/66px 16px repeat-x,
+    conic-gradient(from 135deg at top, var(--yellow) 90deg, transparent 0) 22px 0/66px 16px repeat-x,
+    conic-gradient(from 135deg at top, var(--blue) 90deg, transparent 0) 44px 0/66px 16px repeat-x;
+  border-top:2px solid var(--ink)}
+.wrap{max-width:1120px;margin:0 auto}
+header.sign{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding-block:22px 18px}
+header.sign h1{font-family:var(--display);font-weight:400;font-size:clamp(2.4rem,7vw,4rem);line-height:.9;margin:0;letter-spacing:.01em}
+header.sign h1 span{color:var(--red)}
+header.sign p{margin:6px 0 0;color:var(--muted);max-width:46ch}
+.hdr-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}.side{order:2}.main{order:1}}
+.side,.main{display:flex;flex-direction:column;gap:20px;min-width:0}
+
+/* Window sticker */
+.sticker{background:var(--surface);border:3px solid var(--ink);padding:14px 14px 12px;font-family:var(--cond)}
+.st-kicker{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.st-name{font-family:var(--display);font-weight:400;font-size:1.5rem;line-height:1.1;margin:2px 0;overflow-wrap:anywhere}
+.st-sub{font-family:var(--body);color:var(--muted);font-size:.9rem}
+.st-role{margin-top:10px;background:var(--ink);color:var(--surface);padding:6px 10px;font-size:1.05rem;letter-spacing:.04em;text-transform:uppercase}
+.st-big{display:grid;grid-template-columns:1fr 1fr;border-block:2px solid var(--ink);margin-top:10px}
+.st-big>div{padding:8px 6px;text-align:center;min-width:0}
+.st-big>div+div{border-left:2px solid var(--ink)}
+.big{display:block;font-family:var(--display);font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.big.neg{color:var(--red)}
+.lbl{display:block;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stats{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.stats li{display:grid;grid-template-columns:8.5rem 1fr 1.8rem;align-items:center;gap:8px;font-size:.95rem}
+.stats li .v{text-align:right;font-variant-numeric:tabular-nums}
+.bar{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;height:12px}
+.bar i{background:var(--line)}
+.bar i.on{background:var(--ink)}
+.bar.warn i.on{background:var(--red)}
+.repbar{height:12px;background:var(--line);position:relative}
+.repbar b{position:absolute;inset:0 auto 0 0;background:var(--blue)}
+.st-foot{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-family:var(--body);font-size:.85rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+
+/* Ladder */
+.ladder{background:var(--surface);border:1px solid var(--line);padding:14px}
+.ladder h2,.jacket h2{font-family:var(--cond);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.ladder ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ladder li{display:grid;grid-template-columns:1.6rem 1fr;gap:8px;align-items:start;font-size:.9rem;color:var(--muted)}
+.ladder li .n{font-family:var(--display);font-size:1rem;color:var(--line);text-align:center}
+.ladder li b{display:block;color:var(--ink);font-family:var(--cond);font-size:1rem;letter-spacing:.02em}
+.ladder li.done .n{color:var(--muted)}
+.ladder li.now{color:var(--ink)}
+.ladder li.now .n{color:var(--red)}
+.ladder li.now b{color:var(--red)}
+
+/* Stage */
+.stage{background:var(--surface);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--shadow);padding:20px;min-width:0}
+.eyebrow{font-family:var(--cond);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stage h2{font-family:var(--display);font-weight:400;font-size:clamp(1.6rem,4vw,2.2rem);line-height:1.1;margin:4px 0 8px;text-wrap:balance}
+.stage p{margin:0 0 12px;max-width:62ch}
+.pips{display:inline-flex;gap:5px;vertical-align:middle;margin-left:6px}
+.pips i{width:12px;height:12px;border:2px solid var(--ink);border-radius:50%}
+.pips i.on{background:var(--yellow)}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:10px;margin-top:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--surface);border:2px solid var(--ink);padding:10px 12px;box-shadow:3px 3px 0 var(--shadow);transition:transform .08s, box-shadow .08s}
+.btn b{font-family:var(--cond);font-size:1.1rem;letter-spacing:.02em;line-height:1.2}
+.btn span{font-size:.85rem;color:var(--muted)}
+.btn:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--shadow)}
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.btn:focus-visible,.small:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.btn.primary{background:var(--red);border-color:var(--ink);color:#fff}
+.btn.primary span{color:#fff;opacity:.85}
+.btn.inline{display:inline-flex;margin-top:6px}
+.small{background:transparent;border:2px solid var(--ink);padding:5px 10px;font-family:var(--cond);font-size:.95rem;letter-spacing:.04em;text-transform:uppercase}
+.small.danger{border-color:var(--red);color:var(--red)}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+
+/* Up sheet */
+.upsheet{border:2px solid var(--ink);margin:6px 0 14px}
+.upsheet .hd{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;background:var(--ink);color:var(--surface);padding:4px 10px;font-family:var(--cond);letter-spacing:.12em;text-transform:uppercase;font-size:.8rem}
+.upsheet dl{display:grid;grid-template-columns:minmax(0,7rem) minmax(0,1fr);margin:0}
+.upsheet dt,.upsheet dd{margin:0;padding:7px 10px;border-top:1px solid var(--line)}
+.upsheet dt{font-family:var(--cond);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-right:1px solid var(--line)}
+.upsheet dd{font-family:var(--marker);font-size:1.05rem;color:var(--blue);overflow-wrap:anywhere}
+.quote{font-size:1.05rem;border-left:4px solid var(--yellow);padding-left:12px;margin:0 0 6px}
+.beback{display:inline-block;background:var(--yellow);color:#14171b;font-family:var(--cond);letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;font-size:.85rem;margin-bottom:8px}
+
+/* Results */
+.tag{font-family:var(--marker);font-size:clamp(2rem,6vw,3rem);line-height:1;transform:rotate(-3deg);display:inline-block;margin:4px 0 12px}
+.tag.win{color:var(--good)}
+.tag.loss{color:var(--red)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px;padding:0;list-style:none}
+.chips li{border:1.5px solid var(--ink);padding:2px 8px;font-family:var(--cond);font-size:.95rem;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.chips li.up{border-color:var(--good);color:var(--good)}
+.chips li.down{border-color:var(--red);color:var(--red)}
+.odds{font-size:.85rem;color:var(--muted)}
+.report{list-style:none;margin:6px 0 14px;padding:0;display:grid;gap:8px}
+.report li{padding-left:14px;border-left:3px solid var(--line)}
+.report li.hl{border-left-color:var(--red)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;margin-top:10px}
+
+/* Start + end */
+.speech{font-size:1.05rem;max-width:60ch}
+.field{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:16px 0 4px}
+.field label{display:block;font-family:var(--cond);letter-spacing:.12em;text-transform:uppercase;font-size:.8rem;color:var(--muted);margin-bottom:4px}
+.field input{font:inherit;font-family:var(--marker);font-size:1.3rem;color:var(--blue);background:var(--surface);border:0;border-bottom:3px solid var(--ink);padding:4px 2px;width:min(100%,280px)}
+.endstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));border:2px solid var(--ink);margin:10px 0 16px}
+.endstats>div{padding:10px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.epitaph{font-family:var(--marker);font-size:1.25rem;color:var(--blue);margin:8px 0 16px}
+
+/* Deal jacket */
+.jacket{background:var(--manila);color:var(--manila-ink);padding:14px 16px;border-radius:0 10px 0 0;position:relative}
+.jacket h2{color:var(--manila-ink);opacity:.8}
+.jacket ol{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:340px;overflow-y:auto;font-size:.92rem}
+.jacket li{display:grid;grid-template-columns:6.5rem 1fr;gap:8px}
+.jacket li .when{font-family:var(--cond);letter-spacing:.04em;opacity:.75}
+.jacket li.big{font-weight:600}
+footer{max-width:1120px;margin:24px auto 0;color:var(--muted);font-size:.85rem}
+@media (max-width:480px){
+  .stats li{grid-template-columns:6.8rem 1fr 1.6rem}
+  .jacket li{grid-template-columns:1fr}
+  .stage{padding:16px}
+}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}.tag{transform:none}}
+</style>
+</head>
+<body>
+
+<div class="pennants" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="sign">
+    <div>
+      <h1>LOT <span>LIFE</span></h1>
+      <p>A car salesman simulator. Starts the day you graduate high school. Ends with your name on the sign, or in the regional news.</p>
+    </div>
+    <div class="hdr-tools" id="tools"></div>
+  </header>
+  <div class="grid">
+    <aside class="side">
+      <section class="sticker" id="sticker" aria-label="Your stats"></section>
+      <section class="ladder" aria-label="Career ladder">
+        <h2>The Ladder</h2>
+        <ol id="ladder"></ol>
+      </section>
+    </aside>
+    <div class="main">
+      <section class="stage" id="stage" aria-live="polite"></section>
+      <section class="jacket" aria-label="Career log">
+        <h2>Deal Jacket</h2>
+        <ol id="log"></ol>
+      </section>
+    </div>
+  </div>
+</div>
+<footer>Every dollar figure in this game is made-up game money. None of it is real pay, real trade values or real market prices. Any resemblance to your sales manager is coincidental. Mostly.</footer>
+
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+const rnd = (a,b) => a + Math.random()*(b-a);
+const ri = (a,b) => Math.floor(rnd(a, b+1));
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const fmt = n => (n < 0 ? "-$" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const KEY = "lotlife.v1";
+const SEASONS = ["Summer","Fall","Winter","Spring"];
+const SEASON_MULT = {Summer:1.1, Fall:1, Winter:.7, Spring:1.2};
+const FLOOR = ["greenpea","sales","senior"];
+
+const ROLES = {
+  grad:{t:"Fresh Graduate", rung:0, flav:"Diploma in one hand. Graduation cash in the other. The cash is already mostly gone."},
+  porter:{t:"Lot Porter", rung:1, flav:"You wash cars, park cars, jump cars and fuel cars. You are basically a car's personal assistant."},
+  greenpea:{t:"Green Pea", rung:2, flav:"Brand-new salesperson. Your tie is a clip-on and everyone can tell."},
+  sales:{t:"Sales Consultant", rung:3, flav:"Real business cards. Your name is spelled wrong on them, but they're real."},
+  senior:{t:"Top Dog on the Up Board", rung:4, flav:"Customers ask for you by name. The green peas fetch you coffee without being asked."},
+  fi:{t:"F&I Manager (The Box)", rung:5, flav:"Finance office. Paperwork, lenders, and 41 ways to say 'extended warranty.'"},
+  desk:{t:"Sales Manager (The Desk)", rung:5, flav:"You sit at the tower and pencil deals. You haven't seen daylight on a Saturday in years."},
+  indie:{t:"Independent Car Guy", rung:5, flav:"Your own operation. You buy from private sellers and sell to real people. Every car is your money."},
+  gm:{t:"General Manager", rung:6, flav:"The whole store is yours to run. So are the problems. Mostly the problems."}
+};
+
+const LADDER = [
+  {n:"Graduate", d:"Nobody's guidance counselor ever said 'automotive.' Most car people fall into it."},
+  {n:"Lot Porter", d:"Washes, parks, fuels, jumps. Learns the inventory. A common way in."},
+  {n:"Green Pea", d:"New salesperson. Lives on the up board, a small draw and mini deals."},
+  {n:"Salesperson", d:"Commission on gross plus volume bonuses. Builds a book of repeat and referral customers."},
+  {n:"Top Dog", d:"Steady high volume and a customer base that follows you."},
+  {n:"The Fork", d:"F&I office, the sales desk, or going out on your own."},
+  {n:"GM / Your Own Sign", d:"Run the whole store, or own the lot outright."}
+];
+
+const CUSTOMERS = [
+  {n:"Invoice Ivan", want:"Midsize SUV", trade:"2011 Equinox, \"mint\" (it is not mint)", credit:"\"Great.\" He says this twice.",
+   q:"I printed the invoice. I know what you paid. I know what your MANAGER paid.", g:[200,900],
+   m:{direct:.05,pushy:-.25,nepq:.15,to:.05},
+   win:"Ivan buys it for eleven dollars over his printout and tells his whole church he destroyed you. You made a fine commission. Let him have this one.",
+   lose:"Ivan leaves to check three other stores. Tonight he will email you a screenshot of a car in Oregon."},
+  {n:"Grandma Ruth", want:"\"The blue one\"", trade:"1998 Buick, 31,000 miles, smells like butterscotch", credit:"Cash. In an envelope. From 1997.",
+   q:"My grandson says I'm supposed to negotiate. I don't know what that means, dear.", g:[800,2200],
+   m:{direct:.2,pushy:-.3,nepq:.25,to:0},
+   win:"Ruth buys the blue one, pinches your cheek and sends you home with frosted cookies. Three ladies from her bridge club will ask for you by name.",
+   pushyWin:"You four-squared a grandma. She bought it. You feel this in your soul, and so does your mother, somehow.",
+   lose:"Her grandson shows up, says \"Gram, no,\" and drives her home. She waves sadly from the window."},
+  {n:"The Tire Kicker", want:"\"Just looking\"", trade:"None. He walked here.", credit:"Unclear",
+   q:"I'm not buying today. I'm just looking. Just looking. I'm just looking.", g:[150,500],
+   m:{direct:-.15,pushy:-.15,nepq:0,to:-.1},
+   win:"After 45 minutes of kicking every tire on the row, he buys a 2014 Corolla \"just to get it over with.\" Nobody is more surprised than him.",
+   lose:"He kicks four tires, sits in a Tahoe for an hour, then leaves. You find a granola bar wrapper in the cupholder."},
+  {n:"Upside-Down Ulysses", want:"A newer, bigger truck", trade:"2021 F-150, owes way more than it's worth", credit:"\"I've got a guy.\"",
+   q:"I just want my payment to go DOWN. And I want the bigger truck. And the sunroof.", g:[300,1400],
+   m:{direct:-.05,pushy:.05,nepq:.05,to:.2},
+   win:"Your manager does some math nobody can follow and Ulysses drives off happy. He'll be back in 18 months doing this again.",
+   lose:"The bank looks at the numbers and laughs out loud. You can hear it through the speakerphone."},
+  {n:"Spreadsheet Sharon", want:"The safest crossover on Earth", trade:"2015 RAV4, every oil change logged", credit:"810. She brought the printout.",
+   q:"I have a 47-tab spreadsheet. Tab 31 is about you, specifically.", g:[300,1100],
+   m:{direct:.25,pushy:-.3,nepq:.1,to:0},
+   win:"You answer every question on tab 31. Sharon nods, adds a row and buys it. You have never felt so seen.",
+   lose:"You got the cargo volume wrong by half a cubic foot. Sharon closes the laptop. It's over."},
+  {n:"Farmer Dale", want:"A truck. Not that one.", trade:"1999 Silverado, 412,000 miles, still runs fine", credit:"Pays cash. Doesn't want to talk about it.",
+   q:"...", g:[900,2500],
+   m:{direct:0,pushy:-.2,nepq:.25,to:-.1},
+   win:"You ask him two questions and then shut up. After four silent minutes Dale says \"Yup\" and writes a check. Best deal of your month.",
+   lose:"You talk too much. Dale puts his cap back on and leaves. He will buy a truck from a guy who says even less."},
+  {n:"Credit Challenged Chad", want:"A Charger. Black. Loud.", trade:"Bicycle", credit:"480. \"My cousin's co-signing.\"",
+   q:"Bro, I can do like, forty a month. Maybe fifty if it's a really nice Charger.", g:[200,1200],
+   m:{direct:-.1,pushy:0,nepq:0,to:.25},
+   win:"Your manager finds a lender who says yes. Chad drives off in a 2016 Charger yelling \"LET'S GOOO\" out the window.",
+   lose:"The cousin did not, in fact, agree to co-sign. The cousin has never heard of Chad."},
+  {n:"The Unicorn", want:"That one. Right there.", trade:"None", credit:"Excellent. Doesn't care.",
+   q:"I'll take it. Where do I sign? I have a tee time.", g:[1500,3500],
+   m:{direct:.4,pushy:.15,nepq:.35,to:.3},
+   win:"Full price, no trade, financed with your lender, bought the warranty. The whole showroom slow claps. You'll tell this story for 30 years.",
+   lose:"You somehow talked them out of it. People will tell THIS story for 30 years."},
+  {n:"Be-Back Betty", want:"A minivan, \"probably\"", trade:"2012 Odyssey with a juice-box ecosystem", credit:"Decent",
+   q:"We're just going to go home and think about it. We'll be back.", g:[400,1400],
+   m:{direct:0,pushy:-.15,nepq:.2,to:0},
+   win:"You ask what they'd need to see to feel good about it today. Turns out it was one thing. Betty buys it. She is, finally, not a be-back.",
+   lose:"\"We'll be back!\" She will not be back. She has never been back. She is a legend."},
+  {n:"Teenager With $500", want:"Anything with four wheels", trade:"A skateboard and a dream", credit:"None. Has a job at the Dairy Queen.",
+   q:"I just graduated. I have five hundred bucks. What can I get?", g:[100,300],
+   m:{direct:-.05,pushy:-.25,nepq:.2,to:-.1},
+   win:"You find them a 2007 Camry off the back row and help with the paperwork. They remind you of someone. They remind you of you.",
+   lose:"Their dad takes one look at the numbers and says \"Bus pass.\""},
+  {n:"The Brother-in-Law Who \"Knows Cars\"", want:"Whatever the brother-in-law says", trade:"2013 Accord", credit:"Fine",
+   q:"I'm just here with my sister. I know cars. Is this the one with the bad transmission?", g:[400,1300],
+   m:{direct:.05,pushy:-.15,nepq:.2,to:0},
+   win:"You ask the brother-in-law what he'd look for, then show him exactly that. He nods. The sister buys it. He takes the credit. Everybody wins.",
+   lose:"The brother-in-law says the engine \"sounds funny.\" It is an electric car."},
+  {n:"Divorced Dennis", want:"A convertible. Red. Today.", trade:"Minivan (the ex-wife's, technically)", credit:"Good, for now",
+   q:"I'm starting a new chapter. The chapter has a convertible.", g:[900,2600],
+   m:{direct:.1,pushy:.1,nepq:.1,to:.05},
+   win:"Dennis drives off with the top down at 38 degrees. He is free. He is also very cold.",
+   lose:"His lawyer calls in the middle of the deal and says \"absolutely not.\""},
+  {n:"Internet Lead Larry", want:"\"Best out-the-door price?\"", trade:"Won't say", credit:"Won't say",
+   q:"Best out-the-door price? (Larry has sent this email 41 times to 41 dealers.)", g:[150,700],
+   m:{direct:.2,pushy:-.2,nepq:.05,to:0},
+   win:"You answer with a real number and a video walkaround. Larry, stunned that a human answered, buys it sight unseen.",
+   lose:"Larry bought from a dealer 300 miles away to save eleven dollars. He spent four hundred on gas."},
+  {n:"The Couple Who Disagree", want:"Minivan (her). Mustang (him).", trade:"2014 Malibu", credit:"Joint. Tense.",
+   q:"We just need something practical. / We need something FAST. / Practical. / FAST.", g:[500,1800],
+   m:{direct:0,pushy:-.15,nepq:.25,to:.05},
+   win:"You ask them both what the car really needs to do. They land on an SUV with a sport package. Marriage saved. Deal made.",
+   lose:"They argue for 90 minutes in your office and leave without a car, but they are holding hands. You are a marriage counselor now."}
+];
+
+const SELLERS = [
+  {n:"Widowed Marlys", car:"2017 Silverado, 48,000 miles", ask:"\"Whatever's fair\"",
+   q:"It was Harold's truck. He'd want it to go to somebody who'll use it.",
+   m:{lowball:-.4,nepq:.3,asking:0},
+   win:"You listen to Harold stories for an hour and pay a fair number. Marlys hugs you. You will be sending her a Christmas card.",
+   lowWin:"You lowballed a widow. It worked. Her son found out. The whole town found out.",
+   lose:"Marlys says she'll think about it and sells it to her nephew."},
+  {n:"Classic Car Craig", car:"2009 Malibu (\"a future classic\")", ask:"Triple what it's worth",
+   q:"They don't make 'em like this anymore. (They made 2.1 million of them.)",
+   m:{lowball:-.05,nepq:.15,asking:0},
+   win:"You ask Craig what he'll do once it's sold. It's a boat. You help him get there with a real number. He takes it.",
+   lowWin:"Craig takes your offer, mumbling about the \"collector market.\"",
+   lose:"Craig decides to hold out for a collector. He is still holding."},
+  {n:"Moving-Out-of-State Megan", car:"2019 CR-V, clean", ask:"Fair, needs it gone Friday",
+   q:"The truck leaves Friday. I need this gone by Friday. It's Thursday.",
+   m:{lowball:.1,nepq:.15,asking:0},
+   win:"Quick, clean, fair. Megan sends three coworkers your way before she leaves.",
+   lowWin:"Under the gun, Megan takes the low number. She leaves a review that just says \"Shark.\"",
+   lose:"A guy from Marketplace beat you to it with cash in a coffee can."},
+  {n:"Estate Sale Kids", car:"2012 Buick LaCrosse, 22,000 miles", ask:"\"Make an offer\"",
+   q:"Grandpa only drove it to church and the Hy-Vee. Mostly the Hy-Vee.",
+   m:{lowball:0,nepq:.2,asking:0},
+   win:"You walk them through the process and make it easy. They're relieved. You got a low-mile creampuff.",
+   lowWin:"Four siblings argue about your offer in the driveway. Three outvote one. Thanksgiving will be tense, but not for you.",
+   lose:"The siblings couldn't agree on anything. The car is still in the garage. So are the siblings."},
+  {n:"Garage Mechanic Gus", car:"2010 Tacoma, frame \"mostly\" good", ask:"Firm",
+   q:"I put a new clutch in it. Mostly new. The part I could see is new.",
+   m:{lowball:.05,nepq:.1,asking:0},
+   win:"You ask Gus what he'd fix next if he kept it. He tells you everything wrong with it. You price it right.",
+   lowWin:"Gus takes it. He knows. You know he knows.",
+   lose:"Gus's firm price stays firm. Gus is a rock."}
+];
+
+const FLAVOR = {
+  direct:["You walk them around the car and name every feature, including the cupholders.","You talk horsepower, safety ratings and the heated steering wheel.","You pop the hood like you know what you're looking at. You mostly do."],
+  pushy:["You pull out the four-square worksheet. It somehow has five squares.","You say \"What would it take to earn your business TODAY?\" with real intensity.","You go to \"talk to your manager\" and stand in the break room eating a donut for six minutes."],
+  nepq:["You ask what made them start looking. The old car caught fire. A little.","You ask what they'd change about the car they have now, and then you actually listen.","You ask questions and then do the hardest thing in sales: you stay quiet."],
+  to:["You bring in the manager, who calls them \"boss\" four times in one minute.","You hand them to the desk. The desk does desk things.","You turn them over. Half a deal beats no deal."]
+};
+
+const APPROACH = {
+  direct:{l:"Walk 'em through the features", s:"Uses Product Knowledge"},
+  pushy:{l:"Four-square 'em", s:"Uses Hustle. Costs Integrity."},
+  nepq:{l:"Ask questions, then shut up", s:"NEPQ. Uses Charm and Integrity."},
+  to:{l:"Turn 'em over to the manager", s:"Uses Reputation. You split the deal."}
+};
+const SELL_APPROACH = {
+  nepq:{l:"Ask what they need, then make a fair offer", s:"NEPQ. Uses Charm and Integrity."},
+  lowball:{l:"Lowball 'em", s:"Bigger margin if it works. Costs Reputation."},
+  asking:{l:"Pay what they're asking", s:"Always works. Thin margin."}
+};
+
+const REST_LINES = [
+  "You go to the lake. Your phone buzzes 14 times. Every one is \"is the Silverado still available?\"",
+  "You sleep until 10. It's the best day of your adult life.",
+  "You go to a family reunion. Three uncles ask what they should pay for a car."
+];
+
+function newState(name){
+  return {name:name || "Rookie", t:0, money:500, charm:3, knowledge:1, hustle:3, integrity:6, sanity:8, rep:0,
+    role:"grad", cars:0, inRole:0, actions:3, bebacks:0, inventory:[], lease:false, gmDecl:-99, branchDone:false,
+    style:{direct:0,pushy:0,nepq:0,to:0,lowball:0,asking:0}, log:[], phase:"turn", ctx:null, closing:false, queue:[], ended:null, best:0};
+}
+
+let S = null;
+let confirming = false;
+
+const age = () => 18 + Math.floor(S.t/4);
+const season = () => SEASONS[S.t % 4];
+const year = () => 2026 + Math.floor((S.t+1)/4);
+const label = () => `${season()} '${String(year()).slice(2)}`;
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){ try{ const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+
+function log(text, big){ S.log.unshift({w:label(), text, big:!!big}); if (S.log.length > 80) S.log.length = 80; }
+
+const STAT_NAMES = {money:"Bank", rep:"Reputation", charm:"Charm", knowledge:"Product Knowledge", hustle:"Hustle", integrity:"Integrity", sanity:"Sanity"};
+function apply(fx){
+  if (!fx) return;
+  for (const k in fx){
+    if (k === "money") S.money += fx[k];
+    else if (k === "rep") S.rep = clamp(S.rep + fx[k], 0, 100);
+    else if (k in STAT_NAMES) S[k] = clamp(S[k] + fx[k], 0, 10);
+  }
+}
+function chips(fx){
+  if (!fx) return "";
+  const out = [];
+  for (const k in fx){
+    const v = fx[k]; if (!v) continue;
+    const txt = k === "money" ? `${v > 0 ? "+" : ""}${fmt(v)}` : `${v > 0 ? "+" : ""}${v} ${STAT_NAMES[k]}`;
+    out.push(`<li class="${v > 0 ? "up" : "down"}">${txt}</li>`);
+  }
+  return out.length ? `<ul class="chips">${out.join("")}</ul>` : "";
+}
+
+function setRole(r){ S.role = r; S.inRole = 0; }
+
+function result(title, text, fx, extra){
+  apply(fx);
+  S.phase = "result";
+  S.ctx = Object.assign({title, text, fx: fx || null}, extra || {});
+}
+
+/* ---------- Actions per role ---------- */
+const ACTIONS = {
+  grad:[
+    {id:"porter", l:"Apply to wash cars at the dealership", s:"Lot Porter. Honest work. Wet socks.", run(){
+      setRole("porter");
+      log("Hired as a lot porter. You own four pairs of wet socks now.", true);
+      result("You're hired!", "The used car manager looks at you for three seconds and says \"Can you drive stick?\" You lie. You start Monday.", {hustle:1});
+    }},
+    {id:"apply", l:"Walk in and ask for a sales job", s:"Long shot. Charm helps.", run(){
+      if (Math.random() < .12 + S.charm*.06){
+        setRole("greenpea");
+        log("Talked your way straight onto the sales floor at 18.", true);
+        result("Straight to the floor!", "The sales manager says \"You've got guts, kid.\" He also says \"Here's a clip-on tie.\" You are a Green Pea.", {charm:1});
+      } else {
+        result("Not yet, kid.", "The sales manager says to come back with a haircut and a reason. You only have one of those, and it isn't the haircut.", {charm:1, sanity:-1});
+      }
+    }},
+    {id:"gas", l:"Pick up shifts at the gas station", s:"Money. You learn to talk to anybody at 2am.", run(){
+      result("Night shift", pick(["A man buys 11 scratch-offs and tells you his life story. You listen. It's good practice.","Someone pays for gas entirely in quarters. You count 212 of them. You are learning patience."]), {money:1600, charm:1, sanity:-1});
+    }},
+    {id:"couch", l:"Lie on the couch and \"figure it out\"", s:"Restful. Mom has opinions.", run(){
+      result("Figuring it out", "Day 14 of figuring it out. Your mom walks past and says \"The dealership is hiring\" for the ninth time.", {sanity:2, money:-200});
+    }}
+  ],
+  porter:[
+    {id:"wash", l:"Wash the front line", s:"Builds Hustle.", run(){
+      result("Front line: sparkling", pick(["You wash 41 cars. It rains. You wash 41 cars.","You find $3, a fry, and a baby tooth in a trade-in. You keep the $3."]), {hustle:1, money:200});
+    }},
+    {id:"shadow", l:"Shadow the top salesperson", s:"Builds Product Knowledge and Charm.", run(){
+      result("Learning from Big Lou", pick(["Big Lou explains what \"holdback\" means. You lose a little faith in humanity and gain a little knowledge.","Big Lou shows you how to walk a customer around a car. He calls the trunk \"the cargo experience.\""]), {knowledge:1, charm:1});
+    }},
+    {id:"jump", l:"Jump-start customer cars", s:"Builds Reputation. Big in winter.", run(){
+      const w = season() === "Winter";
+      result(w ? "-27 and dead batteries" : "Jumper cables", w ? "You jump 19 cars in a parking lot at -27. Customers start asking \"where's the kid with the cables?\"" : "You jump a customer's car. She brings you a pan of bars the next week.", {rep: w ? 5 : 2, sanity: w ? -1 : 0});
+    }},
+    {id:"shot", l:"Ask for a shot on the sales floor", s:"Needs Product Knowledge 3+ and Hustle 4+.", run(){
+      if (S.knowledge >= 3 && S.hustle >= 4){
+        setRole("greenpea");
+        log("Promoted from porter to the sales floor. Green Pea status achieved.", true);
+        result("You're on the floor!", "The manager tosses you a lanyard and says \"Don't embarrass me.\" You are a Green Pea. Welcome to the up board.", {charm:1});
+      } else {
+        result("\"Not yet.\"", `The manager says to learn the product and show some hustle first. (You need Product Knowledge 3+ and Hustle 4+. You have ${S.knowledge} and ${S.hustle}.)`, {sanity:-1});
+      }
+    }},
+    {id:"rest", rest:true}
+  ],
+  floor:[
+    {id:"floor", l:"Take an up", s:"Work a customer on the lot.", run(){ startCustomer(); }},
+    {id:"study", l:"Learn the product", s:"Builds Product Knowledge.", run(){
+      result("Study hall", pick(["You read the whole spec sheet. You can now name every trim level of the Equinox, which is a power and a curse.","You watch 3 hours of walkaround videos. You dream in towing capacities."]), {knowledge:1});
+    }},
+    {id:"prospect", l:"Work the phones and follow up", s:"Builds Reputation. Might create a be-back.", run(){
+      const hit = Math.random() < .4 + S.charm*.04;
+      if (hit) S.bebacks++;
+      result("Phone time", hit ? "You call your old customers just to check in. One of them says \"Actually, my daughter needs a car.\" Be-back incoming." : "You leave 30 voicemails. One person calls back to ask how you got this number. You sold them a car.", {rep:2, hustle: hit ? 0 : 1});
+    }},
+    {id:"video", l:"Film a walkaround video", s:"Builds Reputation. Results vary.", min:"sales", run(){
+      const v = Math.random();
+      if (v < .2) result("Semi-viral!", "Your walkaround video hits 1,900 views. About 1,400 are your aunt. The phone rings anyway.", {rep:6, charm:1});
+      else if (v < .7) result("Posted", "Eleven views and one comment: \"is this still available.\" You'll take it.", {rep:2});
+      else result("Blooper reel", "You film the whole thing with the lens cap on. It's 4 minutes of your voice describing heated seats in the dark.", {sanity:-1, knowledge:1});
+    }},
+    {id:"rest", rest:true}
+  ],
+  fi:[
+    {id:"box", l:"Get a customer in the box", s:"Present products. Your call how.", run(){ S.phase = "choice"; S.ctx = {ev:"box"}; }},
+    {id:"comp", l:"Read the compliance manual", s:"Builds Product Knowledge and Integrity.", run(){
+      result("Compliance", "The manual is 400 pages. Page 212 just says \"no\" in bold. You respect page 212.", {knowledge:1, integrity:1, sanity:-1});
+    }},
+    {id:"lender", l:"Take a lender rep to lunch", s:"Builds Reputation.", run(){
+      result("Lunch with the bank", "The credit union rep eats a walleye sandwich and approves two of your stretch deals. Business is relationships.", {rep:3, money:-60});
+    }},
+    {id:"rest", rest:true}
+  ],
+  desk:[
+    {id:"pencil", l:"Desk deals all Saturday", s:"Money. Costs Sanity.", run(){
+      const n = ri(9,18);
+      result("Saturday on the tower", `You pencil ${n} deals, eat lunch standing up, and say \"Go back and get a commitment\" about 60 times.`, {money: n*180, sanity:-1, knowledge:1});
+    }},
+    {id:"train", l:"Train the green peas", s:"Your style becomes theirs.", run(){ S.phase = "choice"; S.ctx = {ev:"train"}; }},
+    {id:"floor", l:"Save a deal on the floor", s:"Work a customer yourself.", run(){ startCustomer(); }},
+    {id:"rest", rest:true}
+  ],
+  gm:[
+    {id:"culture", l:"Fix the culture", s:"Builds Reputation. Costs Sanity.", run(){
+      result("Culture day", pick(["You ban the word \"grinder\" and buy everyone lunch. Turnover drops. Morale rises. Someone still microwaves fish.","You put in a real pay plan anyone can understand. Two salespeople cry. Good tears."]), {rep:4, sanity:-1});
+    }},
+    {id:"floorplan", l:"Stare at the floorplan bill", s:"Builds Product Knowledge. Hurts.", run(){
+      result("Floorplan", "Every aged unit costs money every day it sits. You look at the 2022 Bronco that's been here 214 days. It looks back.", {knowledge:1, sanity:-1, money:2000});
+    }},
+    {id:"owner", l:"Pitch the owner on a second store", s:"Big gamble.", run(){ S.phase = "choice"; S.ctx = {ev:"owner"}; }},
+    {id:"rest", rest:true}
+  ],
+  indie:[
+    {id:"buy", l:"Buy from a private seller", s:"Buy-side. Adds a car to your row.", run(){ startSeller(); }},
+    {id:"sell", l:"Sell a car off your row", s:"Sell-side. You keep the whole margin.", need:"inv", run(){ startCustomer(); }},
+    {id:"auction", l:"Hit the auction", s:"Fast inventory. Some are lemons.", run(){
+      const units = [];
+      for (let i = 0; i < 3; i++) units.push(Math.random() < .2 + (10 - S.knowledge)*.02 ? ri(-2000,-300) : ri(900,3600));
+      S.inventory.push(...units);
+      const lemon = units.some(u => u < 0);
+      result("Auction day", lemon ? "You buy three cars. One has a transmission that sounds like a coffee can full of gravel. You'll lose money on that one." : "You buy three clean units and beat a guy in a Carhartt jacket on the last bid. He nods. Respect.", {knowledge:1, sanity: lemon ? -1 : 0});
+    }},
+    {id:"market", l:"Post your row on Marketplace", s:"Builds Reputation.", run(){
+      result("Posted", "You get 412 messages. 409 say \"Is this still available?\" Two are scams. One is a real buyer, and that's the business.", {rep:3, sanity:-1});
+    }},
+    {id:"rest", rest:true}
+  ]
+};
+function actionsFor(r){ return FLOOR.includes(r) ? ACTIONS.floor : ACTIONS[r]; }
+
+function doRest(){
+  const fx = {sanity:2};
+  if (FLOOR.includes(S.role)) fx.rep = -1;
+  result("A Saturday off", pick(REST_LINES) + (FLOOR.includes(S.role) ? " The up board noticed you were gone." : ""), fx);
+}
+
+/* ---------- Customers ---------- */
+function startCustomer(){
+  let beback = false;
+  if (S.role !== "indie" && S.bebacks > 0 && Math.random() < .45){ beback = true; S.bebacks--; }
+  let unit = null;
+  if (S.role === "indie") unit = Math.floor(Math.random()*S.inventory.length);
+  S.phase = "customer";
+  S.ctx = {c: Math.floor(Math.random()*CUSTOMERS.length), beback, unit};
+}
+function resolveCustomer(a){
+  const c = CUSTOMERS[S.ctx.c];
+  const indie = S.role === "indie";
+  let p = .22 + c.m[a];
+  if (a === "direct") p += S.knowledge*.045 + S.charm*.01;
+  if (a === "pushy") p += S.hustle*.045;
+  if (a === "nepq") p += S.charm*.03 + S.integrity*.02;
+  if (a === "to") p += .12 + S.rep*.003;
+  if (S.ctx.beback) p += .2;
+  p = clamp(p, .05, .95);
+  const won = Math.random() < p;
+  S.style[a]++;
+  const fx = {};
+  let text = pick(FLAVOR[a]) + " ";
+  let extra = "";
+  if (won){
+    let comm;
+    if (indie){ comm = S.inventory.splice(S.ctx.unit, 1)[0]; }
+    else {
+      comm = Math.max(150, Math.round(ri(c.g[0], c.g[1]) * .25 / 5) * 5);
+      if (S.role === "desk") comm = Math.round(comm * 1.5);
+      if (a === "to") comm = Math.round(comm / 2);
+    }
+    fx.money = comm;
+    S.best = Math.max(S.best, comm);
+    S.cars++;
+    if (a === "pushy"){ fx.integrity = -1; fx.rep = -1; if (c.pushyWin) fx.integrity = -2; }
+    if (a === "nepq") fx.rep = 4;
+    if (a === "direct") fx.rep = 2;
+    if (a === "to") fx.rep = 1;
+    text += (a === "pushy" && c.pushyWin) ? c.pushyWin : c.win;
+    log(`Sold ${c.n}. ${indie ? (comm < 0 ? "Took a loss to move it" : "Margin") : "Commission"}: ${fmt(comm)}.`);
+  } else {
+    if (a === "pushy"){ fx.rep = -3; fx.sanity = -1; }
+    if (a === "nepq" && !indie && Math.random() < .5){ S.bebacks++; extra = " They took your card, and they meant it. Possible be-back."; }
+    text += c.lose + extra;
+    log(`${c.n} walked.`);
+  }
+  // Every rep teaches you something
+  if (Math.random() < .3){
+    const k = {direct:"knowledge", pushy:"hustle", nepq:"charm", to:"knowledge"}[a];
+    fx[k] = (fx[k] || 0) + 1;
+  }
+  result(won ? "SOLD!" : "Walked.", text, fx, {won, odds:p, tag:true});
+}
+
+function startSeller(){ S.phase = "seller"; S.ctx = {c: Math.floor(Math.random()*SELLERS.length)}; }
+function resolveSeller(a){
+  const c = SELLERS[S.ctx.c];
+  let p = 1;
+  if (a === "lowball") p = clamp(.2 + S.hustle*.03 + c.m.lowball, .05, .9);
+  if (a === "nepq") p = clamp(.35 + S.charm*.04 + S.integrity*.02 + c.m.nepq, .05, .95);
+  const won = Math.random() < p;
+  S.style[a]++;
+  const fx = {};
+  let text;
+  if (won){
+    const margin = a === "lowball" ? ri(4500,8000) : a === "nepq" ? ri(3000,6000) : ri(900,2200);
+    S.inventory.push(margin);
+    if (a === "lowball"){ fx.rep = c.lowWin.includes("whole town") ? -6 : -2; fx.integrity = -1; text = c.lowWin; }
+    else if (a === "nepq"){ fx.rep = 3; text = c.win; }
+    else { text = "You pay the asking price. Quick and painless, but there's not much room left when it sells."; }
+    log(`Bought ${c.car} from ${c.n}.`);
+  } else {
+    text = c.lose;
+    if (a === "lowball") fx.rep = -1;
+    log(`Missed out on ${c.n}'s ${c.car.split(",")[0]}.`);
+  }
+  result(won ? "Bought it!" : "No deal.", text, fx, {won, odds:p, tag:true});
+}
+
+/* ---------- Events ---------- */
+const notGrad = s => s.role !== "grad";
+const onFloor = s => FLOOR.includes(s.role);
+const EVENTS = {
+  polar:{when:s => notGrad(s) && season() === "Winter", t:"Polar vortex", x:"Windchill is -34. Twenty-two cars on the front line need scraping before 8 a.m.", o:[
+    {l:"Scrape them all", f:() => ["You scrape every one. The GM sees you out there and remembers your name.", {hustle:1, sanity:-1, rep:3}]},
+    {l:"Remote-start them and pray", f:() => Math.random() < .5 ? ["They warm right up. Work smarter, not colder.", {knowledge:1}] : ["Seven of the batteries die. You spend the morning with jumper cables anyway.", {sanity:-2}]}
+  ]},
+  abc:{when:onFloor, t:"Mandatory sales training", x:"Corporate sends a trainer with a headset mic who yells ALWAYS BE CLOSING for three hours.", o:[
+    {l:"Buy his box set", f:() => ["You learn eleven ways to say \"if I could, would you.\" Customers can smell it on you.", {hustle:1, integrity:-1, money:-400}]},
+    {l:"Read a book on asking better questions", f:() => ["You learn to ask what the customer actually needs. Wild concept. It works.", {charm:1, integrity:1}]}
+  ]},
+  tube:{when:notGrad, t:"Tube man escape", x:"The inflatable tube man broke loose and is flailing down the highway.", o:[
+    {l:"Chase it", f:() => ["You tackle it in a ditch. The local paper runs it on the front page: \"Car Salesman Wrestles Balloon.\" Business is up.", {rep:4, sanity:-1}]},
+    {l:"Let it go", f:() => ["It was last seen headed toward Wisconsin. You wish it well.", {sanity:1}]}
+  ]},
+  hotdish:{when:s => notGrad(s) && s.role !== "indie", t:"Break room potluck", x:"Three hotdishes, two bars, and a Jell-O salad with something suspended in it.", o:[
+    {l:"Get a plate", f:() => ["All three hotdishes have tater tots. You have three helpings. Morale is restored.", {sanity:1}]}
+  ]},
+  deer:{when:() => true, t:"Deer vs. you", x:"You hit a deer on the way in. The deer walks away fine. Your bumper does not.", o:[
+    {l:"Pay the body shop", f:() => ["The body shop guy says \"Happens to everybody.\" It still costs money.", {money:-900}]}
+  ]},
+  opener:{when:s => notGrad(s) && season() === "Spring", t:"Fishing opener", x:"The whole town is on a lake. Nobody is buying a car this weekend.", o:[
+    {l:"Go fishing too", f:() => ["You catch two walleye and a customer who's in the market for a boat-towing truck.", {sanity:2, rep:1}]},
+    {l:"Stand on the lot alone", f:() => ["Zero customers. You alphabetize the key box. It's beautiful.", {hustle:1, sanity:-1}]}
+  ]},
+  review:{when:onFloor, t:"Five stars for \"Mike\"", x:"A customer you sold left a glowing review. It praises \"Mike.\" You are not Mike. Nobody here is named Mike.", o:[
+    {l:"Ask them to fix the name", f:() => ["They fix it and add \"also very honest.\" Mike remains a mystery.", {rep:3, integrity:1}]},
+    {l:"Start answering to Mike", f:() => ["You're Mike now. Some days you like Mike better.", {rep:1, sanity:-1}]}
+  ]},
+  catcon:{when:notGrad, t:"Catalytic converter theft", x:"Somebody sawed the catalytic converters off six trucks overnight.", o:[
+    {l:"File the report", f:() => ["The cop says \"third one this month.\" The trucks now sound like a NASCAR race.", {sanity:-1}]}
+  ]},
+  payplan:{when:onFloor, t:"New pay plan", x:"A new manager from the city changed the pay plan. It's 9 pages and has a flowchart.", o:[
+    {l:"Read the whole thing", f:() => ["You find a volume bonus nobody else noticed. You hit it. Knowledge is money.", {knowledge:1, money:700}]},
+    {l:"Complain in the break room", f:() => ["Everyone agrees with you. Nothing changes. It felt good.", {sanity:1, rep:-1}]}
+  ]},
+  mom:{when:notGrad, t:"Family betrayal", x:"Your mom bought a car from the dealer across town. \"They had the color I wanted, honey.\"", o:[
+    {l:"Take it like a pro", f:() => ["Thanksgiving is going to be very quiet.", {sanity:-1, integrity:1}]}
+  ]},
+  lease:{when:s => notGrad(s) && !s.lease, t:"Looking the part", x:"Your manager says you need a nicer demo car to \"look successful.\"", o:[
+    {l:"Lease the shiny one", f:() => { S.lease = true; return ["It's gorgeous. It also adds a payment every month until the sun burns out.", {charm:1, money:-1500}]; }},
+    {l:"Keep driving the old Grand Am", f:() => ["It's paid off. It's also held together by zip ties and prayer. Customers trust you more for some reason.", {integrity:1}]}
+  ]},
+  truck:{when:onFloor, t:"TRUCK MONTH", x:"Corporate announces it's Truck Month. (It's Truck Month every month.)", o:[
+    {l:"Sell trucks", f:() => ["You sell trucks. It's Minnesota. This was always going to happen.", {rep:2, money:500}]}
+  ]},
+  partner:{when:notGrad, t:"The Saturday talk", x:"Your partner asks if you will ever, in your entire life, have a Saturday off.", o:[
+    {l:"Take one off", f:() => ["You go to the farmers market. You don't talk about cars once. Okay, twice.", {sanity:2, rep:-1}]},
+    {l:"\"Next month, I promise\"", f:() => ["They've heard that before. They've heard it every month.", {sanity:-1, money:400}]}
+  ]},
+  csi:{when:onFloor, t:"The CSI survey", x:"A customer gave you a 9 out of 10 on the survey. In car sales, anything under 10 counts as failing.", o:[
+    {l:"Call them and beg", f:() => ["They change it to a 10 to make you stop talking. You hate this system.", {integrity:-1, rep:1}]},
+    {l:"Accept the 9", f:() => ["The manager posts it in the break room with a sad face. You stand by it.", {sanity:-1, integrity:1}]}
+  ]},
+  fair:{when:s => notGrad(s) && season() === "Summer", t:"State Fair booth", x:"You work the dealership booth at the State Fair for ten hours.", o:[
+    {l:"Work the booth", f:() => ["You sell zero cars, collect 140 leads, and eat a pork chop on a stick.", {rep:2, sanity:1, money:-40}]}
+  ]},
+  chargeback:{when:s => s.role === "fi", t:"Chargeback", x:"A customer cancelled the warranty you sold them. That money comes back out of your check.", o:[
+    {l:"Sigh deeply", f:() => ["The commission giveth. The chargeback taketh away.", {money:-1200, sanity:-1}]}
+  ]},
+  scam:{when:s => s.role === "indie", t:"Too good to be true", x:"A buyer offers $3,000 over asking with a cashier's check and a \"shipping agent.\"", o:[
+    {l:"Take the deal", f:() => ["The check bounces higher than a basketball. Lesson learned, expensively.", {money:-2500, knowledge:1}]},
+    {l:"Block them", f:() => ["You've been around long enough. Block, delete, back to work.", {knowledge:1}]}
+  ]},
+  party:{when:s => s.role === "grad", t:"Grad party circuit", x:"Every weekend is another grad party with ham sandwiches and somebody's uncle grilling.", o:[
+    {l:"Work the room", f:() => ["You tell everyone you're \"exploring automotive.\" An uncle gives you his card. He's a used car manager.", {charm:1}]},
+    {l:"Eat the bars and leave", f:() => ["Seven kinds of bars. You try all seven. No regrets.", {sanity:1}]}
+  ]},
+  mompush:{when:s => s.role === "grad" && s.t > 0, t:"The plan talk", x:"Mom sits you down to ask about \"the plan.\" There is no plan.", o:[
+    {l:"Make up a plan on the spot", f:() => ["\"I'm going into sales.\" You have no idea why you said it. She seems relieved.", {charm:1, sanity:-1}]}
+  ]},
+
+  /* not random */
+  box:{t:"Customer in the box", x:"A young family just bought a minivan. Nice people, tight budget. Now they're in your office.", o:[
+    {l:"Pitch the full package", f:() => ["Warranty, GAP, tire-and-wheel, paint sealant, nitrogen in the tires and a commemorative mug. They sign everything. They look tired.", {money:ri(3000,6500), integrity:-1, rep:-2}]},
+    {l:"Explain each product and let them pick", f:() => ["They take GAP and the warranty and skip the rest. They thank you for being straight.", {money:ri(1500,3200), rep:3}]},
+    {l:"Ask what worries them about owning it (NEPQ)", f:() => Math.random() < .55 + S.charm*.04 ? ["Turns out their last car left them stranded twice. The warranty sells itself. Nobody felt pushed.", {money:ri(2600,4600), rep:3}] : ["They say they're not worried about anything. Fair enough. A small deal is still a deal.", {money:ri(700,1400), rep:1}]}
+  ]},
+  train:{t:"Green pea training", x:"Four new salespeople are staring at you. One is still wearing a backpack.", o:[
+    {l:"Teach them the four-square", f:() => ["They learn fast and sell hard. Customer reviews start using the word \"aggressive.\"", {money:2500, rep:-3, integrity:-1}]},
+    {l:"Teach them to ask questions", f:() => ["Slower start, but the referrals pour in by spring. One of them sends you a thank-you card.", {money:1200, rep:4, charm:1}]},
+    {l:"Let them shadow you all day", f:() => ["They copy everything you do, including the way you sigh at the coffee maker.", {rep:2, sanity:-1}]}
+  ]},
+  owner:{t:"The big pitch", x:"You pitch the owner on opening a second rooftop two towns over.", o:[
+    {l:"Go all in", f:() => Math.random() < S.rep/120 ? ["He says yes. The second store crushes its first year. Your bonus is very large.", {money:40000, rep:5}] : ["He says \"Not with this floorplan bill.\" You go back to your office and stare at the wall.", {sanity:-2, rep:-3}]},
+    {l:"Pitch something smaller", f:() => ["You pitch a used-car-only annex. He likes it. Steady money, nobody has to cry.", {money:9000, rep:2}]}
+  ]},
+  gmoffer:{t:"The corner office", x:"The owner calls you in. \"The GM is retiring. I want you to run this place.\"", o:[
+    {l:"Take the job", f:() => { setRole("gm"); log("Named General Manager.", true); return ["You get a bigger office, a bigger check, and a phone that rings at 6 a.m. every day for the rest of your life.", {rep:5}]; }},
+    {l:"Not yet", f:() => { S.gmDecl = S.t; return ["You stay put. The owner says the door's open.", {sanity:1}]; }}
+  ]},
+  buyin:{t:"Buy the store", x:"The owner is retiring to Arizona. He offers to sell you the dealership.", o:[
+    {l:"Sign the papers", f:() => { finish("principal"); return null; }},
+    {l:"Not yet", f:() => ["You keep running it as GM. Arizona can wait.", {sanity:1}]}
+  ]},
+  ownlot:{t:"Your name on the sign", x:"A lot on the highway just came up for lease. Good traffic, small office, a sign out front with room for your name.", o:[
+    {l:"Sign the lease", f:() => { finish("ownlot"); return null; }},
+    {l:"Keep grinding for now", f:() => ["You keep building. The right lot will come around again.", {hustle:1}]}
+  ]}
+};
+function resolveEvent(i){
+  const ev = EVENTS[S.ctx.ev];
+  const r = ev.o[i].f();
+  if (S.ended){ render(); return; }
+  if (!r){ next(); return; }
+  log(`${ev.t}: ${r[0]}`);
+  result(ev.t, r[0], r[1]);
+  render();
+}
+
+/* ---------- Season close ---------- */
+function endSeason(){
+  S.closing = true; S.queue = [];
+  const L = [];
+  const r = S.role, sea = season();
+  if (FLOOR.includes(r)){
+    const mult = {greenpea:1, sales:1.15, senior:1.3}[r] * SEASON_MULT[sea];
+    const n = Math.max(0, Math.round((3*(S.charm + S.knowledge + S.hustle)/4 + S.rep/8 + S.integrity/2 + ri(-2,2)) * mult));
+    const per = ri(220, 320);
+    S.cars += n; S.money += n*per;
+    L.push([`You sold ${n} more cars around the edges this season. Commission: ${fmt(n*per)}.`, true]);
+    if (r === "greenpea"){ S.money += 2400; L.push(["Your draw covered the weeks you sold nothing: +$2,400. (You owe it back. Don't think about it.)"]); }
+  }
+  const SAL = {porter:5400, fi:9000, desk:11000, gm:28000};
+  if (SAL[r]){ S.money += SAL[r]; L.push([`Base pay: ${fmt(SAL[r])}.`]); }
+  if (r === "desk"){ const team = ri(70,130); S.cars += team; S.money += team*60; L.push([`Your team moved ${team} cars. Override: ${fmt(team*60)}.`, true]); }
+  if (r === "gm"){ const store = ri(200,320); S.cars += store; L.push([`The store sold ${store} cars. You get credit for all of them, emotionally.`]); }
+  if (r === "indie" && S.inventory.length){
+    const k = Math.min(S.inventory.length, 1 + Math.floor(S.rep/20));
+    if (k > 0){
+      const sold = S.inventory.splice(0, k), sum = sold.reduce((a,b) => a+b, 0);
+      S.cars += k; S.money += sum;
+      L.push([`${k} car${k > 1 ? "s" : ""} sold off your row to referral customers. Net margin: ${fmt(sum)}.`, true]);
+    }
+  }
+  const exp = r === "grad" ? 600 : 3600 + (S.lease ? 1500 : 0);
+  S.money -= exp;
+  L.push([r === "grad" ? `Mom charges you ${fmt(600)} rent "to teach you something."` : `Rent, groceries, gas and an alarming amount of gas-station coffee: -${fmt(exp)}.`]);
+  if (sea === "Winter" && r !== "grad"){ S.sanity = clamp(S.sanity - 1, 0, 10); L.push(["Winter on a car lot. You can no longer feel your face. -1 Sanity."]); }
+
+  if (S.sanity <= 0) S.queue.push("end:burnout");
+  else if (S.money < -8000) S.queue.push("end:broke");
+  else if (S.integrity <= 0) S.queue.push("end:news");
+  else {
+    if (Math.random() < .8){
+      const pool = Object.keys(EVENTS).filter(k => EVENTS[k].when && EVENTS[k].when(S));
+      if (pool.length) S.queue.push("ev:" + pick(pool));
+    }
+    if (r === "greenpea" && S.cars >= 30) S.queue.push("promo:sales");
+    if (r === "sales" && S.cars >= 260 && S.rep >= 45) S.queue.push("promo:senior");
+    if (r === "senior" && S.cars >= 650 && S.rep >= 60) S.queue.push("branch");
+    if ((r === "fi" || r === "desk") && S.inRole >= 14 && S.rep >= 70 && S.t - S.gmDecl >= 4) S.queue.push("ev:gmoffer");
+    if (r === "gm" && S.inRole >= 16 && S.rep >= 90 && S.money >= 400000) S.queue.push("ev:buyin");
+    if (r === "indie" && S.money >= 200000 && S.rep >= 75) S.queue.push("ev:ownlot");
+  }
+  S.phase = "report"; S.ctx = {lines:L};
+  log(`Season closed. Bank: ${fmt(S.money)}.`);
+}
+
+const PROMO = {
+  sales:["Sales Consultant", "You hit 30 cars. They give you real business cards. Your name is spelled wrong, but they're real."],
+  senior:["Top Dog", "You're the name customers ask for. The new guys call you \"sir\" and it makes you feel 70 years old."]
+};
+function runStep(st){
+  const [kind, arg] = st.split(":");
+  if (kind === "end") return finish(arg);
+  if (kind === "ev"){ S.phase = "choice"; S.ctx = {ev:arg}; return render(); }
+  if (kind === "promo"){ setRole(arg); log(`Promoted to ${ROLES[arg].t}.`, true); result("Promoted!", PROMO[arg][1], {charm:1}); return render(); }
+  if (kind === "branch"){ S.phase = "branch"; S.ctx = null; return render(); }
+}
+
+function next(){
+  if (S.ended){ S.phase = "end"; return render(); }
+  if (!S.closing){ S.phase = "turn"; S.ctx = null; return render(); }
+  if (S.queue.length) return runStep(S.queue.shift());
+  S.closing = false; S.t++; S.actions = 3; S.inRole++;
+  if (age() >= 65) return finish("retire");
+  S.phase = "turn"; S.ctx = null;
+  render();
+}
+
+function finish(kind){
+  S.ended = kind; S.closing = false; S.queue = []; S.phase = "end";
+  log(`Career over: ${ENDINGS[kind].t}.`, true);
+  render();
+}
+
+/* ---------- Endings ---------- */
+function styleName(){
+  const st = S.style, n = st.nepq, p = st.pushy + st.lowball, d = st.direct;
+  if (n + p + d + st.to < 3) return "Barely talked to anybody";
+  if (n >= p && n >= d) return "Question-asker. People trusted you.";
+  if (p >= n && p >= d) return "Four-square fossil. Effective. Feared.";
+  return "Feature-and-benefit machine. You knew every trim level.";
+}
+const ENDINGS = {
+  burnout:{t:"Burned Out", x:() => "You hand in your keys and take a job selling insurance. You still catch yourself asking the dog \"What would it take to earn your business today?\"", e:"Gone to sell insurance. Still checks the up board in their dreams."},
+  broke:{t:"The Repo Man Knows Your Name", x:() => "The demo car gets repossessed from the dealership lot, during a Saturday sale, in front of a customer. You wave. The repo guy waves back. You used to sell him cars.", e:"Leased beyond their means. Lived beyond their lease."},
+  news:{t:"Channel 5 Investigates", x:() => "A reporter in a windbreaker shows up on the lot with a camera crew. \"We've been getting calls.\" You are now a segment on the 10 o'clock news, right before the weather.", e:"Remembered mostly by the consumer protection office."},
+  retire:{t:"The Gold Watch", x:() => `At 65 you hang up the lanyard after ${S.cars.toLocaleString("en-US")} cars. ${S.role === "gm" ? "The whole store throws you a party with three sheet cakes." : S.role === "indie" ? "You sell your last car to the grandkid of your first customer." : "The new kids on the floor have no idea who you are. The customers do."}`, e:"Sold cars for 47 years. Never once had a Saturday off."},
+  principal:{t:"Dealer Principal", x:() => "You buy the store. Your name goes on the building, the license plate frames and a sponsorship banner at the hockey rink. You started washing cars. Now you own the hose.", e:"From porter to owner. Still picks up trash on the lot every morning."},
+  ownlot:{t:"Your Name on the Sign", x:() => "You sign the lease. The sign goes up on the highway with your name on it. You buy from neighbors, sell to neighbors, and nobody ever gets four-squared on your lot.", e:"Independent. Small-town. Answered every \"is this still available?\""}
+};
+
+/* ---------- Render ---------- */
+function bar(v, warn){
+  let h = `<span class="bar${warn ? " warn" : ""}" aria-hidden="true">`;
+  for (let i = 0; i < 10; i++) h += `<i class="${i < v ? "on" : ""}"></i>`;
+  return h + "</span>";
+}
+function renderSticker(){
+  if (!S){ $("sticker").innerHTML = `<span class="st-kicker">Window Sticker</span><div class="st-name">Unsold Graduate</div><div class="st-sub">Age 18 · Summer '26</div><div class="st-role">No job yet</div>`; return; }
+  const r = ROLES[S.role];
+  $("sticker").innerHTML = `
+    <span class="st-kicker">Window Sticker</span>
+    <div class="st-name">${esc(S.name)}</div>
+    <div class="st-sub">Age ${age()} · ${label()}</div>
+    <div class="st-role">${r.t}</div>
+    <div class="st-big">
+      <div><span class="big">${S.cars.toLocaleString("en-US")}</span><span class="lbl">Cars sold, lifetime</span></div>
+      <div><span class="big${S.money < 0 ? " neg" : ""}">${fmt(S.money)}</span><span class="lbl">Bank (game money)</span></div>
+    </div>
+    <ul class="stats">
+      <li><span>Charm</span>${bar(S.charm)}<span class="v">${S.charm}</span></li>
+      <li><span>Product Knowledge</span>${bar(S.knowledge)}<span class="v">${S.knowledge}</span></li>
+      <li><span>Hustle</span>${bar(S.hustle)}<span class="v">${S.hustle}</span></li>
+      <li><span>Integrity</span>${bar(S.integrity, S.integrity <= 2)}<span class="v">${S.integrity}</span></li>
+      <li><span>Sanity</span>${bar(S.sanity, S.sanity <= 2)}<span class="v">${S.sanity}</span></li>
+      <li><span>Reputation</span><span class="repbar" aria-hidden="true"><b style="width:${S.rep}%"></b></span><span class="v">${S.rep}</span></li>
+    </ul>
+    <div class="st-foot">
+      ${S.role !== "indie" ? `<span>Be-backs pending: ${S.bebacks}</span>` : `<span>Cars on your row: ${S.inventory.length}</span>`}
+      <span>Best single deal: ${fmt(S.best)}</span>
+    </div>`;
+}
+function renderLadder(){
+  const cur = S ? ROLES[S.role].rung : -1;
+  $("ladder").innerHTML = LADDER.map((r,i) => `<li class="${i < cur ? "done" : i === cur ? "now" : ""}"><span class="n">${i+1}</span><span><b>${r.n}</b>${r.d}</span></li>`).join("");
+}
+function renderLog(){
+  $("log").innerHTML = S ? S.log.map(e => `<li class="${e.big ? "big" : ""}"><span class="when">${e.w}</span><span>${esc(e.text)}</span></li>`).join("") : `<li><span class="when">—</span><span>Your career history shows up here.</span></li>`;
+}
+function renderTools(){
+  if (!S){ $("tools").innerHTML = ""; return; }
+  $("tools").innerHTML = confirming
+    ? `<span class="confirm">Start a brand-new career? <button class="small danger" data-a="reset-yes">Yes, start over</button><button class="small" data-a="reset-no">Keep playing</button></span>`
+    : `<button class="small" data-a="reset">New career</button>`;
+}
+
+function renderStage(){
+  const st = $("stage");
+  if (!S){
+    st.innerHTML = `
+      <span class="eyebrow">Commencement · June 2026</span>
+      <h2>Congratulations, graduate.</h2>
+      <p class="speech">The principal says you can be anything you want. Doctor. Astronaut. Lawyer. He does not mention car salesman. Nobody ever mentions car salesman. And yet, here you are, about to become one.</p>
+      <p class="speech">You have $500 in graduation cash, a 2004 Grand Am with 211,000 miles, and a mom who has started leaving the classifieds open on the kitchen table.</p>
+      <form id="startForm" class="field">
+        <div><label for="nameIn">Your name</label><input id="nameIn" maxlength="28" placeholder="Write it on the windshield" autocomplete="off"></div>
+        <button class="btn primary" type="submit"><b>Toss the cap</b><span>Start your career</span></button>
+      </form>`;
+    return;
+  }
+  const r = ROLES[S.role];
+  if (S.phase === "turn"){
+    const acts = actionsFor(S.role);
+    const pips = [0,1,2].map(i => `<i class="${i < S.actions ? "on" : ""}"></i>`).join("");
+    if (S.actions <= 0){
+      st.innerHTML = `<span class="eyebrow">${label()} · Age ${age()}</span><h2>Season's over.</h2><p>Time to see the numbers. Commission, bills, and whatever chaos is waiting.</p><button class="btn primary inline" data-a="close"><b>Close out the season</b><span>Pay day. Bill day. Event day.</span></button>`;
+      return;
+    }
+    const btns = acts.map(a => {
+      if (a.rest) return `<button class="btn" data-a="act:rest"><b>Take a Saturday off</b><span>Restores Sanity.${FLOOR.includes(S.role) ? " The up board will notice." : ""}</span></button>`;
+      if (a.min === "sales" && S.role === "greenpea") return "";
+      const dis = a.need === "inv" && !S.inventory.length;
+      return `<button class="btn" data-a="act:${a.id}" ${dis ? "disabled" : ""}><b>${a.l}</b><span>${dis ? "Your row is empty. Buy something first." : a.s}</span></button>`;
+    }).join("");
+    st.innerHTML = `<span class="eyebrow">${label()} · Age ${age()} · Moves left <span class="pips" aria-label="${S.actions} of 3">${pips}</span></span>
+      <h2>${r.t}</h2><p>${r.flav}</p><div class="actions">${btns}</div>`;
+    return;
+  }
+  if (S.phase === "customer"){
+    const c = CUSTOMERS[S.ctx.c];
+    const indie = S.role === "indie";
+    const unitNote = indie ? `<dt>Your car</dt><dd>${S.inventory[S.ctx.unit] < 0 ? "The one with the gravel transmission" : "A clean one off your row"}</dd>` : "";
+    st.innerHTML = `<span class="eyebrow">${label()} · Fresh up on the lot</span>
+      ${S.ctx.beback ? `<div><span class="beback">They came back!</span></div>` : ""}
+      <h2>${c.n}</h2>
+      <div class="upsheet"><div class="hd"><span>Guest sheet</span><span>Salesperson: ${esc(S.name)}</span></div>
+        <dl><dt>Wants</dt><dd>${c.want}</dd><dt>Trade-in</dt><dd>${c.trade}</dd><dt>Credit</dt><dd>${c.credit}</dd>${unitNote}</dl></div>
+      <p class="quote">${c.q}</p>
+      <div class="actions">${Object.keys(APPROACH).filter(k => !(indie && k === "to")).map(k => `<button class="btn" data-a="appr:${k}"><b>${APPROACH[k].l}</b><span>${APPROACH[k].s}</span></button>`).join("")}</div>`;
+    return;
+  }
+  if (S.phase === "seller"){
+    const c = SELLERS[S.ctx.c];
+    st.innerHTML = `<span class="eyebrow">${label()} · Buy-side appointment</span>
+      <h2>${c.n}</h2>
+      <div class="upsheet"><div class="hd"><span>Buy sheet</span><span>Buyer: ${esc(S.name)}</span></div>
+        <dl><dt>Vehicle</dt><dd>${c.car}</dd><dt>Asking</dt><dd>${c.ask}</dd></dl></div>
+      <p class="quote">${c.q}</p>
+      <div class="actions">${Object.keys(SELL_APPROACH).map(k => `<button class="btn" data-a="sapp:${k}"><b>${SELL_APPROACH[k].l}</b><span>${SELL_APPROACH[k].s}</span></button>`).join("")}</div>`;
+    return;
+  }
+  if (S.phase === "result"){
+    const c = S.ctx;
+    st.innerHTML = `<span class="eyebrow">${label()} · Age ${age()}</span>
+      ${c.tag ? `<div class="tag ${c.won ? "win" : "loss"}">${c.title}</div>` : `<h2>${c.title}</h2>`}
+      <p>${c.text}</p>${chips(c.fx)}
+      ${c.odds != null ? `<p class="odds">Your odds on that approach were ${Math.round(c.odds*100)}%.</p>` : ""}
+      <button class="btn primary inline" data-a="cont"><b>Continue</b><span>${S.closing ? "Keep closing out the season" : S.actions > 0 ? `${S.actions} move${S.actions > 1 ? "s" : ""} left this season` : "Close out the season"}</span></button>`;
+    return;
+  }
+  if (S.phase === "report"){
+    st.innerHTML = `<span class="eyebrow">${label()} · Season close-out</span><h2>The numbers</h2>
+      <ul class="report">${S.ctx.lines.map(l => `<li class="${l[1] ? "hl" : ""}">${l[0]}</li>`).join("")}</ul>
+      <button class="btn primary inline" data-a="cont"><b>Continue</b><span>See what else happened</span></button>`;
+    return;
+  }
+  if (S.phase === "choice"){
+    const ev = EVENTS[S.ctx.ev];
+    st.innerHTML = `<span class="eyebrow">${label()} · Something happened</span><h2>${ev.t}</h2><p>${ev.x}</p>
+      <div class="actions">${ev.o.map((o,i) => `<button class="btn" data-a="opt:${i}"><b>${o.l}</b></button>`).join("")}</div>`;
+    return;
+  }
+  if (S.phase === "branch"){
+    st.innerHTML = `<span class="eyebrow">${label()} · The fork in the road</span><h2>Where do you go from here?</h2>
+      <p>You've sold ${S.cars.toLocaleString("en-US")} cars. Three doors are open. You only get to walk through one.</p>
+      <div class="cards">
+        <button class="btn" data-a="branch:fi"><b>F&amp;I Manager</b><span>Finance office. Steady base pay, big product commissions, and some tough calls about how hard to sell warranties.</span></button>
+        <button class="btn" data-a="branch:desk"><b>Sales Manager</b><span>Run the desk and the team. Override pay on every car. Saturdays belong to the store forever.</span></button>
+        <button class="btn" data-a="branch:indie"><b>Go Independent</b><span>Your own operation. Buy from private sellers, sell to real people. No base pay. Every car is your money.</span></button>
+      </div>`;
+    return;
+  }
+  if (S.phase === "end"){
+    const e = ENDINGS[S.ended];
+    const win = S.ended === "principal" || S.ended === "ownlot";
+    st.innerHTML = `<span class="eyebrow">Career complete · Age ${age()}</span>
+      <div class="tag ${win ? "win" : "loss"}">${e.t}</div>
+      <p>${e.x()}</p>
+      <div class="endstats">
+        <div><span class="lbl">Cars sold</span><span class="big">${S.cars.toLocaleString("en-US")}</span></div>
+        <div><span class="lbl">Final bank</span><span class="big${S.money < 0 ? " neg" : ""}">${fmt(S.money)}</span></div>
+        <div><span class="lbl">Reputation</span><span class="big">${S.rep}</span></div>
+        <div><span class="lbl">Years on the lot</span><span class="big">${Math.floor(S.t/4)}</span></div>
+      </div>
+      <p><b>Sales style:</b> ${styleName()}</p>
+      <p class="epitaph">"${e.e}"</p>
+      <button class="btn primary inline" data-a="reset-yes"><b>Graduate again</b><span>New career, same diploma</span></button>`;
+  }
+}
+
+function render(){
+  renderSticker(); renderLadder(); renderLog(); renderTools(); renderStage();
+  if (S) save();
+}
+
+/* ---------- Input ---------- */
+document.addEventListener("submit", e => {
+  if (e.target.id !== "startForm") return;
+  e.preventDefault();
+  const name = ($("nameIn").value || "").trim();
+  S = newState(name);
+  log(`${S.name} graduates high school. Career goal: unclear.`, true);
+  render();
+  $("stage").scrollIntoView({block:"nearest"});
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-a]"); if (!b || b.disabled) return;
+  const [a, arg] = b.dataset.a.split(":");
+  if (a === "reset"){ confirming = true; return renderTools(); }
+  if (a === "reset-no"){ confirming = false; return renderTools(); }
+  if (a === "reset-yes"){ confirming = false; S = null; try{ localStorage.removeItem(KEY); }catch(err){} return render(); }
+  if (!S) return;
+  if (a === "act"){
+    if (S.phase !== "turn" || S.actions <= 0) return;
+    S.actions--;
+    if (arg === "rest") doRest();
+    else actionsFor(S.role).find(x => x.id === arg).run();
+  }
+  else if (a === "appr" && S.phase === "customer") resolveCustomer(arg);
+  else if (a === "sapp" && S.phase === "seller") resolveSeller(arg);
+  else if (a === "opt" && S.phase === "choice") return resolveEvent(+arg);
+  else if (a === "branch" && S.phase === "branch"){
+    S.branchDone = true; setRole(arg);
+    log(`Took the ${ROLES[arg].t} path.`, true);
+    const txt = {fi:"You move into the finance office. It has no windows and a printer that hates you personally.",
+      desk:"You move up to the desk. You now say \"Go get me a commitment\" in your sleep.",
+      indie:"You strike out on your own. First purchase: a used office trailer. Second purchase: a coffee maker. Third: inventory."}[arg];
+    result("New chapter", txt, {rep:3});
+  }
+  else if (a === "cont") return next();
+  else if (a === "close"){ endSeason(); }
+  else return;
+  render();
+  $("stage").scrollIntoView({block:"nearest"});
+});
+
+/* ---------- Boot ---------- */
+function boot(data){
+  S = (data && data.S) || load();
+  if (S && !S.phase) S = null;
+  render();
+}
+try{ window.claude?.hot?.snapshot?.(() => ({S})); }catch(e){}
+if (window.claude?.hot?.ready) window.claude.hot.ready(boot); else boot(window.claude?.hot?.data ?? {});
+})();
+</script>
+</body>
+</html>
