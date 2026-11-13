@@ -395,25 +395,34 @@ const needsOf = p => Array.isArray(p.needs) ? p.needs : [];
 
 function simulate(b, level) {
   const inLevel = inLevelFn(level);
-  const itemIds = new Set(b.items.filter(inLevel).map(i => i.id));
-  const have = new Set(b.items.filter(i => inLevel(i) && i.start).map(i => i.id));
+  const itemIds = new Set();
+  const have = new Set();
+
+  for (const item of b.items) {
+    if (!inLevel(item)) continue;
+    itemIds.add(item.id);
+    if (item.start) have.add(item.id);
+  }
+
   const solved = new Set();
   const steps = [];                        // [[puzzleIds open at this step]]
-  let progress = true;
-  while (progress) {
-    progress = false;
-    const open = b.puzzles.filter(p => !solved.has(p.id) &&
-      needsOf(p).every(n => have.has(n) || solved.has(n)));
-    if (open.length) {
-      steps.push(open.map(p => p.id));
-      open.forEach(p => {
-        solved.add(p.id);
-        (p.unlocks || []).forEach(u => { if (itemIds.has(u)) have.add(u); });
-      });
-      progress = true;
+
+  while (true) {
+    const open = b.puzzles.filter(
+      p => !solved.has(p.id) && needsOf(p).every(n => have.has(n) || solved.has(n))
+    );
+    if (!open.length) break;
+
+    steps.push(open.map(p => p.id));
+    for (const p of open) {
+      solved.add(p.id);
+      for (const u of p.unlocks || []) {
+        if (itemIds.has(u)) have.add(u);
+      }
     }
   }
-  const finalOk = (b.final.needs || []).every(n => solved.has(n) || have.has(n));
+
+  const finalOk = (b.final?.needs || []).every(n => solved.has(n) || have.has(n));
   return { level, have, solved, steps, finalOk, itemIds };
 }
 
