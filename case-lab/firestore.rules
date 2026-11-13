@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    // Replace YOUR_UID with your Firebase uid (Authentication → Users), the same
+    // value as ALLOWED_UID on Netlify. Add a tester role later only if someone
+    // else runs playtests for you.
+    function isMick() { return request.auth != null && request.auth.uid == 'YOUR_UID'; }
+    match /{document=**} { allow read, write: if isMick(); }
+  }
+}

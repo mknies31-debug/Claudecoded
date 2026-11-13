@@ -1,0 +1,23 @@
+# Case Lab — standalone deploy config (separate from CARVIS, Ledger and VOLT).
+#
+# In Netlify, create a new site from this repo and set "Base directory" = case-lab.
+# Netlify installs firebase-admin from package.json, serves index.html at the
+# root, and bundles the two AI proxies from netlify/functions.
+#
+# Environment variables (Site settings → Environment variables):
+#   ANTHROPIC_API_KEY, GEMINI_API_KEY, GEMINI_MODEL,
+#   ALLOWED_UID, FIREBASE_SERVICE_ACCOUNT (or FIREBASE_PROJECT_ID)
+#   CLAUDE_MODEL (optional)
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

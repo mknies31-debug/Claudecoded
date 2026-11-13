@@ -1,0 +1,1543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14171c">
+<title>Case Lab</title>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1b1d21; --muted: #646a73; --line: #e2e0da;
+  --accent: #2f5d8a; --accent-ink: #ffffff;
+  --crit: #b42318; --crit-bg: #fde8e6; --warn: #9a5b00; --warn-bg: #fff2d6;
+  --info: #555b64; --info-bg: #eceef1; --ok: #1d7a46; --ok-bg: #e3f4ea;
+  --chip: #f0eee9; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121418; --panel: #1b1e24; --ink: #e8e9eb; --muted: #9aa1ab; --line: #2c3038;
+    --accent: #6fa3d6; --accent-ink: #0d1117;
+    --crit: #ff8a80; --crit-bg: #3a1a18; --warn: #f5c060; --warn-bg: #3a2c10;
+    --info: #b8bec7; --info-bg: #262a31; --ok: #7fd6a0; --ok-bg: #15301f; --chip: #252830;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 12px; min-height: 40px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button.danger { color: var(--crit); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+input, select, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; max-width: 100%; }
+label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+h1, h2, h3 { margin: 0 0 8px; line-height: 1.2; }
+h1 { font-size: 20px; } h2 { font-size: 17px; } h3 { font-size: 15px; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.mono { font-family: var(--mono); font-size: 13px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.grow { flex: 1 1 auto; }
+.stack > * + * { margin-top: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.grid2 { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+/* layout: bottom bar on phones, sidebar on desktop */
+#app { min-height: 100vh; }
+header.top { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header.top .brand { font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+header.top .case { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--panel); border-top: 1px solid var(--line); z-index: 6; padding-bottom: env(safe-area-inset-bottom); }
+nav.tabs button { border: 0; border-radius: 0; background: none; min-height: 56px; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+nav.tabs button .ico { font-size: 18px; line-height: 1; }
+nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 700; }
+main { padding: 16px; padding-bottom: 96px; max-width: 1200px; margin: 0 auto; min-width: 0; }
+@media (min-width: 900px) {
+  #app { display: grid; grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  header.top { grid-column: 1 / 3; }
+  nav.tabs { position: sticky; top: 57px; align-self: start; height: calc(100vh - 57px); display: flex; flex-direction: column; border-top: 0; border-right: 1px solid var(--line); padding: 8px; }
+  nav.tabs button { flex-direction: row; justify-content: flex-start; gap: 10px; min-height: 44px; font-size: 14px; padding: 0 12px; border-radius: 8px; }
+  nav.tabs button[aria-current="page"] { background: var(--chip); }
+  main { padding: 20px 24px 40px; margin: 0; width: 100%; }
+}
+
+/* severity: always color + text label */
+.sev { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border-radius: 99px; white-space: nowrap; }
+.sev.critical { color: var(--crit); background: var(--crit-bg); }
+.sev.warning { color: var(--warn); background: var(--warn-bg); }
+.sev.info { color: var(--info); background: var(--info-bg); }
+.sev.ok { color: var(--ok); background: var(--ok-bg); }
+.pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; background: var(--chip); }
+.pill.draft { color: var(--crit); background: var(--crit-bg); }
+.pill.testing { color: var(--warn); background: var(--warn-bg); }
+.pill.ready, .pill.live { color: var(--ok); background: var(--ok-bg); }
+.errors { background: var(--crit-bg); color: var(--crit); border-radius: 8px; padding: 10px 14px 10px 28px; margin: 0; }
+.notice { background: var(--info-bg); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+.notice.warn { background: var(--warn-bg); color: var(--warn); }
+
+table.list { width: 100%; border-collapse: collapse; }
+table.list th, table.list td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.list th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.tablewrap { overflow-x: auto; }
+
+.issue { border-top: 1px solid var(--line); padding: 10px 0; display: grid; gap: 4px; }
+.issue:first-child { border-top: 0; }
+.issue .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--muted); }
+.issue .fix { font-size: 13px; color: var(--muted); }
+.issue .fix b { color: var(--ink); font-weight: 600; }
+
+/* JSON editor */
+.editor { display: grid; grid-template-columns: auto 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); height: 60vh; min-height: 320px; }
+.editor .gutter { font-family: var(--mono); font-size: 13px; line-height: 20px; padding: 8px 6px; color: var(--muted); text-align: right; background: var(--chip); overflow: hidden; user-select: none; white-space: pre; }
+.editor textarea { font-family: var(--mono); font-size: 13px; line-height: 20px; border: 0; border-radius: 0; padding: 8px 10px; resize: none; white-space: pre; overflow: auto; height: 100%; width: 100%; outline: none; tab-size: 2; }
+
+/* dependency map */
+.levelpick { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.levelpick button { border: 0; border-radius: 0; min-height: 36px; }
+.levelpick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.depmap { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+.depcol { flex: 0 0 auto; width: 180px; scroll-snap-align: start; background: var(--chip); border: 2px solid transparent; border-radius: 10px; padding: 8px; }
+.depcol.bottleneck { border-color: var(--warn); }
+.depcol.dead { border-color: var(--crit); }
+.depcol h4 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 700; }
+.chipp { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; margin-bottom: 6px; font-size: 13px; }
+.chipp.unreach { border-color: var(--crit); color: var(--crit); background: var(--crit-bg); }
+.chipp .id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+@media (max-width: 600px) { .depcol { width: 78vw; } }
+
+/* live runner */
+.timer { font-family: var(--mono); font-size: 44px; font-weight: 700; text-align: center; letter-spacing: .02em; }
+.bigbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bigbtns button { min-height: 64px; font-size: 16px; font-weight: 600; }
+.bigbtns .solved { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+.bigbtns .help { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+.bigbtns .gaveup { background: var(--crit-bg); color: var(--crit); border-color: var(--crit); }
+.hintbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.hintbtns button { min-height: 56px; }
+.hintbtns button[aria-pressed="true"] { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); font-weight: 700; }
+.tagchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tagchips button { min-height: 40px; border-radius: 99px; font-size: 13px; }
+.tagchips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.progress { height: 6px; background: var(--chip); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); }
+
+/* report */
+.score { font-size: 64px; font-weight: 800; line-height: 1; }
+.gate { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; }
+.heat td.status-red { background: var(--crit-bg); }
+.heat td.status-amber { background: var(--warn-bg); }
+.heat td.status-green { background: var(--ok-bg); }
+.flag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 99px; background: var(--warn-bg); color: var(--warn); margin: 1px 2px 1px 0; font-weight: 600; }
+.flag.bad { background: var(--crit-bg); color: var(--crit); }
+.toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; z-index: 20; font-size: 14px; max-width: calc(100vw - 32px); }
+@media (min-width: 900px) { .toast { bottom: 24px; } }
+details > summary { cursor: pointer; }
+pre.out { white-space: pre-wrap; word-break: break-word; background: var(--chip); padding: 10px; border-radius: 8px; max-height: 320px; overflow: auto; font-family: var(--mono); font-size: 12px; }
+.hl { outline: 3px solid var(--warn); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <span class="brand">Case Lab</span>
+    <span class="case grow" id="hdrCase"></span>
+    <span id="hdrUser" class="small muted"></span>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+  <main id="main"></main>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script type="module">
+// =====================================================================
+// CONFIG
+// =====================================================================
+// Paste your Firebase web config here (Firebase console → Project settings →
+// Your apps → Web app). While apiKey still starts with "YOUR_", Case Lab runs
+// in DEMO MODE: everything is stored in this browser's localStorage and the AI
+// testers are switched off (they need the Firebase login to reach the proxy).
+const CONFIG = {
+  firebase: {
+    apiKey: 'YOUR_API_KEY',
+    authDomain: 'YOUR_PROJECT.firebaseapp.com',
+    projectId: 'YOUR_PROJECT',
+    appId: 'YOUR_APP_ID'
+  },
+  firebaseSdk: '10.12.2',
+  claudeModel: 'claude-sonnet-5-5',   // the proxy falls back to CLAUDE_MODEL env if blank
+  geminiModel: '',                     // blank = use GEMINI_MODEL env on the proxy
+  localDbKey: 'caselab.demo.db.v1',
+  liveKey: 'caselab.live.v1'
+};
+const DEMO = !CONFIG.firebase.apiKey || CONFIG.firebase.apiKey.startsWith('YOUR_');
+
+// =====================================================================
+// STATE
+// =====================================================================
+const S = {
+  user: null,               // Firebase user (or a demo stand-in)
+  cases: [],                // [{id, title, type, status, latestVersion}]
+  current: null,            // { caseId, version, bible, changelog, versions: [v...] }
+  logic: null,              // output of runLogicLab(bible)
+  aiRuns: [],               // for current case+version
+  sessions: [],             // live tests for current case+version
+  live: null,               // in-progress live session (mirrored to localStorage)
+  tab: 'cases',             // cases | logic | ai | live | report
+  // UI-only state
+  draft: '',                // JSON textarea contents
+  draftErrors: [],
+  ready: false,
+  busy: '',
+  logicLevel: 'detective',
+  reportLevel: 'detective',
+  aiOpts: { persona: 'game_night', level: 'detective', provider: 'claude', count: 2 },
+  compare: null,
+  liveSetup: { level: 'detective', size: 4, ages: '', gamers: false, devices: true },
+  surveyDraft: {}
+};
+
+// =====================================================================
+// DB
+// =====================================================================
+// Firestore paths:
+//   cases/{caseId}                 {title, type, status, latestVersion, updatedAt}
+//   cases/{caseId}/versions/{v}    {bible, changelog, logic, createdAt}
+//   aiRuns/{runId}                 {caseId, version, kind, provider, persona, level, result, usage, createdAt}
+//   sessions/{sessionId}           {caseId, version, level, group, puzzles, survey, ...}
+// In DEMO mode the same shapes live in one localStorage blob.
+const fb = {};
+
+async function initFirebase() {
+  const v = CONFIG.firebaseSdk;
+  const [app, auth, fs] = await Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${v}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${v}/firebase-auth.js`),
+    import(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore.js`)
+  ]);
+  fb.A = auth; fb.F = fs;
+  fb.app = app.initializeApp(CONFIG.firebase);
+  fb.auth = auth.getAuth(fb.app);
+  fb.db = fs.getFirestore(fb.app);
+  auth.onAuthStateChanged(fb.auth, async u => {
+    S.user = u;
+    if (u) { try { await afterLogin(); } catch (e) { toast('Load failed: ' + e.message); } }
+    S.ready = true;
+    render();
+  });
+}
+async function signIn() {
+  const p = new fb.A.GoogleAuthProvider();
+  try { await fb.A.signInWithPopup(fb.auth, p); }
+  catch (e) {
+    if (String(e.code || '').includes('popup')) await fb.A.signInWithRedirect(fb.auth, p);
+    else toast('Sign-in failed: ' + e.message);
+  }
+}
+async function signOut() { if (!DEMO) await fb.A.signOut(fb.auth); }
+
+// ---- local (demo) backend ----
+function ldb() {
+  try { return JSON.parse(localStorage.getItem(CONFIG.localDbKey)) || { cases: {}, aiRuns: {}, sessions: {} }; }
+  catch { return { cases: {}, aiRuns: {}, sessions: {} }; }
+}
+function ldbSave(d) { localStorage.setItem(CONFIG.localDbKey, JSON.stringify(d)); }
+const clean = o => JSON.parse(JSON.stringify(o));     // Firestore rejects undefined
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'case';
+
+async function loadCases() {
+  if (DEMO) {
+    return Object.entries(ldb().cases).map(([id, c]) => ({ id, title: c.title, type: c.type, status: c.status, latestVersion: c.latestVersion, updatedAt: c.updatedAt }))
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  }
+  const { collection, getDocs } = fb.F;
+  const snap = await getDocs(collection(fb.db, 'cases'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+
+// validate → write version v = latest+1 → update case doc
+async function saveCase(bible, changelog = []) {
+  const res = validateBible(bible);
+  if (!res.ok) throw Object.assign(new Error('Schema errors'), { errors: res.errors });
+  const caseId = slug(bible.id);
+  const now = Date.now();
+  if (DEMO) {
+    const d = ldb();
+    const c = d.cases[caseId] || { versions: {}, status: 'draft', latestVersion: 0 };
+    const v = (c.latestVersion || 0) + 1;
+    const b = clean({ ...bible, version: v });
+    c.versions[v] = { bible: b, changelog, createdAt: now };
+    Object.assign(c, { title: b.title, type: b.type, latestVersion: v, updatedAt: now });
+    d.cases[caseId] = c; ldbSave(d);
+    return { caseId, version: v, bible: b };
+  }
+  const { doc, getDoc, setDoc } = fb.F;
+  const ref = doc(fb.db, 'cases', caseId);
+  const snap = await getDoc(ref);
+  const prev = snap.exists() ? snap.data() : { status: 'draft', latestVersion: 0 };
+  const v = (prev.latestVersion || 0) + 1;
+  const b = clean({ ...bible, version: v });
+  await setDoc(doc(fb.db, 'cases', caseId, 'versions', String(v)), { bible: b, changelog: clean(changelog), createdAt: now });
+  await setDoc(ref, { title: b.title, type: b.type, status: prev.status || 'draft', latestVersion: v, updatedAt: now }, { merge: true });
+  return { caseId, version: v, bible: b };
+}
+
+async function loadVersion(caseId, v) {
+  if (DEMO) {
+    const c = ldb().cases[caseId]; const ver = c && c.versions[v];
+    if (!ver) throw new Error(`No version ${v} of ${caseId}`);
+    return { ...ver, versions: Object.keys(c.versions).map(Number).sort((a, b) => a - b) };
+  }
+  const { doc, getDoc, collection, getDocs } = fb.F;
+  const snap = await getDoc(doc(fb.db, 'cases', caseId, 'versions', String(v)));
+  if (!snap.exists()) throw new Error(`No version ${v} of ${caseId}`);
+  const vs = await getDocs(collection(fb.db, 'cases', caseId, 'versions'));
+  return { ...snap.data(), versions: vs.docs.map(d => Number(d.id)).sort((a, b) => a - b) };
+}
+
+async function saveLogicResult(caseId, v, result) {
+  const slim = clean({ issues: result.issues, score: result.score, paths: result.paths, pages: result.pages, at: Date.now() });
+  if (DEMO) { const d = ldb(); const ver = d.cases[caseId]?.versions[v]; if (ver) { ver.logic = slim; ldbSave(d); } return; }
+  const { doc, setDoc } = fb.F;
+  await setDoc(doc(fb.db, 'cases', caseId, 'versions', String(v)), { logic: slim }, { merge: true });
+}
+
+async function saveAiRun(run) {
+  const r = clean({ ...run, id: run.id || newId(), createdAt: run.createdAt || Date.now() });
+  if (DEMO) { const d = ldb(); d.aiRuns[r.id] = r; ldbSave(d); return r; }
+  const { doc, setDoc } = fb.F;
+  await setDoc(doc(fb.db, 'aiRuns', r.id), r);
+  return r;
+}
+
+async function saveSession(session) {
+  const s = clean({ ...session, savedAt: Date.now() });
+  if (DEMO) { const d = ldb(); d.sessions[s.id] = s; ldbSave(d); return s; }
+  const { doc, setDoc } = fb.F;
+  await setDoc(doc(fb.db, 'sessions', s.id), s);
+  return s;
+}
+
+async function queryBy(col, caseId, v) {
+  if (DEMO) return Object.values(ldb()[col]).filter(r => r.caseId === caseId && r.version === v);
+  const { collection, query, where, getDocs } = fb.F;
+  const snap = await getDocs(query(collection(fb.db, col), where('caseId', '==', caseId), where('version', '==', v)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+const loadRuns = (caseId, v) => queryBy('aiRuns', caseId, v).then(r => r.sort((a, b) => a.createdAt - b.createdAt));
+const loadSessions = (caseId, v) => queryBy('sessions', caseId, v).then(r => r.sort((a, b) => a.startedAt - b.startedAt));
+
+async function setStatus(caseId, status) {   // draft | testing | ready | live
+  if (DEMO) { const d = ldb(); if (d.cases[caseId]) { d.cases[caseId].status = status; ldbSave(d); } return; }
+  const { doc, setDoc } = fb.F;
+  await setDoc(doc(fb.db, 'cases', caseId), { status, updatedAt: Date.now() }, { merge: true });
+}
+
+// =====================================================================
+// SCHEMA
+// =====================================================================
+const LEVELS = ['rookie', 'detective', 'mastermind'];
+const TYPES = ['escape', 'mystery', 'hunt', 'party'];
+const REQUIRED = ['id', 'version', 'title', 'type', 'players', 'targetMinutes', 'items', 'puzzles', 'final'];
+const norm = s => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+function validateBible(b) {
+  const errors = [];
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return { ok: false, errors: ['The case bible must be a JSON object.'] };
+  for (const f of REQUIRED) if (b[f] === undefined || b[f] === null || b[f] === '') errors.push(`Missing required field "${f}".`);
+  if (b.type !== undefined && !TYPES.includes(b.type)) errors.push(`"type" must be one of ${TYPES.join(', ')} (got "${b.type}").`);
+  if (b.targetMinutes && typeof b.targetMinutes === 'object') {
+    for (const l of LEVELS) if (!(Number(b.targetMinutes[l]) > 0)) errors.push(`targetMinutes.${l} must be a number above 0.`);
+  } else if (b.targetMinutes !== undefined) errors.push('"targetMinutes" must be an object with rookie, detective and mastermind.');
+  if (b.items !== undefined && !Array.isArray(b.items)) errors.push('"items" must be an array.');
+  if (b.puzzles !== undefined && !Array.isArray(b.puzzles)) errors.push('"puzzles" must be an array.');
+  if (b.final !== undefined && (typeof b.final !== 'object' || !Array.isArray(b.final.needs))) errors.push('"final" must be an object with a "needs" array.');
+
+  const items = Array.isArray(b.items) ? b.items : [];
+  const puzzles = Array.isArray(b.puzzles) ? b.puzzles : [];
+  const seen = new Map();
+  [...items.map(x => ['item', x]), ...puzzles.map(x => ['puzzle', x])].forEach(([kind, x], i) => {
+    if (!x || typeof x.id !== 'string' || !x.id) { errors.push(`A ${kind} (#${i + 1}) has no "id".`); return; }
+    if (seen.has(x.id)) errors.push(`Duplicate id "${x.id}" (used by a ${seen.get(x.id)} and a ${kind}). Item and puzzle ids must all be unique.`);
+    else seen.set(x.id, kind);
+  });
+  items.forEach(it => {
+    if (!it || !it.id) return;
+    if (it.level !== undefined && (!Array.isArray(it.level) || it.level.some(l => !LEVELS.includes(l))))
+      errors.push(`Item ${it.id}: "level" must be an array of ${LEVELS.join('/')}.`);
+  });
+  puzzles.forEach(p => {
+    if (!p || !p.id) return;
+    if (!norm(p.answer)) errors.push(`Puzzle ${p.id}: missing "answer".`);
+    if (!p.text || typeof p.text !== 'object') errors.push(`Puzzle ${p.id}: missing "text" (rookie/detective/mastermind).`);
+    else for (const l of LEVELS) if (!String(p.text[l] || '').trim()) errors.push(`Puzzle ${p.id}: missing text.${l}.`);
+    if (!Array.isArray(p.hints) || p.hints.length !== 3) errors.push(`Puzzle ${p.id}: needs exactly 3 hints.`);
+    if (!p.minutes || typeof p.minutes !== 'object') errors.push(`Puzzle ${p.id}: missing "minutes" for each level.`);
+    else for (const l of LEVELS) if (!(Number(p.minutes[l]) > 0)) errors.push(`Puzzle ${p.id}: minutes.${l} must be a number above 0.`);
+    if (p.needs !== undefined && !Array.isArray(p.needs)) errors.push(`Puzzle ${p.id}: "needs" must be an array.`);
+    if (p.unlocks !== undefined && !Array.isArray(p.unlocks)) errors.push(`Puzzle ${p.id}: "unlocks" must be an array.`);
+  });
+  if (b.type === 'mystery') {
+    if (!Array.isArray(b.suspects) || !b.suspects.length) errors.push('Mysteries need a "suspects" array.');
+    if (!b.solution || !b.solution.culprit) errors.push('Mysteries need "solution.culprit".');
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+// =====================================================================
+// LOGIC
+// =====================================================================
+const inLevelFn = level => it => !it.level || it.level.includes(level);
+const needsOf = p => Array.isArray(p.needs) ? p.needs : [];
+
+function simulate(b, level) {
+  const inLevel = inLevelFn(level);
+  const itemIds = new Set(b.items.filter(inLevel).map(i => i.id));
+  const have = new Set(b.items.filter(i => inLevel(i) && i.start).map(i => i.id));
+  const solved = new Set();
+  const steps = [];                        // [[puzzleIds open at this step]]
+  let progress = true;
+  while (progress) {
+    progress = false;
+    const open = b.puzzles.filter(p => !solved.has(p.id) &&
+      needsOf(p).every(n => have.has(n) || solved.has(n)));
+    if (open.length) {
+      steps.push(open.map(p => p.id));
+      open.forEach(p => {
+        solved.add(p.id);
+        (p.unlocks || []).forEach(u => { if (itemIds.has(u)) have.add(u); });
+      });
+      progress = true;
+    }
+  }
+  const finalOk = (b.final.needs || []).every(n => solved.has(n) || have.has(n));
+  return { level, have, solved, steps, finalOk, itemIds };
+}
+
+// Longest chain by minutes from start to final.needs. An item becomes available
+// when its EARLIEST provider puzzle finishes; a puzzle finishes after its slowest need.
+function criticalPath(b, level, sim = simulate(b, level)) {
+  const P = new Map(b.puzzles.map(p => [p.id, p]));
+  const start = new Set(b.items.filter(i => inLevelFn(level)(i) && i.start).map(i => i.id));
+  const providers = new Map();
+  b.puzzles.forEach(p => (p.unlocks || []).forEach(u => {
+    if (!providers.has(u)) providers.set(u, []);
+    providers.get(u).push(p.id);
+  }));
+  const memo = new Map(), visiting = new Set();
+  const NONE = { minutes: Infinity, path: [] };
+  const cost = pid => {
+    if (memo.has(pid)) return memo.get(pid);
+    if (visiting.has(pid) || !sim.solved.has(pid)) return NONE;
+    visiting.add(pid);
+    let best = { minutes: 0, path: [] };
+    for (const n of needsOf(P.get(pid))) {
+      const dep = resolve(n);
+      if (dep.minutes > best.minutes) best = dep;
+    }
+    visiting.delete(pid);
+    const res = { minutes: best.minutes + (Number(P.get(pid).minutes?.[level]) || 0), path: [...best.path, pid] };
+    memo.set(pid, res);
+    return res;
+  };
+  const resolve = n => {
+    if (P.has(n)) return cost(n);
+    if (start.has(n)) return { minutes: 0, path: [] };
+    if (!sim.itemIds.has(n)) return NONE;
+    const opts = (providers.get(n) || []).map(cost).filter(c => Number.isFinite(c.minutes));
+    return opts.length ? opts.reduce((a, c) => c.minutes < a.minutes ? c : a) : NONE;
+  };
+  let best = { minutes: 0, path: [] };
+  for (const n of b.final.needs || []) {
+    const d = resolve(n);
+    if (d.minutes > best.minutes) best = d;
+  }
+  return { level, path: best.path, minutes: best.minutes, reachable: Number.isFinite(best.minutes) };
+}
+
+function countPages(b) {
+  const pages = it => it.pages === undefined ? 1 : Math.max(0, Number(it.pages) || 0);
+  const tally = list => ({ total: list.reduce((s, i) => s + pages(i), 0), color: list.filter(i => i.color).reduce((s, i) => s + pages(i), 0) });
+  return { ...tally(b.items), byLevel: Object.fromEntries(LEVELS.map(l => [l, tally(b.items.filter(inLevelFn(l)))])) };
+}
+
+const SEV_RANK = { critical: 0, warning: 1, info: 2 };
+const nameOf = (b, id) => (b.items.find(i => i.id === id) || b.puzzles.find(p => p.id === id) || (b.suspects || []).find(s => s.id === id) || {}).name || id;
+const tagsOf = it => (it.tags || []).filter(t => t && typeof t === 'object');
+const isRedHerring = it => it.redHerring === true || tagsOf(it).some(t => t.type === 'redHerring');
+const allNeeds = b => new Set([...b.puzzles.flatMap(needsOf), ...(b.final.needs || []), ...((b.legend && b.legend.needs) || [])]);
+
+// Run fn once per level, then merge identical issues into one row listing the levels.
+function perLevel(fn) {
+  const merged = new Map();
+  for (const l of LEVELS) for (const i of fn(l)) {
+    const k = `${i.severity}|${i.target || ''}|${i.message}`;
+    if (merged.has(k)) merged.get(k).levels.push(l); else merged.set(k, { ...i, levels: [l] });
+  }
+  return [...merged.values()].map(({ levels, ...i }) => ({ ...i, level: levels.length === 3 ? 'all' : levels.join(', ') }));
+}
+
+// #1
+function checkFinalReachable(b, sims) {
+  return perLevel(l => {
+    if (sims[l].finalOk) return [];
+    const missing = (b.final.needs || []).filter(n => !sims[l].solved.has(n) && !sims[l].have.has(n));
+    return [{ severity: 'critical', target: 'final', message: `The final can't be reached. Never available: ${missing.map(m => `${nameOf(b, m)} (${m})`).join(', ')}.`,
+      fix: 'Make every final need a start item or something a solvable puzzle unlocks.' }];
+  });
+}
+// #2
+function checkUnreachable(b, sims) {
+  const needed = allNeeds(b);
+  return perLevel(l => {
+    const s = sims[l], out = [];
+    for (const id of s.itemIds) if (!s.have.has(id)) out.push({
+      severity: needed.has(id) ? 'critical' : 'warning', target: id,
+      message: `Item "${nameOf(b, id)}" is never reached${needed.has(id) ? ' and something needs it' : ''}.`,
+      fix: 'Mark it "start": true, add it to a puzzle\'s "unlocks", or cut it from the print file.' });
+    for (const p of b.puzzles) if (!s.solved.has(p.id)) out.push({
+      severity: 'critical', target: p.id, message: `Puzzle "${p.name || p.id}" can never be opened.`,
+      fix: `Check its needs (${needsOf(p).join(', ') || 'none'}); one of them is never available.` });
+    return out;
+  });
+}
+// #3
+function checkMissingRefs(b) {
+  const out = [];
+  const items = new Set(b.items.map(i => i.id)), puzzles = new Set(b.puzzles.map(p => p.id));
+  const known = n => items.has(n) || puzzles.has(n);
+  b.puzzles.forEach(p => {
+    needsOf(p).filter(n => !known(n)).forEach(n => out.push({ severity: 'critical', target: p.id, message: `Puzzle ${p.id} needs "${n}", which doesn't exist.`, fix: 'Fix the typo or add the missing item.' }));
+    (p.unlocks || []).forEach(u => {
+      if (puzzles.has(u)) out.push({ severity: 'warning', target: p.id, message: `Puzzle ${p.id} unlocks a puzzle id ("${u}"). "unlocks" should list items.`, fix: `Put ${p.id} in ${u}'s "needs" instead.` });
+      else if (!items.has(u)) out.push({ severity: 'critical', target: p.id, message: `Puzzle ${p.id} unlocks "${u}", which doesn't exist.`, fix: 'Fix the typo or add the missing item.' });
+    });
+  });
+  (b.final.needs || []).filter(n => !known(n)).forEach(n => out.push({ severity: 'critical', target: 'final', message: `The final needs "${n}", which doesn't exist.`, fix: 'Fix the id in final.needs.' }));
+  ((b.legend && b.legend.needs) || []).filter(n => !known(n)).forEach(n => out.push({ severity: 'warning', target: 'legend', message: `The legend needs "${n}", which doesn't exist.`, fix: 'Fix the id in legend.needs.' }));
+  const suspects = new Set((b.suspects || []).map(s => s.id));
+  b.items.forEach(it => tagsOf(it).forEach(t => {
+    if (t.suspect && !suspects.has(t.suspect)) out.push({ severity: 'warning', target: it.id, message: `Item ${it.id} tags suspect "${t.suspect}", who isn't in the suspect list.`, fix: 'Fix the suspect id on the tag.' });
+  }));
+  if (b.type === 'mystery' && b.solution && b.solution.culprit && !suspects.has(b.solution.culprit))
+    out.push({ severity: 'critical', target: 'solution', message: `The culprit "${b.solution.culprit}" isn't in the suspect list.`, fix: 'Point solution.culprit at a real suspect id.' });
+  return out;
+}
+// #4
+function checkPuzzleComplete(b) {
+  const out = [];
+  b.puzzles.forEach(p => {
+    const hints = (p.hints || []).map(h => String(h || '').trim());
+    if (!p.name) out.push({ severity: 'info', target: p.id, message: `Puzzle ${p.id} has no name.`, fix: 'Add a short "name" so the host sheet and reports read clearly.' });
+    if (hints.some(h => !h)) out.push({ severity: 'warning', target: p.id, message: `Puzzle ${p.id} has an empty hint.`, fix: 'Write all 3 hints: nudge, stronger nudge, near-giveaway.' });
+    if (new Set(hints.filter(Boolean)).size < hints.filter(Boolean).length) out.push({ severity: 'warning', target: p.id, message: `Puzzle ${p.id} repeats a hint.`, fix: 'Each hint should say something new.' });
+    if (hints[2] && norm(p.answer) && !norm(hints[2]).includes(norm(p.answer))) out.push({ severity: 'info', target: p.id, message: `Hint 3 for ${p.id} doesn't spell out the answer.`, fix: 'Groups that reach hint 3 usually need the answer. Consider stating it.' });
+    if (!needsOf(p).length) out.push({ severity: 'info', target: p.id, message: `Puzzle ${p.id} needs nothing, so it's open from minute one.`, fix: 'Fine for a warm-up. Otherwise list what it needs.' });
+  });
+  return out;
+}
+// #5
+function checkDuplicateAnswers(b) {
+  const groups = new Map();
+  b.puzzles.forEach(p => { const k = norm(p.answer); if (!k) return; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p.id); });
+  const out = [];
+  for (const [ans, ids] of groups) if (ids.length > 1) out.push({ severity: 'warning', target: ids.join(','),
+    message: `Puzzles ${ids.join(' and ')} share the answer "${ans}".`,
+    fix: 'Players will try a known code on every lock. Give each puzzle its own answer, unless the reuse is the point.' });
+  if (b.legend && norm(b.legend.answer) && groups.has(norm(b.legend.answer)))
+    out.push({ severity: 'warning', target: 'legend', message: `The legend answer matches puzzle ${groups.get(norm(b.legend.answer)).join(', ')}.`, fix: 'The bonus secret should be its own word.' });
+  return out;
+}
+// #6 cycles: DFS with a "visiting" set over puzzle -> dependency edges.
+function puzzleDeps(b) {
+  const puzzles = new Set(b.puzzles.map(p => p.id));
+  const providers = new Map();
+  b.puzzles.forEach(p => (p.unlocks || []).forEach(u => { if (!providers.has(u)) providers.set(u, []); providers.get(u).push(p.id); }));
+  return new Map(b.puzzles.map(p => [p.id, [...new Set(needsOf(p).flatMap(n => puzzles.has(n) ? [n] : (providers.get(n) || [])))]]));
+}
+function checkCycles(b) {
+  const deps = puzzleDeps(b), done = new Set(), visiting = [], out = [], seen = new Set();
+  const dfs = id => {
+    if (done.has(id)) return;
+    const at = visiting.indexOf(id);
+    if (at >= 0) {
+      const cyc = visiting.slice(at).concat(id), key = [...cyc].slice(0, -1).sort().join(',');
+      if (!seen.has(key)) { seen.add(key); out.push({ severity: 'critical', target: cyc[0], message: `Dependency loop: ${cyc.join(' → ')}.`, fix: 'Something in this loop has to be available first. Make one of these items a start item or re-route an unlock.' }); }
+      return;
+    }
+    visiting.push(id);
+    (deps.get(id) || []).forEach(dfs);
+    visiting.pop(); done.add(id);
+  };
+  [...deps.keys()].forEach(dfs);
+  return out;
+}
+// #7 Second-killer test (mysteries only), per level
+function checkSecondKiller(b, sims) {
+  if (b.type !== 'mystery') return [];
+  return perLevel(l => {
+    const reach = sims[l].have;
+    const tagsFor = s => b.items.filter(i => reach.has(i.id)).flatMap(i => tagsOf(i).filter(t => t.suspect === s).map(t => t.type));
+    return (b.suspects || []).filter(s => s.id !== b.solution.culprit).flatMap(s => {
+      const t = new Set(tagsFor(s.id));
+      const looksGuilty = t.has('means') && t.has('motive') && t.has('opportunity');
+      return looksGuilty && !t.has('alibi')
+        ? [{ severity: 'critical', target: s.id, message: `${s.name} could also be the killer: means, motive and opportunity, and no alibi.`,
+             fix: 'Add a reachable alibi clue or remove one of means/motive/opportunity.' }]
+        : [];
+    });
+  });
+}
+// #8 Every innocent needs at least one reachable alibi
+function checkUnclearedSuspects(b, sims) {
+  if (b.type !== 'mystery') return [];
+  return perLevel(l => (b.suspects || []).filter(s => s.id !== b.solution.culprit).filter(s =>
+    !b.items.some(i => sims[l].have.has(i.id) && tagsOf(i).some(t => t.suspect === s.id && t.type === 'alibi'))
+  ).map(s => ({ severity: 'warning', target: s.id, message: `${s.name} is never cleared: no reachable alibi.`, fix: 'Give every innocent at least one alibi clue players can reach.' })));
+}
+// #9 Culprit must have means + motive + opportunity reachable at every level
+function checkCulpritMMO(b, sims) {
+  if (b.type !== 'mystery' || !b.solution) return [];
+  const c = b.solution.culprit;
+  return perLevel(l => {
+    const t = new Set(b.items.filter(i => sims[l].have.has(i.id)).flatMap(i => tagsOf(i).filter(x => x.suspect === c).map(x => x.type)));
+    const missing = ['means', 'motive', 'opportunity'].filter(x => !t.has(x));
+    return missing.length ? [{ severity: 'critical', target: c, message: `The culprit (${nameOf(b, c)}) has no reachable ${missing.join(' or ')}.`, fix: 'Players must be able to prove all three. Add or unlock a clue tagged for each.' }] : [];
+  });
+}
+// #10 Bottleneck: 3+ consecutive steps with only one open puzzle
+function bottleneckRuns(steps) {
+  const runs = []; let cur = [];
+  steps.forEach((s, i) => { if (s.length === 1) cur.push(i); else { if (cur.length >= 3) runs.push(cur); cur = []; } });
+  if (cur.length >= 3) runs.push(cur);
+  return runs;
+}
+function checkBottleneck(b, sims) {
+  return perLevel(l => bottleneckRuns(sims[l].steps).map(run => {
+    const ids = run.map(i => sims[l].steps[i][0]);
+    return { severity: 'warning', target: ids.join(','), message: `${run.length} steps in a row with only one puzzle open (${ids.join(' → ')}). The rest of the table sits idle.`, fix: 'Split the chain so two puzzles can be worked at the same time.' };
+  }));
+}
+// #11 Timing
+function checkTiming(b, sims) {
+  const out = [];
+  for (const l of LEVELS) {
+    const cp = criticalPath(b, l, sims[l]); const target = Number(b.targetMinutes[l]);
+    if (!cp.reachable || !target) continue;
+    const off = (cp.minutes - target) / target;
+    if (Math.abs(off) > 0.25) out.push({ severity: 'warning', level: l, target: 'timing',
+      message: `Critical path is ${cp.minutes} min against a ${target} min target (${off > 0 ? '+' : ''}${Math.round(off * 100)}%).`,
+      fix: off > 0 ? 'Trim the longest chain or add a shortcut.' : 'Add depth to the longest chain, or lower the target.' });
+  }
+  return out;
+}
+// #12 Color load
+function checkColorLoad(b) {
+  const pg = countPages(b);
+  if (!pg.total) return [];
+  const r = pg.color / pg.total;
+  return r > 0.30 ? [{ severity: 'warning', target: 'print', message: `${pg.color} of ${pg.total} pages are color (${Math.round(r * 100)}%). Home printers choke on that.`, fix: 'Keep color under 30%: make photos grayscale-friendly or move color to one sheet.' }] : [];
+}
+// #13 Phone fallback
+function checkPhoneFallback(b) {
+  return b.items.filter(i => i.kind === 'phone' || i.phone).flatMap(i => {
+    const ph = i.phone || {};
+    if (!String(ph.fallback || '').trim()) return [{ severity: 'critical', target: i.id, message: `Phone item "${i.name || i.id}" has no printed fallback.`, fix: 'Add phone.fallback: a printed code or text for when there is no signal or a dead battery.' }];
+    if (!String(ph.qr || '').trim()) return [{ severity: 'warning', target: i.id, message: `Phone item "${i.name || i.id}" has no QR link.`, fix: 'Add phone.qr, or change the kind if it is not a phone clue.' }];
+    return [];
+  });
+}
+// #14 Split level: the three levels should actually differ
+function checkSplitLevel(b, sims) {
+  const out = [];
+  b.puzzles.forEach(p => {
+    if (p.text && String(p.text.rookie || '').trim() && String(p.text.rookie).trim() === String(p.text.mastermind || '').trim())
+      out.push({ severity: 'info', target: p.id, message: `Puzzle ${p.id} has the same wording at rookie and mastermind.`, fix: 'Rookie text should hand-hold; mastermind text should only hint at the method.' });
+  });
+  const m = LEVELS.map(l => criticalPath(b, l, sims[l]));
+  if (m.every(x => x.reachable) && !(m[0].minutes <= m[1].minutes && m[1].minutes <= m[2].minutes))
+    out.push({ severity: 'warning', target: 'levels', message: `Critical-path minutes don't rise with difficulty (${m.map(x => `${x.level} ${x.minutes}`).join(', ')}).`, fix: 'Rookie should be the shortest run and mastermind the longest.' });
+  return out;
+}
+// #15 Legend (hidden bonus secret)
+function checkLegend(b, sims) {
+  if (!b.legend) return b.type === 'party' ? [] : [{ severity: 'info', target: 'legend', message: 'No legend (hidden bonus secret).', fix: 'Optional. A legend gives puzzle fans something extra to find.' }];
+  const out = [];
+  if (!norm(b.legend.answer)) out.push({ severity: 'warning', target: 'legend', message: 'The legend has no answer.', fix: 'Add legend.answer.' });
+  const ok = l => (b.legend.needs || []).every(n => sims[l].have.has(n) || sims[l].solved.has(n));
+  if (!LEVELS.some(ok)) out.push({ severity: 'warning', target: 'legend', message: 'The legend can\'t be found at any level.', fix: 'Make everything in legend.needs reachable at mastermind at least.' });
+  else if (!ok('mastermind')) out.push({ severity: 'warning', target: 'legend', message: 'The legend isn\'t reachable at mastermind.', fix: 'Mastermind players are the ones hunting for it. Make it reachable there.' });
+  return out;
+}
+// #16 Suspect count
+function checkSuspectCount(b) {
+  if (b.type !== 'mystery') return [];
+  const n = (b.suspects || []).length, out = [];
+  if (n < 3) out.push({ severity: 'warning', target: 'suspects', message: `Only ${n} suspect${n === 1 ? '' : 's'}. Players can guess.`, fix: 'Use 4 to 6 suspects.' });
+  if (n > 8) out.push({ severity: 'warning', target: 'suspects', message: `${n} suspects is a lot to track at a party.`, fix: 'Cut to 8 or fewer.' });
+  (b.suspects || []).filter(s => !s.name).forEach(s => out.push({ severity: 'warning', target: s.id, message: `Suspect ${s.id} has no name.`, fix: 'Name every suspect.' }));
+  return out;
+}
+// #17 Red herrings, counted per level (info only)
+const HERRING_RANGE = { rookie: [0, 1], detective: [2, 3], mastermind: [4, Infinity] };
+function checkRedHerrings(b, sims) {
+  return LEVELS.flatMap(l => {
+    const n = b.items.filter(i => sims[l].have.has(i.id) && isRedHerring(i)).length;
+    const [lo, hi] = HERRING_RANGE[l];
+    return n < lo || n > hi ? [{ severity: 'info', level: l, target: 'redHerrings', message: `${n} reachable red herring${n === 1 ? '' : 's'}; ${l} usually has ${hi === Infinity ? lo + '+' : lo + '–' + hi}.`, fix: n < lo ? 'Add a misleading but fair clue.' : 'Cut a red herring so new players are not buried.' }] : [];
+  });
+}
+
+const CHECKS = [checkFinalReachable, checkUnreachable, checkMissingRefs, checkPuzzleComplete,
+  checkDuplicateAnswers, checkCycles, checkSecondKiller, checkUnclearedSuspects,
+  checkCulpritMMO, checkBottleneck, checkTiming, checkColorLoad, checkPhoneFallback,
+  checkSplitLevel, checkLegend, checkSuspectCount, checkRedHerrings];
+
+function logicScore(issues) {
+  const crit = issues.filter(i => i.severity === 'critical').length;
+  const warn = issues.filter(i => i.severity === 'warning').length;
+  return crit ? 0 : Math.max(0, 40 - 5 * warn);
+}
+
+function runLogicLab(b) {
+  const sims = Object.fromEntries(LEVELS.map(l => [l, simulate(b, l)]));
+  const used = new Map();
+  const issues = CHECKS.flatMap(fn => fn(b, sims).map(i => {
+    const base = `${fn.name}:${i.level || '-'}:${i.target || '-'}`;
+    const n = (used.get(base) || 0) + 1; used.set(base, n);
+    return { ...i, check: fn.name, id: n > 1 ? `${base}#${n}` : base };
+  })).sort((a, c) => SEV_RANK[a.severity] - SEV_RANK[c.severity]);
+  return { sims, issues, paths: LEVELS.map(l => criticalPath(b, l, sims[l])),
+           pages: countPages(b), score: logicScore(issues) };
+}
+
+// =====================================================================
+// AI
+// =====================================================================
+async function callAI(provider, { system, prompt, model, maxTokens = 4000, effort }) {
+  if (DEMO) throw new Error('AI testers need Firebase sign-in (set CONFIG.firebase). Use "Copy prompt" and paste the result instead.');
+  const token = await S.user.getIdToken();
+  const r = await fetch(`/.netlify/functions/${provider}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ system, prompt, model, maxTokens, effort })
+  });
+  if (!r.ok) throw new Error(`${provider} ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  return r.json();                     // { text, usage }
+}
+
+function parseJSON(text) {             // strip ```json fences, then JSON.parse in try/catch
+  let t = String(text || '').trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  try { return JSON.parse(t); } catch {}
+  const a = t.indexOf('{'), z = t.lastIndexOf('}');
+  if (a >= 0 && z > a) { try { return JSON.parse(t.slice(a, z + 1)); } catch {} }
+  return null;
+}
+
+// Blind solver gets no answers.
+function playerView(b, level) {
+  const inLevel = inLevelFn(level);
+  return {
+    title: b.title, type: b.type, level, players: b.players,
+    suspects: (b.suspects || []).map(s => ({ id: s.id, name: s.name, role: s.role })),
+    items: b.items.filter(inLevel).map(i => ({ id: i.id, name: i.name, kind: i.kind,
+             text: i.playerText || i.name, start: !!i.start })),
+    puzzles: b.puzzles.map(p => ({ id: p.id, name: p.name, needs: p.needs || [],
+             text: p.text[level], hints: p.hints })),
+    final: { needs: b.final.needs || [], text: b.final.text || '' }
+    // NEVER include: answer, solution, tags, final.answer, legend.answer
+  };
+}
+
+const PERSONAS = {
+  rookie_family: 'a family with an 8-year-old and grandparents; they read instructions literally and give up after about 8 minutes stuck',
+  game_night: 'four adults at a casual game night, a couple of drinks in, average puzzle skill',
+  puzzle_nerds: 'experienced escape-room players who hunt for shortcuts and alternate answers',
+  distracted_party: 'a loud party where people skim the instructions and miss small print'
+};
+
+const blindSystem = persona => `You are playtesting a printed party game as ${PERSONAS[persona] || persona}. Solve it using ONLY the materials given. Do not invent facts that are not in the materials. Where a puzzle could have more than one answer, list every answer that fits. Use a hint only when your persona would be stuck, and count it. Return ONLY JSON in this format: {"puzzles":[{"id","answer","confidence","alternateAnswers":[],"stuckPoints":[],"hintsNeeded","estMinutes"}],"accusation","finalAnswer","confusingWording":[],"funNotes"}
+"confidence" is a number from 0 to 1. "accusation" is the suspect you accuse (mysteries only, else null). "finalAnswer" is your answer to the final question.`;
+
+const HUNTER_SYSTEM = `You are a professional mystery editor reviewing a game before it goes on sale. Using the full case bible, including the solution, find: contradictions; timeline errors; clues pointing to the wrong person; any second person who could reasonably be the culprit; puzzles with more than one valid answer; wording a tired party guest would misread; and anything inappropriate for the stated rating. Return ONLY JSON: {"issues":[{"severity":"critical|warning|info","target":"item or puzzle id","problem","fix"}]}`;
+
+const blindPrompt = (b, level) => `GAME MATERIALS (${level} level):\n${JSON.stringify(playerView(b, level), null, 2)}`;
+const hunterPrompt = b => `CASE BIBLE:\n${JSON.stringify(b, null, 2)}`;
+
+const conf01 = c => { const n = Number(c); return Number.isFinite(n) ? (n > 1 ? n / 100 : n) : 1; };
+
+function scoreBlindRun(b, run) {
+  return ((run.result && run.result.puzzles) || []).map(r => {
+    const p = b.puzzles.find(x => x.id === r.id);
+    if (!p) return null;
+    const right = norm(r.answer) === norm(p.answer);
+    const altValid = (r.alternateAnswers || []).filter(a => norm(a) && norm(a) !== norm(p.answer));
+    return {
+      id: r.id, right, answer: r.answer, alternates: altValid, hints: Number(r.hintsNeeded) || 0, est: r.estMinutes,
+      flags: [
+        !right && 'ambiguous_or_too_hard',
+        altValid.length && 'possible_second_answer',
+        Number(r.hintsNeeded) >= 2 && 'hint_heavy',
+        conf01(r.confidence) < 0.5 && 'low_confidence'
+      ].filter(Boolean)
+    };
+  }).filter(Boolean);
+}
+
+function blindFinalRight(b, run) {
+  const r = run.result || {};
+  if (b.type === 'mystery' && b.solution) {
+    const c = (b.suspects || []).find(s => s.id === b.solution.culprit) || { id: b.solution.culprit, name: '' };
+    const a = norm(r.accusation);
+    if (a && (a === norm(c.id) || (norm(c.name) && (norm(c.name).includes(a) || a.includes(norm(c.name)) || norm(c.name).split(/\s+/)[0] === a)))) return true;
+    // accept a first-name match ("Victor" for "Victor Hale")
+    const first = norm(String(c.name || '').split(/\s+/)[0]);
+    if (a && first && a.includes(first)) return true;
+  }
+  return !!norm(b.final.answer) && norm(r.finalAnswer) === norm(b.final.answer);
+}
+
+// Runs of the same persona+level: flag puzzles whose answers differ between runs.
+function runConsistency(runs) {
+  const groups = new Map();
+  runs.filter(r => r.kind === 'blind' && r.result).forEach(r => {
+    const k = `${r.persona}|${r.level}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  });
+  const out = [];
+  for (const [k, rs] of groups) {
+    if (rs.length < 2) continue;
+    const [persona, level] = k.split('|');
+    const byPuzzle = new Map();
+    rs.forEach(r => (r.result.puzzles || []).forEach(p => {
+      if (!byPuzzle.has(p.id)) byPuzzle.set(p.id, new Set());
+      byPuzzle.get(p.id).add(norm(p.answer));
+    }));
+    for (const [id, set] of byPuzzle) if (set.size > 1) out.push({ persona, level, id, answers: [...set], runs: rs.length });
+  }
+  return out;
+}
+
+const STOP = new Set('the and for that this with from are was were has have not but its into than then when what which who will would could should there their they them a an of to in on is it be as at by or if so no can any one'.split(' '));
+const words = s => new Set(String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP.has(w)));
+function overlap(a, b) {
+  const A = words(a), B = words(b);
+  if (!A.size || !B.size) return 0;
+  let n = 0; A.forEach(w => { if (B.has(w)) n++; });
+  return n / Math.min(A.size, B.size);
+}
+const sevOf = s => SEV_RANK[s] !== undefined ? s : 'info';
+
+// Group by target id + similar wording. Issues both models flag → "confirmed", sorted first.
+function mergeHunterIssues(claudeIssues, geminiIssues) {
+  const rows = (claudeIssues || []).map(i => ({ ...i, severity: sevOf(i.severity), sources: ['claude'], confirmed: false }));
+  (geminiIssues || []).forEach(g => {
+    const gi = { ...g, severity: sevOf(g.severity) };
+    const match = rows.find(r => !r.confirmed && r.sources.includes('claude') &&
+      (norm(r.target) === norm(gi.target) || !norm(r.target) || !norm(gi.target)) &&
+      overlap(`${r.problem} ${r.fix}`, `${gi.problem} ${gi.fix}`) > 0.4);
+    if (match) {
+      match.confirmed = true; match.sources.push('gemini');
+      if (SEV_RANK[gi.severity] < SEV_RANK[match.severity]) match.severity = gi.severity;
+      match.alt = gi.problem;
+    } else rows.push({ ...gi, sources: ['gemini'], confirmed: false });
+  });
+  return rows.sort((a, c) => (c.confirmed - a.confirmed) || (SEV_RANK[a.severity] - SEV_RANK[c.severity]));
+}
+
+function hunterMerged(runs) {
+  const latest = p => [...runs].reverse().find(r => r.kind === 'hunter' && r.provider === p && r.result);
+  const c = latest('claude'), g = latest('gemini');
+  if (!c && !g) return null;
+  return mergeHunterIssues(c ? c.result.issues : [], g ? g.result.issues : []);
+}
+
+function summarizeRuns(runs, b) {
+  const blind = runs.filter(r => r.kind === 'blind' && r.result).map(r => ({
+    persona: r.persona, level: r.level, provider: r.provider, finalRight: blindFinalRight(b, r),
+    puzzles: scoreBlindRun(b, r).filter(p => p.flags.length).map(p => ({ id: p.id, flags: p.flags, answer: p.answer, alternates: p.alternates }))
+  }));
+  return { blind, inconsistent: runConsistency(runs), hunter: (hunterMerged(runs) || []).map(i => ({ severity: i.severity, target: i.target, problem: i.problem, fix: i.fix, confirmed: i.confirmed, sources: i.sources })) };
+}
+
+// =====================================================================
+// LIVE
+// =====================================================================
+const LIVE_TAGS = ['confusing wording', 'wrong answer tried', 'missed a clue', 'loved it', 'too easy', 'arguing', 'lost a card', 'phone trouble'];
+
+function liveOrder(b, level) {
+  const steps = simulate(b, level).steps.flat();
+  const fallback = simulate(b, 'detective').steps.flat();
+  const order = steps.length ? steps : fallback;
+  return [...order, ...b.puzzles.map(p => p.id).filter(id => !order.includes(id))];
+}
+
+function newLiveSession(b, caseId, version, setup) {
+  const now = Date.now();
+  return {
+    id: newId(), caseId, version, level: setup.level, state: 'running',
+    group: { size: Number(setup.size) || 0, ages: setup.ages || '', gamers: !!setup.gamers, devices: !!setup.devices },
+    startedAt: now, current: 0,
+    puzzles: liveOrder(b, setup.level).map((id, i) => ({ id, startedAt: i === 0 ? now : null, endedAt: null, seconds: 0, hints: [], result: null, tags: [], note: '' })),
+    survey: null
+  };
+}
+const liveElapsed = (p, now = Date.now()) => p.startedAt ? Math.max(0, Math.round(((p.endedAt || now) - p.startedAt) / 1000)) : 0;
+const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const median = xs => { const a = xs.filter(Number.isFinite).sort((x, y) => x - y); if (!a.length) return NaN; const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+const sessionMinutes = s => s.puzzles.reduce((t, p) => t + (p.seconds || 0), 0) / 60;
+
+function liveSolved(s, b) {
+  if (s.puzzles.some(p => p.result === 'gaveup' || !p.result)) return false;
+  if (b.type === 'mystery') return !!(s.survey && s.survey.rightCulprit);
+  return true;
+}
+
+function puzzleStats(b, sessions, level) {
+  const ss = sessions.filter(s => s.level === level);
+  return b.puzzles.map(p => {
+    const rows = ss.map(s => s.puzzles.find(x => x.id === p.id)).filter(x => x && x.result);
+    const n = rows.length;
+    const target = (Number(p.minutes?.[level]) || 0) * 60;
+    const med = median(rows.map(r => r.seconds));
+    const hinted = n ? rows.filter(r => r.hints.length).length / n : 0;
+    const gaveUp = n ? rows.filter(r => r.result === 'gaveup').length / n : 0;
+    const tagCount = {};
+    rows.forEach(r => r.tags.forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; }));
+    const topTags = Object.entries(tagCount).sort((a, c) => c[1] - a[1]).slice(0, 3).map(([t, c]) => `${t} (${c})`);
+    const status = !n ? 'none' : (gaveUp > 0.25 || (target && med > 1.5 * target)) ? 'red' : hinted > 0.5 ? 'amber' : 'green';
+    return { id: p.id, name: p.name, n, medianSeconds: med, targetSeconds: target, hinted, gaveUp, topTags, status };
+  });
+}
+
+function summarizeSessions(sessions, b) {
+  const done = sessions.filter(s => s.survey);
+  const avg = k => done.length ? +(done.reduce((t, s) => t + (Number(s.survey[k]) || 0), 0) / done.length).toFixed(2) : null;
+  return {
+    count: sessions.length,
+    byLevel: Object.fromEntries(LEVELS.map(l => {
+      const ss = sessions.filter(s => s.level === l);
+      return [l, { sessions: ss.length, solveRate: ss.length ? +(ss.filter(s => liveSolved(s, b)).length / ss.length).toFixed(2) : null,
+        medianMinutes: ss.length ? +median(ss.map(sessionMinutes)).toFixed(1) : null,
+        problemPuzzles: puzzleStats(b, sessions, l).filter(p => p.status === 'red' || p.status === 'amber').map(p => ({ id: p.id, status: p.status, gaveUp: p.gaveUp, hinted: p.hinted, tags: p.topTags })) }];
+    })),
+    fun: avg('fun'), clarity: avg('clarity'), difficulty: avg('difficulty'),
+    wouldPay: done.length ? +(done.filter(s => s.survey.wouldPay).length / done.length).toFixed(2) : null,
+    worst: done.map(s => s.survey.worst).filter(Boolean), best: done.map(s => s.survey.best).filter(Boolean)
+  };
+}
+
+// =====================================================================
+// REPORT
+// =====================================================================
+function aiScore(runs, b) {                  // max 25
+  const blind = runs.filter(r => r.kind === 'blind' && r.result);
+  const levelsRight = LEVELS.filter(l => blind.some(r => r.level === l && blindFinalRight(b, r)));
+  let score = 5 * levelsRight.length;
+  const secondAnswer = blind.some(r => scoreBlindRun(b, r).some(p => p.flags.includes('possible_second_answer')));
+  const merged = hunterMerged(runs);
+  const confirmedCrit = (merged || []).some(i => i.confirmed && i.severity === 'critical');
+  if (blind.length && merged && !secondAnswer && !confirmedCrit) score += 10;
+  return { score, levelsRight, secondAnswer, confirmedCrit, hasHunter: !!merged, blindRuns: blind.length };
+}
+
+function liveScore(sessions, b) {            // max 35
+  const det = sessions.filter(s => s.level === 'detective');
+  const rate = det.length ? det.filter(s => liveSolved(s, b)).length / det.length : 0;
+  const solve = det.length ? 15 * Math.min(1, rate / 0.7) : 0;
+  const surveyed = sessions.filter(s => s.survey);
+  const fun = surveyed.length ? surveyed.reduce((t, s) => t + (Number(s.survey.fun) || 0), 0) / surveyed.length : 0;
+  const funPts = surveyed.length ? 10 * Math.min(1, fun / 4) : 0;
+  // median total time vs that session's own target
+  const offs = sessions.filter(s => s.state === 'saved' || s.survey).map(s => {
+    const t = Number(b.targetMinutes[s.level]); return t ? Math.abs(sessionMinutes(s) - t) / t : NaN;
+  });
+  const off = median(offs);
+  const timePts = Number.isFinite(off) ? (off <= 0.25 ? 10 : Math.max(0, 10 * (1 - (off - 0.25) / 0.5))) : 0;
+  return { score: Math.round(solve + funPts + timePts), rate, fun, off, detSessions: det.length, sessions: sessions.length,
+    parts: { solve: Math.round(solve), fun: Math.round(funPts), time: Math.round(timePts) } };
+}
+
+// The 6 launch-gate items.
+function launchGate(ctx) {
+  const { logic, ai, live, sessions } = ctx;
+  const crit = logic.issues.filter(i => i.severity === 'critical').length;
+  const surveyed = sessions.filter(s => s.survey);
+  const payRate = surveyed.length ? surveyed.filter(s => s.survey.wouldPay).length / surveyed.length : 0;
+  return [
+    { label: 'Logic Lab: zero critical issues', pass: crit === 0, detail: crit ? `${crit} critical` : 'clean' },
+    { label: 'Final reachable at rookie, detective and mastermind', pass: LEVELS.every(l => logic.sims[l].finalOk) },
+    { label: 'A blind AI solver got the final right at every level', pass: ai.levelsRight.length === 3, detail: `${ai.levelsRight.length}/3 levels` },
+    { label: 'No possible second answers and no confirmed critical hunter issues', pass: ai.blindRuns > 0 && ai.hasHunter && !ai.secondAnswer && !ai.confirmedCrit,
+      detail: !ai.blindRuns ? 'no blind runs yet' : !ai.hasHunter ? 'no hunter run yet' : ai.secondAnswer ? 'second answer flagged' : ai.confirmedCrit ? 'confirmed critical' : 'clear' },
+    { label: 'At least 3 live tests at detective, 70%+ solved', pass: live.detSessions >= 3 && live.rate >= 0.7, detail: `${live.detSessions} tests, ${Math.round(live.rate * 100)}% solved` },
+    { label: 'Average fun 4+ and at least half would pay', pass: surveyed.length > 0 && live.fun >= 4 && payRate >= 0.5, detail: surveyed.length ? `fun ${live.fun.toFixed(1)}, ${Math.round(payRate * 100)}% would pay` : 'no surveys yet' }
+  ];
+}
+
+function buildReport(b, logic, runs, sessions) {
+  const ai = aiScore(runs, b), live = liveScore(sessions, b);
+  const total = logic.score + ai.score + live.score;
+  const gate = launchGate({ logic, ai, live, sessions });
+  const pill = total >= 85 && gate.every(g => g.pass) ? 'ready' : total >= 60 ? 'testing' : 'draft';
+  return { total, logic: logic.score, ai, live, gate, pill };
+}
+
+function buildFixPrompt(b, logic, runs, sessions) {
+  return `Here is a case bible (version ${b.version}) and its test results.
+Fix every critical issue and as many warnings as possible without changing the culprit,
+the answer codes, or the player count. Return ONLY the corrected JSON with version ${b.version + 1}
+and a "changelog" array listing each change.
+
+CASE BIBLE:
+${JSON.stringify(b)}
+
+LOGIC ISSUES:
+${JSON.stringify(logic.issues.map(({ id, check, ...i }) => i))}
+
+AI FINDINGS:
+${JSON.stringify(summarizeRuns(runs, b))}
+
+LIVE TEST SUMMARY:
+${JSON.stringify(summarizeSessions(sessions, b))}`;
+}
+
+function compareVersions(oldB, newB) {
+  const a = runLogicLab(oldB), c = runLogicLab(newB);
+  const key = i => `${i.check}|${i.target || ''}|${i.message}`;
+  const A = new Map(a.issues.map(i => [key(i), i])), C = new Map(c.issues.map(i => [key(i), i]));
+  return { from: oldB.version, to: newB.version, scoreFrom: a.score, scoreTo: c.score,
+    fixed: [...A.keys()].filter(k => !C.has(k)).map(k => A.get(k)),
+    added: [...C.keys()].filter(k => !A.has(k)).map(k => C.get(k)),
+    still: [...C.keys()].filter(k => A.has(k)).length };
+}
+
+// =====================================================================
+// UI
+// =====================================================================
+const $ = sel => document.querySelector(sel);
+const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sev = s => `<span class="sev ${h(s)}">${h(s)}</span>`;
+const pct = x => `${Math.round((x || 0) * 100)}%`;
+let toastTimer;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
+
+const TABS = [['cases', 'Cases', '▤'], ['logic', 'Logic', '⚙'], ['ai', 'AI', '✦'], ['live', 'Live', '⏱'], ['report', 'Report', '★']];
+
+async function afterLogin() {
+  S.cases = await loadCases();
+  restoreLive();
+}
+
+async function openCase(caseId, v) {
+  const c = S.cases.find(x => x.id === caseId);
+  const version = v || (c && c.latestVersion);
+  const ver = await loadVersion(caseId, version);
+  S.current = { caseId, version, bible: ver.bible, changelog: ver.changelog || [], versions: ver.versions };
+  S.draft = JSON.stringify(ver.bible, null, 2);
+  S.draftErrors = [];
+  S.compare = null;
+  await refreshCurrent();
+}
+
+async function refreshCurrent() {
+  const cur = S.current; if (!cur) return;
+  const v = validateBible(cur.bible);
+  S.logic = v.ok ? runLogicLab(cur.bible) : null;
+  S.draftErrors = v.errors;
+  [S.aiRuns, S.sessions] = await Promise.all([loadRuns(cur.caseId, cur.version), loadSessions(cur.caseId, cur.version)]);
+  if (S.logic) saveLogicResult(cur.caseId, cur.version, S.logic).catch(() => {});
+}
+
+function render() {
+  const c = S.current;
+  $('#hdrCase').textContent = c ? `${c.bible.title} · v${c.version}` : '';
+  $('#hdrUser').innerHTML = DEMO ? '<span class="sev info">demo mode</span>' : S.user ? `${h(S.user.displayName || S.user.email || '')} <button data-act="signout" style="min-height:30px;padding:2px 8px">Sign out</button>` : '';
+  $('#tabs').innerHTML = TABS.map(([k, label, ico]) => `<button data-tab="${k}" ${S.tab === k ? 'aria-current="page"' : ''}><span class="ico" aria-hidden="true">${ico}</span>${label}</button>`).join('');
+  const main = $('#main');
+  if (!S.ready) { main.innerHTML = '<p class="muted">Loading…</p>'; return; }
+  if (!DEMO && !S.user) {
+    main.innerHTML = `<div class="card stack" style="max-width:420px;margin:40px auto;text-align:center"><h1>Case Lab</h1><p class="muted">Playtest engine for printed party games.</p><button class="primary" data-act="signin">Sign in with Google</button></div>`;
+    return;
+  }
+  const view = { cases: renderCases, logic: renderLogic, ai: renderAI, live: renderLive, report: renderReport }[S.tab];
+  main.innerHTML = view();
+  if (S.tab === 'cases') syncGutter();
+}
+
+const needCase = () => `<div class="card"><p>Open or import a case on the <a href="#" data-tab="cases">Cases</a> tab first.</p></div>`;
+const levelPicker = (cur, act) => `<div class="levelpick" role="group" aria-label="Level">${LEVELS.map(l => `<button data-act="${act}" data-level="${l}" aria-pressed="${l === cur}">${l}</button>`).join('')}</div>`;
+
+// ---------- Cases ----------
+function renderCases() {
+  const c = S.current;
+  const list = S.cases.length ? `<div class="tablewrap"><table class="list"><thead><tr><th>Case</th><th>Type</th><th>Status</th><th>Ver</th><th></th></tr></thead><tbody>${S.cases.map(x => `
+    <tr><td><b>${h(x.title)}</b><div class="mono muted">${h(x.id)}</div></td><td>${h(x.type)}</td><td><span class="pill ${h(x.status)}">${h(x.status)}</span></td><td>v${h(x.latestVersion)}</td>
+    <td><button data-act="open" data-id="${h(x.id)}" ${c && c.caseId === x.id ? 'class="primary"' : ''}>Open</button></td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="muted">No cases yet. Import a case bible or load a sample.</p>';
+  const current = c ? `
+    <div class="card stack">
+      <div class="row"><h2 class="grow">${h(c.bible.title)}</h2>
+        <label class="small" style="margin:0">Version</label>
+        <select data-act="pickversion">${c.versions.map(v => `<option value="${v}" ${v === c.version ? 'selected' : ''}>v${v}</option>`).join('')}</select>
+        <label class="small" style="margin:0">Status</label>
+        <select data-act="status">${['draft', 'testing', 'ready', 'live'].map(s => `<option ${(S.cases.find(x => x.id === c.caseId) || {}).status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
+      </div>
+      ${c.changelog && c.changelog.length ? `<details><summary class="small">Changelog for v${c.version} (${c.changelog.length})</summary><ul class="small">${c.changelog.map(x => `<li>${h(typeof x === 'string' ? x : JSON.stringify(x))}</li>`).join('')}</ul></details>` : ''}
+      ${S.draftErrors.length ? `<div><b class="small" style="color:var(--crit)">Schema errors (these block the Logic Lab):</b><ul class="errors small">${S.draftErrors.map(e => `<li>${h(e)}</li>`).join('')}</ul></div>` : ''}
+      <div class="editor"><div class="gutter" id="gutter"></div><textarea id="json" spellcheck="false" aria-label="Case bible JSON">${h(S.draft)}</textarea></div>
+      <div class="row"><button data-act="validate">Validate</button><button class="primary" data-act="saveDraft">Save as new version</button><span class="grow"></span>
+        <button data-act="download">Download JSON</button></div>
+      ${c.versions.length > 1 ? `<div class="row"><b class="small">Compare versions</b>
+        <select id="cmpA">${c.versions.map(v => `<option ${v === c.versions[c.versions.length - 2] ? 'selected' : ''}>${v}</option>`).join('')}</select> →
+        <select id="cmpB">${c.versions.map(v => `<option ${v === c.version ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <button data-act="compare">Compare</button></div>` : ''}
+      ${S.compare ? renderCompare(S.compare) : ''}
+    </div>` : '';
+  return `<div class="stack">
+    <div class="card stack">
+      <div class="row"><h1 class="grow">Cases</h1>
+        <button data-act="sample" data-file="snowed-in-broken.json">Load sample: Snowed In</button>
+        <button data-act="sample" data-file="supper-club-ambiguous.json">Load sample: Supper Club</button></div>
+      ${DEMO ? '<div class="notice">Demo mode: data is saved in this browser only. Add your Firebase config in the CONFIG section to sync and to turn on the AI testers.</div>' : ''}
+      ${list}
+      <details ${S.cases.length ? '' : 'open'}><summary><b>Import a case bible / new version</b></summary>
+        <p class="small muted">Paste JSON (including a fixed version back from the AI, "changelog" and all) or pick a .json file. Same <span class="mono">id</span> = new version of that case.</p>
+        <textarea id="importText" rows="6" style="width:100%" class="mono" placeholder='{"id": "...", "title": "...", ...}'></textarea>
+        <div class="row" style="margin-top:8px"><button class="primary" data-act="import">Import</button><input type="file" id="importFile" accept=".json,application/json"></div>
+        ${S.importErrors && S.importErrors.length ? `<ul class="errors small" style="margin-top:8px">${S.importErrors.map(e => `<li>${h(e)}</li>`).join('')}</ul>` : ''}
+      </details>
+    </div>
+    ${current}
+  </div>`;
+}
+
+function renderCompare(cmp) {
+  const d = cmp.scoreTo - cmp.scoreFrom;
+  return `<div class="card stack" style="background:var(--chip)">
+    <div class="row"><b>v${cmp.from} → v${cmp.to}</b><span>Logic score ${cmp.scoreFrom} → <b>${cmp.scoreTo}</b> (${d >= 0 ? '+' : ''}${d})</span></div>
+    <div class="small"><b>Fixed (${cmp.fixed.length})</b>${cmp.fixed.length ? `<ul>${cmp.fixed.map(i => `<li>${sev(i.severity)} ${h(i.message)}</li>`).join('')}</ul>` : ' none'}</div>
+    <div class="small"><b>New (${cmp.added.length})</b>${cmp.added.length ? `<ul>${cmp.added.map(i => `<li>${sev(i.severity)} ${h(i.message)}</li>`).join('')}</ul>` : ' none'}</div>
+    <div class="small muted">${cmp.still} issue${cmp.still === 1 ? '' : 's'} unchanged.</div></div>`;
+}
+
+function syncGutter() {
+  const ta = $('#json'), g = $('#gutter'); if (!ta || !g) return;
+  const n = ta.value.split('\n').length;
+  g.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n');
+  g.scrollTop = ta.scrollTop;
+}
+
+// "jump to": highlight the item/puzzle in the JSON view
+function jumpTo(id) {
+  S.tab = 'cases'; render();
+  const ta = $('#json'); if (!ta) return;
+  const m = ta.value.search(new RegExp(`"id"\\s*:\\s*"${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+  const at = m >= 0 ? m : ta.value.indexOf(`"${id}"`);
+  if (at < 0) { toast(`Couldn't find "${id}" in the JSON.`); return; }
+  const line = ta.value.slice(0, at).split('\n').length - 1;
+  ta.focus();
+  ta.setSelectionRange(at, at + ta.value.slice(at).indexOf('\n'));
+  ta.scrollTop = Math.max(0, line * 20 - 80);
+  syncGutter();
+  ta.parentElement.classList.add('hl'); setTimeout(() => ta.parentElement.classList.remove('hl'), 1500);
+}
+
+async function importBible(text) {
+  S.importErrors = [];
+  const obj = parseJSON(text);
+  if (!obj) { S.importErrors = ['That isn\'t valid JSON.']; render(); return; }
+  const { changelog = [], ...bible } = obj;
+  const v = validateBible(bible);
+  if (!v.ok) { S.importErrors = v.errors; render(); return; }
+  const saved = await saveCase(bible, changelog);
+  S.cases = await loadCases();
+  await openCase(saved.caseId, saved.version);
+  toast(`Saved ${saved.bible.title} v${saved.version}`);
+  render();
+}
+
+// ---------- Logic ----------
+function issueRow(i) {
+  const jumpable = i.target && i.target.split(',').every(t => S.current.bible.items.some(x => x.id === t) || S.current.bible.puzzles.some(x => x.id === t));
+  return `<div class="issue"><div class="meta">${sev(i.severity)}${i.level ? `<span>${h(i.level)}</span>` : ''}${i.target ? `<span class="mono">${h(i.target)}</span>` : ''}
+    ${jumpable ? `<a href="#" data-act="jump" data-id="${h(i.target.split(',')[0])}">jump to</a>` : ''}</div>
+    <div>${h(i.message)}</div><div class="fix"><b>Fix:</b> ${h(i.fix)}</div></div>`;
+}
+
+function renderDepMap(b, sim) {
+  const bottleneckSteps = new Set(bottleneckRuns(sim.steps).flat());
+  const P = new Map(b.puzzles.map(p => [p.id, p]));
+  const chip = id => `<div class="chipp"><div>${h((P.get(id) || {}).name || id)}</div><div class="id">${h(id)}</div></div>`;
+  const cols = sim.steps.map((s, i) => `<div class="depcol ${bottleneckSteps.has(i) ? 'bottleneck' : ''}"><h4>Step ${i + 1}${bottleneckSteps.has(i) ? ' · bottleneck' : ''}</h4>${s.map(chip).join('')}</div>`);
+  const dead = b.puzzles.filter(p => !sim.solved.has(p.id));
+  const deadItems = [...sim.itemIds].filter(id => !sim.have.has(id));
+  if (dead.length || deadItems.length) cols.push(`<div class="depcol dead"><h4>Never reached</h4>${dead.map(p => `<div class="chipp unreach"><div>${h(p.name || p.id)}</div><div class="id">${h(p.id)} · puzzle</div></div>`).join('')}${deadItems.map(id => `<div class="chipp unreach"><div>${h(nameOf(b, id))}</div><div class="id">${h(id)} · item</div></div>`).join('')}</div>`);
+  cols.push(`<div class="depcol"><h4>Final</h4><div class="chipp ${sim.finalOk ? '' : 'unreach'}">${sim.finalOk ? 'Reachable' : 'Blocked'}<div class="id">needs ${h((b.final.needs || []).join(', '))}</div></div></div>`);
+  return `<div class="depmap">${cols.join('')}</div>`;
+}
+
+function renderLogic() {
+  if (!S.current) return needCase();
+  if (!S.logic) return `<div class="card"><h2>Logic Lab blocked</h2><p>Fix the schema errors on the <a href="#" data-tab="cases">Cases</a> tab first.</p><ul class="errors small">${S.draftErrors.map(e => `<li>${h(e)}</li>`).join('')}</ul></div>`;
+  const L = S.logic, b = S.current.bible, lvl = S.logicLevel;
+  const counts = ['critical', 'warning', 'info'].map(s => [s, L.issues.filter(i => i.severity === s).length]);
+  const cp = L.paths.find(p => p.level === lvl);
+  return `<div class="stack">
+    <div class="card"><div class="row"><h1 class="grow">Logic Lab</h1><div><span class="score" style="font-size:36px">${L.score}</span><span class="muted"> / 40</span></div></div>
+      <div class="row small">${counts.map(([s, n]) => `${sev(s)} ${n}`).join(' &nbsp; ')} &nbsp; · &nbsp; ${L.pages.total} pages, ${L.pages.color} color</div></div>
+    <div class="card stack">
+      <div class="row"><h2 class="grow">Dependency map</h2>${levelPicker(lvl, 'logicLevel')}</div>
+      ${renderDepMap(b, L.sims[lvl])}
+      <div class="small">Critical path (${h(lvl)}): ${cp.reachable ? `<b>${cp.minutes} min</b> vs target ${h(b.targetMinutes[lvl])} · <span class="mono">${h(cp.path.join(' → '))}</span>` : '<span class="sev critical">blocked</span>'}</div>
+      <div class="small muted">${L.paths.map(p => `${p.level}: ${p.reachable ? p.minutes + ' min' : 'blocked'} (target ${b.targetMinutes[p.level]})`).join(' · ')}</div>
+    </div>
+    <div class="card"><h2>Issues (${L.issues.length})</h2>${L.issues.length ? L.issues.map(issueRow).join('') : '<p class="muted">No issues. Nice.</p>'}</div>
+  </div>`;
+}
+
+// ---------- AI ----------
+function renderAI() {
+  if (!S.current) return needCase();
+  if (!S.logic) return `<div class="card"><p>Fix the schema errors before running AI testers.</p></div>`;
+  const b = S.current.bible, o = S.aiOpts;
+  const blind = S.aiRuns.filter(r => r.kind === 'blind');
+  const incons = runConsistency(S.aiRuns);
+  const merged = hunterMerged(S.aiRuns);
+  const ai = aiScore(S.aiRuns, b);
+  const blindRows = blind.map(r => {
+    const sc = scoreBlindRun(b, r);
+    return `<details class="card" style="padding:10px"><summary><b>${h(r.persona)}</b> · ${h(r.level)} · ${h(r.provider)} · final ${blindFinalRight(b, r) ? sev('ok').replace('>ok<', '>right<') : sev('critical').replace('>critical<', '>wrong<')}
+      ${sc.some(p => p.flags.includes('possible_second_answer')) ? '<span class="flag bad">possible second answer</span>' : ''}</summary>
+      <div class="tablewrap"><table class="list small"><thead><tr><th>Puzzle</th><th>Answer</th><th>Right</th><th>Hints</th><th>Est</th><th>Flags</th></tr></thead><tbody>
+      ${sc.map(p => `<tr><td class="mono">${h(p.id)}</td><td>${h(p.answer)}${p.alternates.length ? `<div class="muted">also: ${h(p.alternates.join(', '))}</div>` : ''}</td><td>${p.right ? 'yes' : '<b style="color:var(--crit)">no</b>'}</td><td>${p.hints}</td><td>${h(p.est ?? '')}</td><td>${p.flags.map(f => `<span class="flag ${f === 'possible_second_answer' || f === 'ambiguous_or_too_hard' ? 'bad' : ''}">${h(f.replace(/_/g, ' '))}</span>`).join('')}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${r.result.confusingWording && r.result.confusingWording.length ? `<p class="small"><b>Confusing wording:</b> ${h(r.result.confusingWording.join(' · '))}</p>` : ''}
+      ${r.result.funNotes ? `<p class="small"><b>Fun notes:</b> ${h(r.result.funNotes)}</p>` : ''}
+      ${r.usage ? `<p class="small muted">tokens: ${h(JSON.stringify(r.usage))}</p>` : ''}</details>`;
+  }).join('');
+  return `<div class="stack">
+    <div class="card stack">
+      <div class="row"><h1 class="grow">AI testers</h1><div><span class="score" style="font-size:36px">${ai.score}</span><span class="muted"> / 25</span></div></div>
+      ${DEMO ? '<div class="notice warn">Demo mode: live AI calls are off. You can still copy a prompt, run it in any chat, and paste the JSON back.</div>' : ''}
+      <div class="grid2">
+        <div><h3>Blind solver</h3><p class="small muted">Gets the player view only: no answers, tags or solution.</p>
+          <label>Persona</label><select data-opt="persona">${Object.keys(PERSONAS).map(p => `<option ${o.persona === p ? 'selected' : ''}>${p}</option>`).join('')}</select>
+          <p class="small muted">${h(PERSONAS[o.persona])}</p>
+          <label>Level</label>${levelPicker(o.level, 'aiLevel')}
+          <div class="row" style="margin-top:8px"><label style="margin:0">Provider</label><select data-opt="provider"><option ${o.provider === 'claude' ? 'selected' : ''}>claude</option><option ${o.provider === 'gemini' ? 'selected' : ''}>gemini</option></select>
+            <label style="margin:0">Runs</label><select data-opt="count">${[1, 2, 3].map(n => `<option ${o.count === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+          <div class="row" style="margin-top:10px"><button class="primary" data-act="runBlind" ${S.busy ? 'disabled' : ''}>Run blind solver</button><button data-act="copyBlind">Copy prompt</button></div>
+        </div>
+        <div><h3>Plot-hole hunter</h3><p class="small muted">Reads the full bible, solution included. Run both models; issues both flag come back "confirmed".</p>
+          <div class="row"><button class="primary" data-act="runHunter" data-p="both" ${S.busy ? 'disabled' : ''}>Run Claude + Gemini</button>
+            <button data-act="runHunter" data-p="claude" ${S.busy ? 'disabled' : ''}>Claude only</button><button data-act="runHunter" data-p="gemini" ${S.busy ? 'disabled' : ''}>Gemini only</button><button data-act="copyHunter">Copy prompt</button></div>
+        </div>
+      </div>
+      ${S.busy ? `<div class="notice">${h(S.busy)}</div>` : ''}
+      <details><summary class="small"><b>Paste a result by hand</b></summary>
+        <div class="row" style="margin-top:8px"><select id="pasteKind"><option value="blind">blind (uses persona + level above)</option><option value="hunter:claude">hunter: claude</option><option value="hunter:gemini">hunter: gemini</option></select></div>
+        <textarea id="pasteText" rows="5" style="width:100%;margin-top:8px" class="mono" placeholder="Paste the JSON the model returned"></textarea>
+        <button data-act="pasteRun" style="margin-top:8px">Save pasted result</button></details>
+    </div>
+    <div class="card stack"><h2>Blind runs (${blind.length})</h2>
+      <div class="small muted">Final right at: ${ai.levelsRight.length ? h(ai.levelsRight.join(', ')) : 'no level yet'}</div>
+      ${incons.length ? `<div><b class="small">Run consistency</b><ul class="small">${incons.map(x => `<li><span class="flag bad">inconsistent</span> <span class="mono">${h(x.id)}</span> · ${h(x.persona)}/${h(x.level)}: ${h(x.answers.join(' vs '))} across ${x.runs} runs</li>`).join('')}</ul></div>` : ''}
+      ${blindRows || '<p class="muted">No blind runs yet.</p>'}</div>
+    <div class="card"><h2>Hunter findings</h2>${merged ? (merged.length ? merged.map(i => `<div class="issue"><div class="meta">${sev(i.severity)}${i.confirmed ? '<span class="sev ok">confirmed</span>' : ''}<span>${h(i.sources.join(' + '))}</span>${i.target ? `<span class="mono">${h(i.target)}</span>` : ''}</div><div>${h(i.problem)}</div>${i.fix ? `<div class="fix"><b>Fix:</b> ${h(i.fix)}</div>` : ''}</div>`).join('') : '<p class="muted">The hunters found nothing.</p>') : '<p class="muted">No hunter runs yet.</p>'}</div>
+  </div>`;
+}
+
+async function runBlind() {
+  const b = S.current.bible, o = { ...S.aiOpts };
+  const model = o.provider === 'claude' ? CONFIG.claudeModel : CONFIG.geminiModel;
+  for (let i = 1; i <= o.count; i++) {
+    S.busy = `Blind solver ${i}/${o.count} (${o.persona}, ${o.level}, ${o.provider})…`; render();
+    const res = await callAI(o.provider, { system: blindSystem(o.persona), prompt: blindPrompt(b, o.level), model, maxTokens: 8000, effort: 'low' });
+    const result = parseJSON(res.text);
+    if (!result) throw new Error('The model didn\'t return valid JSON. Try again.');
+    S.aiRuns.push(await saveAiRun({ caseId: S.current.caseId, version: S.current.version, kind: 'blind', provider: o.provider, model: model || '', persona: o.persona, level: o.level, result, usage: res.usage || null }));
+  }
+}
+
+async function runHunter(which) {
+  const b = S.current.bible;
+  const providers = which === 'both' ? ['claude', 'gemini'] : [which];
+  S.busy = `Plot-hole hunter running (${providers.join(' + ')})…`; render();
+  const results = await Promise.allSettled(providers.map(async p => {
+    const model = p === 'claude' ? CONFIG.claudeModel : CONFIG.geminiModel;
+    const res = await callAI(p, { system: HUNTER_SYSTEM, prompt: hunterPrompt(b), model, maxTokens: 12000, effort: 'medium' });
+    const result = parseJSON(res.text);
+    if (!result || !Array.isArray(result.issues)) throw new Error(`${p} didn't return {"issues": [...]}.`);
+    return saveAiRun({ caseId: S.current.caseId, version: S.current.version, kind: 'hunter', provider: p, model: model || '', result, usage: res.usage || null });
+  }));
+  results.forEach(r => { if (r.status === 'fulfilled') S.aiRuns.push(r.value); });
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length) throw new Error(failed.map(f => f.reason.message).join(' | '));
+}
+
+// ---------- Live ----------
+function persistLive() {
+  try { if (S.live) localStorage.setItem(CONFIG.liveKey, JSON.stringify(S.live)); else localStorage.removeItem(CONFIG.liveKey); } catch {}
+}
+function restoreLive() {
+  try { const raw = localStorage.getItem(CONFIG.liveKey); S.pendingResume = raw ? JSON.parse(raw) : null; } catch { S.pendingResume = null; }
+}
+let wakeLock = null, tick = null;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.live && S.live.state === 'running') keepAwake(true); });
+
+function startTick() {
+  clearInterval(tick);
+  tick = setInterval(() => {   // only repaints; time always comes from Date.now() differences
+    if (!S.live || S.live.state !== 'running' || S.tab !== 'live') return;
+    const p = S.live.puzzles[S.live.current]; const el = $('#liveTimer'), tot = $('#liveTotal');
+    if (el && p) el.textContent = fmtTime(liveElapsed(p));
+    if (tot) tot.textContent = fmtTime(Math.round((Date.now() - S.live.startedAt) / 1000));
+  }, 500);
+}
+
+function renderLive() {
+  const resume = S.pendingResume && (!S.live || S.live.id !== S.pendingResume.id) ? `<div class="card row"><span class="grow">An unfinished live test (${h(S.pendingResume.caseId)} v${h(S.pendingResume.version)}, ${h(S.pendingResume.level)}) was found. Resume test?</span><button class="primary" data-act="resume">Resume</button><button class="danger" data-act="discard">Discard</button></div>` : '';
+  if (S.live) return resume + (S.live.state === 'survey' ? renderSurvey() : renderRunner());
+  if (!S.current) return resume + needCase();
+  if (!S.logic) return resume + `<div class="card"><p>Fix the schema errors before running a live test.</p></div>`;
+  const st = S.liveSetup;
+  return `${resume}<div class="card stack" style="max-width:560px">
+    <h1>Live test</h1><p class="muted small">Run this on your phone at the table. Times come from the clock, so a locked screen doesn't lose them.</p>
+    <label>Level</label>${levelPicker(st.level, 'liveLevel')}
+    <div class="row"><div><label>Group size</label><input type="number" min="1" max="30" data-setup="size" value="${h(st.size)}" style="width:90px"></div>
+      <div class="grow"><label>Ages</label><input type="text" data-setup="ages" value="${h(st.ages)}" placeholder="e.g. 8, 35, 38, 70" style="width:100%"></div></div>
+    <label class="row" style="color:var(--ink)"><input type="checkbox" data-setup="gamers" ${st.gamers ? 'checked' : ''} style="min-height:auto"> Puzzle / game-night regulars</label>
+    <label class="row" style="color:var(--ink)"><input type="checkbox" data-setup="devices" ${st.devices ? 'checked' : ''} style="min-height:auto"> Phones at the table</label>
+    <button class="primary" data-act="liveStart" style="min-height:56px;font-size:17px">Start test</button></div>
+    ${S.sessions.length ? `<div class="card"><h2>Saved tests for v${S.current.version} (${S.sessions.length})</h2><ul class="small">${S.sessions.map(s => `<li>${new Date(s.startedAt).toLocaleString()} · ${h(s.level)} · ${s.group.size} players · ${fmtTime(Math.round(sessionMinutes(s) * 60))} · ${liveSolved(s, S.current.bible) ? 'solved' : 'not solved'}${s.survey ? ` · fun ${h(s.survey.fun)}/5` : ''}</li>`).join('')}</ul></div>` : ''}`;
+}
+
+function renderRunner() {
+  const L = S.live, b = S.current && S.current.caseId === L.caseId ? S.current.bible : null;
+  const p = L.puzzles[L.current]; const P = b ? b.puzzles.find(x => x.id === p.id) : null;
+  startTick(); keepAwake(true);
+  const done = L.puzzles.filter(x => x.result).length;
+  return `<div class="card stack" style="max-width:560px">
+    <div class="row small muted"><span class="grow">Puzzle ${L.current + 1} of ${L.puzzles.length} · ${h(L.level)}</span><span>Total <span id="liveTotal" class="mono">${fmtTime(Math.round((Date.now() - L.startedAt) / 1000))}</span></span></div>
+    <div class="progress"><div style="width:${(done / L.puzzles.length) * 100}%"></div></div>
+    <h2>${h(P ? P.name || P.id : p.id)} <span class="mono muted">${h(p.id)}</span></h2>
+    ${P ? `<p class="small muted">Target ${h(P.minutes[L.level])} min · answer <span class="mono">${h(P.answer)}</span></p>` : ''}
+    <div class="timer" id="liveTimer">${fmtTime(liveElapsed(p))}</div>
+    <div class="hintbtns">${[1, 2, 3].map(n => `<button data-act="hint" data-n="${n}" aria-pressed="${p.hints.some(x => x.n === n)}">Hint ${n}</button>`).join('')}</div>
+    ${P ? (() => { const used = p.hints.map(x => x.n).sort().pop(); return used ? `<div class="notice small"><b>Hint ${used}:</b> ${h(P.hints[used - 1])}</div>` : ''; })() : ''}
+    <div class="tagchips">${LIVE_TAGS.map(t => `<button data-act="tag" data-tag="${h(t)}" aria-pressed="${p.tags.includes(t)}">${h(t)}</button>`).join('')}</div>
+    <input type="text" data-act="note" value="${h(p.note)}" placeholder="Quick note (optional)" style="width:100%">
+    <div class="bigbtns"><button class="solved" data-act="result" data-r="solved">Solved</button><button class="help" data-act="result" data-r="help">Solved with help</button>
+      <button class="gaveup" data-act="result" data-r="gaveup">Gave up</button><button data-act="undo" ${L.current === 0 ? 'disabled' : ''}>Undo last</button></div>
+    <button class="danger" data-act="liveAbort">Abandon test</button></div>`;
+}
+
+function renderSurvey() {
+  const d = S.surveyDraft, isMystery = S.current && S.current.bible.type === 'mystery';
+  const scale = k => `<div><label>${k} (1–5)</label><div class="hintbtns" style="grid-template-columns:repeat(5,1fr)">${[1, 2, 3, 4, 5].map(n => `<button data-act="sv" data-k="${k}" data-v="${n}" aria-pressed="${d[k] === n}">${n}</button>`).join('')}</div></div>`;
+  const yn = (k, label) => `<div><label>${label}</label><div class="hintbtns" style="grid-template-columns:1fr 1fr">${[['Yes', true], ['No', false]].map(([t, v]) => `<button data-act="sv" data-k="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${t}</button>`).join('')}</div></div>`;
+  return `<div class="card stack" style="max-width:560px"><h1>Quick survey</h1><p class="small muted">Total time ${fmtTime(Math.round(sessionMinutes(S.live) * 60))}. Ask the table.</p>
+    ${scale('fun')}${scale('clarity')}${scale('difficulty')}
+    ${isMystery ? yn('rightCulprit', 'Did they name the right culprit?') : ''}
+    ${yn('wouldPay', 'Would they pay for this?')}
+    <div><label>Price they'd pay</label><input type="text" data-sv="price" value="${h(d.price || '')}" placeholder="their number" style="width:100%"></div>
+    <div><label>Best part</label><input type="text" data-sv="best" value="${h(d.best || '')}" style="width:100%"></div>
+    <div><label>Worst part</label><input type="text" data-sv="worst" value="${h(d.worst || '')}" style="width:100%"></div>
+    ${yn('foundLegend', 'Did anyone find the legend?')}
+    <button class="primary" data-act="liveFinish" style="min-height:56px">Finish and save</button></div>`;
+}
+
+function liveResult(r) {
+  const L = S.live, p = L.puzzles[L.current], now = Date.now();
+  p.result = r; p.endedAt = now; p.seconds = liveElapsed(p, now);
+  if (L.current < L.puzzles.length - 1) { L.current++; L.puzzles[L.current].startedAt = now; }
+  else { L.state = 'survey'; L.endedAt = now; keepAwake(false); }
+  persistLive();
+}
+function liveUndo() {
+  const L = S.live; if (L.current === 0 && L.state !== 'survey') return;
+  if (L.state === 'survey') L.state = 'running'; else { const cur = L.puzzles[L.current]; cur.startedAt = null; L.current--; }
+  const p = L.puzzles[L.current]; p.result = null; p.endedAt = null; p.seconds = 0;
+  persistLive();
+}
+
+// ---------- Report ----------
+function renderReport() {
+  if (!S.current) return needCase();
+  if (!S.logic) return `<div class="card"><p>Fix the schema errors first.</p></div>`;
+  const b = S.current.bible, R = buildReport(b, S.logic, S.aiRuns, S.sessions), lvl = S.reportLevel;
+  const stats = puzzleStats(b, S.sessions, lvl);
+  return `<div class="stack">
+    <div class="card"><div class="row" style="align-items:flex-end"><div class="grow"><div class="small muted">Launch score · ${h(b.title)} v${S.current.version}</div><div class="row"><span class="score">${R.total}</span><span class="pill ${R.pill}" style="font-size:14px">${R.pill[0].toUpperCase() + R.pill.slice(1)}</span></div></div>
+      <div class="small"><div>Logic <b>${R.logic}</b>/40</div><div>AI <b>${R.ai.score}</b>/25</div><div>Live <b>${R.live.score}</b>/35 <span class="muted">(solve ${R.live.parts.solve}, fun ${R.live.parts.fun}, time ${R.live.parts.time})</span></div></div></div>
+      <p class="small muted">Draft under 60 · Testing 60–84 · Ready at 85+ with every gate passing.</p></div>
+    <div class="card"><h2>Launch gate</h2>${R.gate.map(g => `<div class="gate">${sev(g.pass ? 'ok' : 'critical').replace(g.pass ? '>ok<' : '>critical<', g.pass ? '>pass<' : '>not yet<')}<div><div>${h(g.label)}</div>${g.detail ? `<div class="small muted">${h(g.detail)}</div>` : ''}</div></div>`).join('')}</div>
+    <div class="card stack"><div class="row"><h2 class="grow">Puzzle heatmap</h2>${levelPicker(lvl, 'reportLevel')}</div>
+      <div class="tablewrap"><table class="list heat small"><thead><tr><th>Puzzle</th><th>Status</th><th>Tests</th><th>Median</th><th>Target</th><th>Hinted</th><th>Gave up</th><th>Top tags</th></tr></thead><tbody>
+      ${stats.map(s => `<tr><td><span class="mono">${h(s.id)}</span> ${h(s.name || '')}</td><td class="status-${s.status}">${s.status === 'none' ? '<span class="muted">no data</span>' : `<b>${s.status}</b>`}</td><td>${s.n}</td><td>${s.n ? fmtTime(Math.round(s.medianSeconds)) : '–'}</td><td>${fmtTime(s.targetSeconds)}</td><td>${s.n ? pct(s.hinted) : '–'}</td><td>${s.n ? pct(s.gaveUp) : '–'}</td><td>${h(s.topTags.join(', '))}</td></tr>`).join('')}
+      </tbody></table></div><p class="small muted">Red: over 25% gave up or median over 1.5× target. Amber: over half needed a hint.</p></div>
+    <div class="card stack"><h2>Fix it</h2><p class="small">Copies the bible plus every logic issue, AI finding and live-test summary as one prompt. Paste the reply back under <b>Import</b> on the Cases tab to save it as v${S.current.version + 1}.</p>
+      <div class="row"><button class="primary" data-act="copyFix">Copy fix prompt</button></div></div>
+  </div>`;
+}
+
+async function copyText(text, label) {
+  try { await navigator.clipboard.writeText(text); toast(`${label} copied`); }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast(`${label} copied`); }
+}
+
+// ---------- events ----------
+async function guard(fn) {
+  try { await fn(); }
+  catch (e) {
+    if (e.errors) { S.draftErrors = e.errors; toast('Schema errors. See the list.'); }
+    else { console.error(e); toast(e.message || String(e)); }
+  } finally { S.busy = ''; render(); }
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab],[data-act]');
+  if (!t || t.tagName === 'SELECT' || t.tagName === 'INPUT') return;
+  if (t.dataset.tab) { e.preventDefault(); S.tab = t.dataset.tab; render(); window.scrollTo(0, 0); return; }
+  const a = t.dataset.act, d = t.dataset;
+  const L = S.live;
+  switch (a) {
+    case 'signin': return guard(signIn);
+    case 'signout': return guard(signOut);
+    case 'open': return guard(() => openCase(d.id));
+    case 'sample': return guard(async () => {
+      const r = await fetch(`samples/${d.file}`); if (!r.ok) throw new Error(`Couldn't load samples/${d.file}`);
+      await importBible(await r.text());
+    });
+    case 'import': return guard(async () => {
+      const f = $('#importFile').files[0];
+      await importBible(f ? await f.text() : $('#importText').value);
+    });
+    case 'validate': {
+      const obj = parseJSON($('#json').value);
+      S.draft = $('#json').value;
+      S.draftErrors = obj ? validateBible(obj).errors : ['That isn\'t valid JSON.'];
+      toast(S.draftErrors.length ? `${S.draftErrors.length} schema error(s)` : 'Valid');
+      return render();
+    }
+    case 'saveDraft': return guard(async () => {
+      S.draft = $('#json').value;
+      const obj = parseJSON(S.draft);
+      if (!obj) { S.draftErrors = ['That isn\'t valid JSON.']; return; }
+      if (slug(obj.id) !== S.current.caseId && !confirm(`The id changed to "${obj.id}". That saves as a different case. Continue?`)) return;
+      await importBible(S.draft);
+    });
+    case 'download': {
+      const blob = new Blob([JSON.stringify(S.current.bible, null, 2)], { type: 'application/json' });
+      const u = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = u; link.download = `${S.current.caseId}-v${S.current.version}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+      return;
+    }
+    case 'compare': return guard(async () => {
+      const va = Number($('#cmpA').value), vb = Number($('#cmpB').value);
+      const [A, B] = await Promise.all([loadVersion(S.current.caseId, va), loadVersion(S.current.caseId, vb)]);
+      if (!validateBible(A.bible).ok || !validateBible(B.bible).ok) throw new Error('Both versions must pass the schema to compare.');
+      S.compare = compareVersions(A.bible, B.bible);
+    });
+    case 'jump': e.preventDefault(); return jumpTo(d.id);
+    case 'logicLevel': S.logicLevel = d.level; return render();
+    case 'reportLevel': S.reportLevel = d.level; return render();
+    case 'aiLevel': S.aiOpts.level = d.level; return render();
+    case 'liveLevel': S.liveSetup.level = d.level; return render();
+    case 'runBlind': return guard(runBlind);
+    case 'runHunter': return guard(() => runHunter(d.p));
+    case 'copyBlind': return copyText(`SYSTEM:\n${blindSystem(S.aiOpts.persona)}\n\nUSER:\n${blindPrompt(S.current.bible, S.aiOpts.level)}`, 'Blind-solver prompt');
+    case 'copyHunter': return copyText(`SYSTEM:\n${HUNTER_SYSTEM}\n\nUSER:\n${hunterPrompt(S.current.bible)}`, 'Hunter prompt');
+    case 'pasteRun': return guard(async () => {
+      const result = parseJSON($('#pasteText').value);
+      if (!result) throw new Error('That isn\'t valid JSON.');
+      const [kind, provider = 'manual'] = $('#pasteKind').value.split(':');
+      if (kind === 'hunter' && !Array.isArray(result.issues)) throw new Error('A hunter result needs {"issues": [...]}.');
+      if (kind === 'blind' && !Array.isArray(result.puzzles)) throw new Error('A blind result needs {"puzzles": [...]}.');
+      const base = { caseId: S.current.caseId, version: S.current.version, kind, result, usage: null, manual: true };
+      S.aiRuns.push(await saveAiRun(kind === 'blind' ? { ...base, provider: 'manual', persona: S.aiOpts.persona, level: S.aiOpts.level } : { ...base, provider }));
+      toast('Saved');
+    });
+    case 'copyFix': return copyText(buildFixPrompt(S.current.bible, S.logic, S.aiRuns, S.sessions), 'Fix prompt');
+    case 'liveStart': S.live = newLiveSession(S.current.bible, S.current.caseId, S.current.version, S.liveSetup); S.surveyDraft = {}; persistLive(); return render();
+    case 'resume': return guard(async () => {
+      const R = S.pendingResume;
+      if (!S.current || S.current.caseId !== R.caseId || S.current.version !== R.version) {
+        S.cases = await loadCases(); await openCase(R.caseId, R.version);
+      }
+      S.live = R; S.pendingResume = null; S.surveyDraft = R.surveyDraft || {};
+    });
+    case 'discard': if (confirm('Throw away the unfinished test?')) { S.pendingResume = null; try { localStorage.removeItem(CONFIG.liveKey); } catch {} persistLive(); } return render();
+    case 'hint': {
+      const p = L.puzzles[L.current], n = Number(d.n);
+      if (p.hints.some(x => x.n === n)) p.hints = p.hints.filter(x => x.n !== n); else p.hints.push({ n, at: Date.now() });
+      persistLive(); return render();
+    }
+    case 'tag': { const p = L.puzzles[L.current]; p.tags = p.tags.includes(d.tag) ? p.tags.filter(x => x !== d.tag) : [...p.tags, d.tag]; persistLive(); return render(); }
+    case 'result': liveResult(d.r); return render();
+    case 'undo': liveUndo(); return render();
+    case 'liveAbort': if (confirm('Abandon this test? Nothing is saved.')) { S.live = null; persistLive(); keepAwake(false); } return render();
+    case 'sv': { const v = d.v === 'true' ? true : d.v === 'false' ? false : Number(d.v); S.surveyDraft[d.k] = v; L.surveyDraft = S.surveyDraft; persistLive(); return render(); }
+    case 'liveFinish': return guard(async () => {
+      const sd = S.surveyDraft;
+      if (!sd.fun || !sd.clarity || !sd.difficulty) throw new Error('Fill in fun, clarity and difficulty first.');
+      const { surveyDraft, ...session } = L;
+      session.survey = { fun: sd.fun, clarity: sd.clarity, difficulty: sd.difficulty, rightCulprit: sd.rightCulprit ?? null, wouldPay: !!sd.wouldPay,
+        price: sd.price || '', best: sd.best || '', worst: sd.worst || '', foundLegend: !!sd.foundLegend };
+      session.state = 'saved';
+      const saved = await saveSession(session);
+      S.live = null; persistLive(); S.surveyDraft = {};
+      if (S.current && S.current.caseId === saved.caseId && S.current.version === saved.version) S.sessions.push(saved);
+      toast('Live test saved');
+    });
+  }
+});
+
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.act === 'pickversion') return guard(() => openCase(S.current.caseId, Number(t.value)));
+  if (t.dataset.act === 'status') return guard(async () => { await setStatus(S.current.caseId, t.value); S.cases = await loadCases(); toast(`Status: ${t.value}`); });
+  if (t.dataset.opt) { S.aiOpts[t.dataset.opt] = t.dataset.opt === 'count' ? Number(t.value) : t.value; return render(); }
+  if (t.dataset.setup) { S.liveSetup[t.dataset.setup] = t.type === 'checkbox' ? t.checked : t.value; return; }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'json') { S.draft = t.value; syncGutter(); }
+  if (t.dataset.setup && t.type !== 'checkbox') S.liveSetup[t.dataset.setup] = t.value;
+  if (t.dataset.sv) { S.surveyDraft[t.dataset.sv] = t.value; if (S.live) { S.live.surveyDraft = S.surveyDraft; persistLive(); } }
+  if (t.dataset.act === 'note' && S.live) { S.live.puzzles[S.live.current].note = t.value; persistLive(); }
+});
+document.addEventListener('scroll', e => { if (e.target.id === 'json') syncGutter(); }, true);
+document.addEventListener('keydown', e => {
+  if (e.target.id === 'json' && e.key === 'Tab') { e.preventDefault(); const ta = e.target, s = ta.selectionStart; ta.setRangeText('  ', s, ta.selectionEnd, 'end'); S.draft = ta.value; }
+});
+
+// boot
+(async () => {
+  if (DEMO) {
+    S.user = { uid: 'demo', displayName: 'Demo' };
+    await afterLogin();
+    S.ready = true;
+    render();
+  } else {
+    render();
+    try { await initFirebase(); }
+    catch (e) { S.ready = true; render(); toast('Firebase failed to load: ' + e.message); }
+  }
+})();
+</script>
+</body>
+</html>

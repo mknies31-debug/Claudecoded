@@ -1,0 +1,172 @@
+{
+  "id": "supper-club",
+  "version": 1,
+  "title": "Locked Out of the Supper Club",
+  "type": "escape",
+  "rating": "G",
+  "players": {
+    "min": 2,
+    "max": 6
+  },
+  "targetMinutes": {
+    "rookie": 30,
+    "detective": 45,
+    "mastermind": 60
+  },
+  "_plantedBugs": [
+    "p1's cipher card says 'move each letter 3 places' without a direction. EXJ moved back 3 is BUG; moved forward 3 (a shift of 23 the other way) is HAM. Both are real words. The intended answer is HAM, so a blind solver should flag possible_second_answer."
+  ],
+  "items": [
+    {
+      "id": "m1",
+      "name": "Menu Card",
+      "kind": "card",
+      "start": true,
+      "pages": 1,
+      "playerText": "Tonight's special is written in the chef's code: E X J. Chef's note at the bottom: 'Move each letter 3 places.'"
+    },
+    {
+      "id": "m2",
+      "name": "Coat Check Ticket",
+      "kind": "card",
+      "start": true,
+      "pages": 1,
+      "playerText": "Ticket #27. Stamped: 'Table for 4, Booth 9.'"
+    },
+    {
+      "id": "m3",
+      "name": "Wine List",
+      "kind": "card",
+      "pages": 1,
+      "playerText": "Red: 1987, 1992, 2001. White: 1995. The sommelier circled the oldest red."
+    },
+    {
+      "id": "m4",
+      "name": "Seating Chart",
+      "kind": "card",
+      "pages": 1,
+      "color": true,
+      "playerText": "Booths 1 to 12. Booth 9 is marked with a gold star. Under the star: 'Ask for the special.'"
+    },
+    {
+      "id": "m5",
+      "name": "Recipe Card",
+      "kind": "envelope",
+      "pages": 1,
+      "playerText": "The house recipe. The secret ingredient is listed as a single word: NUTMEG."
+    }
+  ],
+  "puzzles": [
+    {
+      "id": "p1",
+      "name": "Chef's Code",
+      "needs": [
+        "m1"
+      ],
+      "unlocks": [
+        "m3"
+      ],
+      "answer": "HAM",
+      "text": {
+        "rookie": "Decode the special on the menu card. Type the 3-letter dish to open the wine list.",
+        "detective": "The chef writes in code. What's the special?",
+        "mastermind": "The special hides in plain sight."
+      },
+      "hints": [
+        "Each letter is shifted in the alphabet.",
+        "Count 3 letters along from each letter.",
+        "E becomes H, X becomes A, J becomes M: HAM."
+      ],
+      "minutes": {
+        "rookie": 8,
+        "detective": 12,
+        "mastermind": 16
+      }
+    },
+    {
+      "id": "p2",
+      "name": "Booth Number",
+      "needs": [
+        "m2"
+      ],
+      "unlocks": [
+        "m4"
+      ],
+      "answer": "9",
+      "text": {
+        "rookie": "Which booth is your table? Type the number.",
+        "detective": "Where are you sitting tonight?",
+        "mastermind": "Your coat knows where you sit."
+      },
+      "hints": [
+        "Look at the stamp on the ticket.",
+        "It says Booth something.",
+        "Booth 9."
+      ],
+      "minutes": {
+        "rookie": 5,
+        "detective": 8,
+        "mastermind": 10
+      }
+    },
+    {
+      "id": "p3",
+      "name": "Sommelier's Pick",
+      "needs": [
+        "m3",
+        "p1"
+      ],
+      "unlocks": [],
+      "answer": "1987",
+      "text": {
+        "rookie": "Which year did the sommelier circle? Type the 4 digits.",
+        "detective": "The sommelier made a choice. Which vintage?",
+        "mastermind": "Oldest red wins."
+      },
+      "hints": [
+        "Only look at the reds.",
+        "Find the oldest year.",
+        "1987."
+      ],
+      "minutes": {
+        "rookie": 8,
+        "detective": 14,
+        "mastermind": 18
+      }
+    },
+    {
+      "id": "p4",
+      "name": "Ask for the Special",
+      "needs": [
+        "m4",
+        "p3"
+      ],
+      "unlocks": [
+        "m5"
+      ],
+      "answer": "HAM1987",
+      "text": {
+        "rookie": "At the starred booth, ask for the special: type the dish and the vintage together, like DISH1234.",
+        "detective": "Order the special with the right wine.",
+        "mastermind": "Dinner and a bottle."
+      },
+      "hints": [
+        "You already found the dish and the year.",
+        "Put the dish first, then the year.",
+        "HAM1987."
+      ],
+      "minutes": {
+        "rookie": 12,
+        "detective": 18,
+        "mastermind": 24
+      }
+    }
+  ],
+  "final": {
+    "needs": [
+      "m5"
+    ],
+    "text": "What's the secret ingredient in the house recipe?",
+    "answer": "NUTMEG"
+  }
+}

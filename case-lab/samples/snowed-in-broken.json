@@ -1,0 +1,372 @@
+{
+  "id": "snowed-in",
+  "version": 1,
+  "title": "Snowed In at Pine Hollow Lodge",
+  "type": "mystery",
+  "rating": "PG-13",
+  "players": {
+    "min": 4,
+    "max": 8
+  },
+  "targetMinutes": {
+    "rookie": 45,
+    "detective": 75,
+    "mastermind": 100
+  },
+  "_plantedBugs": [
+    "c7 is never unlocked by any puzzle and is not a start item (unreachable clue)",
+    "p3 and p5 both use the answer 1225 (duplicate answer)",
+    "s3 Dot Lindqvist has means, motive and opportunity and no alibi (second killer)"
+  ],
+  "suspects": [
+    {
+      "id": "s1",
+      "name": "Victor Hale",
+      "role": "Lodge owner"
+    },
+    {
+      "id": "s2",
+      "name": "June Okafor",
+      "role": "Ski instructor"
+    },
+    {
+      "id": "s3",
+      "name": "Dot Lindqvist",
+      "role": "Cook"
+    },
+    {
+      "id": "s4",
+      "name": "Rev. Amos Pratt",
+      "role": "Weekend guest"
+    }
+  ],
+  "solution": {
+    "culprit": "s1",
+    "how": "Victor slipped out the east door at 11:40, cut the sauna heater line, and was back behind the desk by midnight.",
+    "why": "The victim was about to report Victor's insurance fraud on the lodge."
+  },
+  "items": [
+    {
+      "id": "c1",
+      "name": "Guest Register",
+      "kind": "card",
+      "start": true,
+      "pages": 1,
+      "playerText": "Sign-out times for Saturday night. June signed out 10:05 PM, back 10:40 PM. Rev. Pratt: in chapel room all evening (see note). Victor: 'desk' scrawled at 11:30.",
+      "tags": [
+        {
+          "suspect": "s2",
+          "type": "alibi"
+        },
+        {
+          "suspect": "s4",
+          "type": "alibi"
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "name": "Torn Ski Pass",
+      "kind": "card",
+      "start": true,
+      "pages": 1,
+      "playerText": "A ski pass torn in half. The back reads: 'Kitchen staff key \u2014 sauna & storage.'",
+      "tags": [
+        {
+          "suspect": "s3",
+          "type": "means"
+        }
+      ]
+    },
+    {
+      "id": "c3",
+      "name": "Kitchen Note",
+      "kind": "card",
+      "start": true,
+      "pages": 1,
+      "playerText": "Dot \u2014 he said he'd have you fired before the holidays. Watch yourself. \u2014 M. Numbers on the back: 4 / 12.",
+      "tags": [
+        {
+          "suspect": "s3",
+          "type": "motive"
+        }
+      ]
+    },
+    {
+      "id": "c4",
+      "name": "Victim's Diary",
+      "kind": "envelope",
+      "pages": 2,
+      "playerText": "Dec 12: Found the second set of books. Victor's been padding the fire claim. I go to the insurer Monday. Page torn after the 25th.",
+      "tags": [
+        {
+          "suspect": "s1",
+          "type": "motive"
+        }
+      ]
+    },
+    {
+      "id": "c5",
+      "name": "Boot Print Photo",
+      "kind": "photo",
+      "pages": 1,
+      "color": true,
+      "playerText": "Size 11 boot prints in fresh snow from the east door toward the sauna. A wrench-shaped imprint beside them.",
+      "tags": [
+        {
+          "suspect": "s1",
+          "type": "means"
+        },
+        {
+          "suspect": "s3",
+          "type": "opportunity"
+        }
+      ]
+    },
+    {
+      "id": "c6",
+      "name": "Voicemail",
+      "kind": "phone",
+      "pages": 0,
+      "phone": {
+        "qr": "https://example.com/case/snowed-in/vm",
+        "fallback": "Dial-in code 4471 on the host sheet"
+      },
+      "playerText": "11:52 PM: 'It's Dot. The east door's banging open again and Victor's coat is soaked. Call me back.'",
+      "tags": [
+        {
+          "suspect": "s1",
+          "type": "opportunity"
+        }
+      ]
+    },
+    {
+      "id": "c7",
+      "name": "Letter in the Fireplace Ashes",
+      "kind": "card",
+      "pages": 1,
+      "playerText": "Half-burned: '...if the claim goes through we're clear. Burn this. \u2014 V.'",
+      "tags": [
+        {
+          "suspect": "s1",
+          "type": "motive"
+        }
+      ]
+    },
+    {
+      "id": "c8",
+      "name": "Weather Station Log",
+      "kind": "card",
+      "pages": 1,
+      "level": [
+        "detective",
+        "mastermind"
+      ],
+      "playerText": "Wind gust 11:41 PM triggered the east door alarm. Alarm reset from the front desk at 11:58 PM."
+    },
+    {
+      "id": "c9",
+      "name": "Snowmobile Keys",
+      "kind": "prop",
+      "pages": 1,
+      "start": true,
+      "level": [
+        "mastermind"
+      ],
+      "playerText": "A key ring tagged 'SLED 2'. The odometer note says nobody's run it since Thursday.",
+      "tags": [
+        {
+          "type": "redHerring"
+        }
+      ]
+    },
+    {
+      "id": "c10",
+      "name": "Chapel Room Sign-In",
+      "kind": "card",
+      "pages": 1,
+      "start": true,
+      "level": [
+        "mastermind"
+      ],
+      "playerText": "Evening prayer circle: Rev. Pratt and two guests, 10 PM to 1 AM.",
+      "tags": [
+        {
+          "type": "redHerring"
+        }
+      ]
+    }
+  ],
+  "puzzles": [
+    {
+      "id": "p1",
+      "name": "Register Lock",
+      "needs": [
+        "c1"
+      ],
+      "unlocks": [
+        "c4"
+      ],
+      "answer": "SNOW",
+      "text": {
+        "rookie": "Take the first letter of each sign-out name in the order they signed out. That 4-letter word opens the diary envelope.",
+        "detective": "The register hides a word. Order matters.",
+        "mastermind": "Someone signed the book in a pattern. Find the word the lodge never runs out of."
+      },
+      "hints": [
+        "Look only at the sign-out column.",
+        "Order the names by sign-out time.",
+        "S-N-O-W: the first letters spell SNOW."
+      ],
+      "minutes": {
+        "rookie": 10,
+        "detective": 16,
+        "mastermind": 22
+      }
+    },
+    {
+      "id": "p2",
+      "name": "Kitchen Padlock",
+      "needs": [
+        "c2",
+        "c3"
+      ],
+      "unlocks": [
+        "c5"
+      ],
+      "answer": "0412",
+      "text": {
+        "rookie": "The kitchen note has two numbers on the back. Put them together as a 4-digit code.",
+        "detective": "The storage padlock takes four digits. The cook's note knows them.",
+        "mastermind": "Four digits. The ski pass says where; the note says what."
+      },
+      "hints": [
+        "Flip the kitchen note over.",
+        "4 and 12 \u2014 pad each to two digits.",
+        "The code is 0412."
+      ],
+      "minutes": {
+        "rookie": 8,
+        "detective": 12,
+        "mastermind": 16
+      }
+    },
+    {
+      "id": "p3",
+      "name": "Diary Date",
+      "needs": [
+        "c4"
+      ],
+      "unlocks": [
+        "c6"
+      ],
+      "answer": "1225",
+      "text": {
+        "rookie": "The diary is torn after one date. Write that date as MMDD to unlock the phone.",
+        "detective": "The diary stops on a date everyone knows. MMDD.",
+        "mastermind": "Where the diary ends, the phone begins."
+      },
+      "hints": [
+        "Find the torn page.",
+        "The last date mentioned is the 25th of December.",
+        "The code is 1225."
+      ],
+      "minutes": {
+        "rookie": 12,
+        "detective": 18,
+        "mastermind": 24
+      }
+    },
+    {
+      "id": "p4",
+      "name": "Boot Direction",
+      "needs": [
+        "c5"
+      ],
+      "unlocks": [
+        "c8"
+      ],
+      "answer": "EAST",
+      "text": {
+        "rookie": "Which door did the boot prints come from? Type the direction.",
+        "detective": "Follow the prints back to where they began.",
+        "mastermind": "The snow remembers the way out."
+      },
+      "hints": [
+        "Read the caption on the photo.",
+        "The prints start at a door.",
+        "The answer is EAST."
+      ],
+      "minutes": {
+        "rookie": 8,
+        "detective": 12,
+        "mastermind": 16
+      }
+    },
+    {
+      "id": "p5",
+      "name": "Voicemail Timestamp",
+      "needs": [
+        "p3",
+        "c6"
+      ],
+      "unlocks": [],
+      "answer": "1225",
+      "text": {
+        "rookie": "Listen to the voicemail. The safe code is the date it was left, MMDD.",
+        "detective": "The safe wants the date of the call.",
+        "mastermind": "When was the call? Not the time. The day."
+      },
+      "hints": [
+        "The voicemail was left the same night as the diary's last entry.",
+        "That's December 25th.",
+        "The code is 1225."
+      ],
+      "minutes": {
+        "rookie": 10,
+        "detective": 16,
+        "mastermind": 22
+      }
+    },
+    {
+      "id": "p6",
+      "name": "Put It Together",
+      "needs": [
+        "p4",
+        "p5"
+      ],
+      "unlocks": [],
+      "answer": "VICTOR",
+      "text": {
+        "rookie": "Who had a reason, a way, and a chance? Type their first name.",
+        "detective": "Name the killer.",
+        "mastermind": "Name the killer and be ready to say how."
+      },
+      "hints": [
+        "Who wanted the diary kept quiet?",
+        "Whose coat was soaked at 11:52?",
+        "Victor."
+      ],
+      "minutes": {
+        "rookie": 12,
+        "detective": 20,
+        "mastermind": 28
+      }
+    }
+  ],
+  "final": {
+    "needs": [
+      "p6"
+    ],
+    "text": "Open the final envelope and make your accusation: who did it?",
+    "answer": "VICTOR"
+  },
+  "legend": {
+    "needs": [
+      "c9",
+      "p6"
+    ],
+    "text": "Bonus: the lodge has a ghost story. Find its name.",
+    "answer": "WHITEOUT"
+  }
+}

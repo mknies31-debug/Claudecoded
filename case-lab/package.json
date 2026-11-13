@@ -1,0 +1,13 @@
+{
+  "name": "case-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Case Lab: playtest engine for printed party games. Static app + two Netlify AI proxies.",
+  "scripts": {
+    "test": "node tests/logic.test.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
