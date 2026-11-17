@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14171c">
-<title>Case Lab</title>
+<title>Case Lab · Escape Your Day Games</title>
 <style>
 :root {
   --bg: #f6f5f2; --panel: #ffffff; --ink: #1b1d21; --muted: #646a73; --line: #e2e0da;
@@ -49,6 +49,7 @@ a { color: var(--accent); }
 #app { min-height: 100vh; }
 header.top { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
 header.top .brand { font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+@media (max-width: 600px) { #hdrCo { display: none; } }
 header.top .case { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--panel); border-top: 1px solid var(--line); z-index: 6; padding-bottom: env(safe-area-inset-bottom); }
 nav.tabs button { border: 0; border-radius: 0; background: none; min-height: 56px; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
@@ -142,7 +143,7 @@ pre.out { white-space: pre-wrap; word-break: break-word; background: var(--chip)
 <body>
 <div id="app">
   <header class="top">
-    <span class="brand">Case Lab</span>
+    <span class="brand">Case Lab</span><span class="small muted" id="hdrCo">Escape Your Day Games</span>
     <span class="case grow" id="hdrCase"></span>
     <span id="hdrUser" class="small muted"></span>
   </header>
@@ -1072,7 +1073,7 @@ function render() {
   const main = $('#main');
   if (!S.ready) { main.innerHTML = '<p class="muted">Loading…</p>'; return; }
   if (!DEMO && !S.user) {
-    main.innerHTML = `<div class="card stack" style="max-width:420px;margin:40px auto;text-align:center"><h1>Case Lab</h1><p class="muted">Playtest engine for printed party games.</p><button class="primary" data-act="signin">Sign in with Google</button></div>`;
+    main.innerHTML = `<div class="card stack" style="max-width:420px;margin:40px auto;text-align:center"><h1>Case Lab</h1><p class="muted">Escape Your Day Games · playtest engine</p><button class="primary" data-act="signin">Sign in with Google</button></div>`;
     return;
   }
   const view = { cases: renderCases, logic: renderLogic, ai: renderAI, live: renderLive, report: renderReport }[S.tab];

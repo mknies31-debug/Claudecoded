@@ -1,6 +1,6 @@
 # Case Lab
 
-A playtest engine for printed party games (escape, mystery, hunt, party). It's built from
+**Escape Your Day Games** internal tool: a playtest engine for printed party games (escape, mystery, hunt, party). It's built from
 `case-lab-code-outline-2` (the "how" companion to `case-lab-playtest-engine-spec.md`).
 The app is plain HTML/CSS/JS, uses Firebase Auth + Firestore, and runs on Netlify with two
 Netlify Functions. There's no framework and no build step.
