@@ -16,3 +16,6 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Extractor output (reports, frames, video files)
+extracted/

@@ -188,7 +188,10 @@ def vtt_to_text(vtt):
     return " ".join(lines)
 
 
-def extract_video(url, folder, frames=0, audio=False):
+COOKIES = None  # set by --cookies
+
+
+def extract_video(url, folder, frames=0, audio=False, comments=False):
     if yt_dlp is None:
         raise RuntimeError("yt-dlp not installed. Run: pip install yt-dlp")
     folder.mkdir(parents=True, exist_ok=True)
@@ -197,6 +200,9 @@ def extract_video(url, folder, frames=0, audio=False):
         "writesubtitles": True, "writeautomaticsub": True,
         "subtitleslangs": ["en.*", "en"], "subtitlesformat": "vtt",
         "outtmpl": str(folder / "video.%(ext)s"),
+        "getcomments": comments,
+        **({"cookiefile": COOKIES} if COOKIES else {}),
+        "extractor_args": {"youtube": {"max_comments": ["100"]}},
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)  # downloads captions only
@@ -210,7 +216,8 @@ def extract_video(url, folder, frames=0, audio=False):
     media = None
     if frames or audio:
         dl = {"quiet": True, "no_warnings": True,
-              "format": "best[height<=720]/best", "outtmpl": str(folder / "media.%(ext)s")}
+              "format": "best[height<=720]/best", "outtmpl": str(folder / "media.%(ext)s"),
+              **({"cookiefile": COOKIES} if COOKIES else {})}
         with yt_dlp.YoutubeDL(dl) as ydl:
             ydl.download([url])
         media = next(iter(folder.glob("media.*")), None)
@@ -250,6 +257,11 @@ def extract_video(url, folder, frames=0, audio=False):
         "facts": find_facts(f"{info.get('title', '')}\n{desc}\n{transcript}"),
         "transcript": transcript or "(no captions found — rerun with --audio to transcribe)",
         "frames": frame_files,
+        "top_comments": [{"author": c.get("author"), "likes": c.get("like_count"),
+                          "text": c.get("text")}
+                         for c in sorted(info.get("comments") or [],
+                                         key=lambda c: c.get("like_count") or 0,
+                                         reverse=True)[:40]],
         "thumbnail": info.get("thumbnail"),
     }
 
@@ -269,11 +281,40 @@ def transcribe(media, folder):
 # =====================================================================
 # REPORT
 # =====================================================================
+BRIEF = {
+    "1": ("Why this video", {"A": "Competitor check", "B": "Content idea for my own videos",
+                             "C": "Vehicle research", "D": "Customer sent it"}),
+    "2": ("Pull hardest", {"A": "Hook, script and style", "B": "Vehicles, prices, specs",
+                           "C": "Comments: what viewers ask and push back on", "D": "Everything"}),
+    "3": ("Audience", {"A": "Buyers", "B": "Private sellers (buy-side)",
+                       "C": "Trade-in customers", "D": "Just me"}),
+    "4": ("Deliverable", {"A": "Quick 5-line summary", "B": "Full breakdown",
+                          "C": "Script for my own version", "D": "Customer message (Direct/Softer/NEPQ)"}),
+}
+
+
+def parse_brief(text):
+    """'1A 2C 3B 4D 5 watch for the price claim' -> readable dict."""
+    out = {}
+    if not text:
+        return out
+    m = re.search(r"\b5\s*[:.-]?\s*(.+)$", text)
+    if m:
+        out["Watch for"] = m.group(1).strip()
+        text = text[:m.start()]
+    for num, letter in re.findall(r"([1-4])\s*([A-Da-d])", text):
+        label, opts = BRIEF[num]
+        out[label] = opts[letter.upper()]
+    return out
+
+
 def to_markdown(d):
     L = [f"# {d.get('title') or d['url']}", "",
          f"**Source:** {d['url']}  ", f"**Type:** {d['type']}"
          + (f" ({d['platform']})" if d.get("platform") else ""),
          f"**Pulled:** {datetime.now():%Y-%m-%d %H:%M}", ""]
+    if d.get("brief"):
+        L += ["## Research brief", ""] + [f"- **{k}:** {v}" for k, v in d["brief"].items()] + [""]
 
     if d["type"] == "video":
         L += ["## Quick look", ""]
@@ -287,6 +328,10 @@ def to_markdown(d):
         if d["chapters"]:
             L += ["## Chapters", ""] + [f"- {c['start']}s: {c['title']}" for c in d["chapters"]] + [""]
         L += ["## Transcript", "", d["transcript"], ""]
+        if d.get("top_comments"):
+            L += ["## Top comments", ""]
+            L += [f"- ({c['likes'] or 0} likes) **{c['author']}:** {c['text']}" for c in d["top_comments"]]
+            L.append("")
         if d["frames"]:
             L += ["## Frames", ""] + [f"![{f}]({f})" for f in d["frames"]] + [""]
     else:
@@ -337,15 +382,16 @@ def is_video(url):
     return any(h in host for h in VIDEO_HOSTS) and not url.rstrip("/").endswith(host)
 
 
-def run(url, out_root, frames, audio):
+def run(url, out_root, frames, audio, comments=False, brief=None):
     folder = out_root / slug(url)
     folder.mkdir(parents=True, exist_ok=True)
     if Path(url).exists():  # a saved .html file
         data = extract_website(Path(url).resolve().as_uri(), Path(url).read_text(errors="ignore"))
     elif is_video(url):
-        data = extract_video(url, folder, frames, audio)
+        data = extract_video(url, folder, frames, audio, comments)
     else:
         data = extract_website(url)
+    data["brief"] = parse_brief(brief)
     (folder / "data.json").write_text(json.dumps(data, indent=2, default=str))
     (folder / "report.md").write_text(to_markdown(data))
     return folder
@@ -356,14 +402,19 @@ def main():
     ap.add_argument("urls", nargs="+", help="web page, video link, or saved .html file")
     ap.add_argument("--frames", type=int, default=0, help="grab N still frames from a video")
     ap.add_argument("--audio", action="store_true", help="download audio and transcribe if no captions")
+    ap.add_argument("--comments", action="store_true", help="pull top comments (video)")
+    ap.add_argument("--brief", help='questionnaire answers, e.g. "1A 2C 3B 4D 5 the price claim"')
+    ap.add_argument("--cookies", help="cookies.txt from your browser (needed for YouTube here, IG/FB reels)")
     ap.add_argument("--out", default="extracted", help="output folder (default: extracted)")
     a = ap.parse_args()
 
+    global COOKIES
+    COOKIES = a.cookies
     out = Path(a.out)
     fails = 0
     for u in a.urls:
         try:
-            print(f"OK   {u}\n     -> {run(u, out, a.frames, a.audio)}/report.md")
+            print(f"OK   {u}\n     -> {run(u, out, a.frames, a.audio, a.comments, a.brief)}/report.md")
         except Exception as e:  # keep going on the rest of the list
             fails += 1
             print(f"FAIL {u}\n     -> {type(e).__name__}: {e}", file=sys.stderr)
