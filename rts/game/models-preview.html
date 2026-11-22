@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RTS Model Gallery</title>
+<style>
+  :root{ --ink:#0b0e12; --bg:#12161C; --panel:#1B212B; --line:#313b49;
+         --text:#EAF0FF; --muted:#9AA7BB; --ground:#1c2b1f;
+         --blue:#63a6e6; --green:#8bbf5a; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;line-height:1.4}
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 20px 70px}
+  header{text-align:center;margin-bottom:6px}
+  .kicker{font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+  h1{font-size:clamp(1.8rem,4vw,2.8rem);margin:.15em 0 .1em}
+  .sub{color:var(--muted);max-width:640px;margin:0 auto}
+  .legend{display:flex;gap:18px;justify-content:center;margin:14px 0 6px;flex-wrap:wrap;font-size:.84rem;color:var(--muted)}
+  .legend b{color:var(--text)}
+  .sizes{display:flex;gap:16px;justify-content:center;margin:2px 0 20px;font-size:.78rem;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .name{padding:11px 14px 2px;font-weight:800;font-size:1.02rem}
+  .desc{padding:0 14px 10px;color:var(--muted);font-size:.78rem;min-height:2.3em}
+  .rows{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)}
+  .teamrow{display:flex;align-items:center;justify-content:space-around;padding:10px 6px;
+           background:var(--ground)}
+  .teamrow.alt{background:#182617}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .cell canvas{display:block;image-rendering:auto}
+  .cell .rl{font-size:.62rem;color:rgba(255,255,255,.5)}
+  .tlabel{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.6rem;letter-spacing:.15em;
+          text-transform:uppercase;color:var(--muted);padding:0 2px}
+  .foot{margin-top:40px;text-align:center;color:var(--muted);font-size:.78rem;
+        border-top:1px solid var(--line);padding-top:16px}
+  code{background:#0c1015;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.82em;color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">RTS · Model Kit</div>
+    <h1>Unit &amp; Building Gallery</h1>
+    <p class="sub">Every <code>MODELS</code> entry rendered with pure canvas 2D at four zoom radii in both team colors — the review gallery for <code>models.js</code>.</p>
+  </header>
+  <div class="legend">
+    <span><b style="color:var(--blue)">■</b> Player team <code>#63a6e6</code></span>
+    <span><b style="color:var(--green)">■</b> Enemy team <code>#8bbf5a</code></span>
+    <span>Weapon accent = damage-type color on the barrel / pods / nose</span>
+  </div>
+  <div class="sizes">silhouette at r=8 &nbsp;·&nbsp; r=16 &nbsp;·&nbsp; r=28 &nbsp;·&nbsp; detailed at r=40</div>
+  <div class="grid" id="grid"></div>
+  <div class="foot">
+    Flat cel tones (body · shadow · highlight) + dark outline. Team color dominant on hull/body;
+    <code>C.accent</code> reserved for the weapon element. No gradients, no images.
+  </div>
+</div>
+
+<script src="models.js"></script>
+<script>
+(function(){
+  // shade helper mirrors the game's dark/lite derivation so previews match in-game tones
+  function shade(hex,f){ const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+    const t=f<0?0:255, a=Math.abs(f); r=Math.round(r+(t-r)*a); g=Math.round(g+(t-g)*a); b=Math.round(b+(t-b)*a);
+    return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+
+  // damage-type accent colors (match the game's DMG_COL table)
+  const ACCENT = { 'Basic infantry':'#ffe08a','Specialist infantry':'#ff7a45','Scout vehicle':'#ffe08a',
+    'Main battle tank':'#ff7a45','Advanced vehicle':'#ffca3a','Artillery':'#ef5350','Aircraft':'#90caf9',
+    'Structure':'#ff7a45','HQ':null,'Barracks':null,'Motor Pool':null,'Airstrip':null,'Tech Center':'#7fe0ee' };
+
+  const DESC = {
+    'Basic infantry':'One soldier — body, helmeted head, rifle with accent muzzle.',
+    'Specialist infantry':'Soldier with a chunky shoulder launcher tube, accent at the mouth.',
+    'Scout vehicle':'Small pointed wedge, swept antenna, light accent gun — no turret.',
+    'Main battle tank':'Wide hull, chunky treads, big central turret, single accent barrel.',
+    'Advanced vehicle':'Angular faceted hull with TWIN weapon pods — clearly not a tank.',
+    'Artillery':'Tiny chassis, very long accent barrel, rear recoil spade dug in.',
+    'Aircraft':'Swept-wing gunship, nose cannon accent, twin tail + jet exhausts.',
+    'Structure':'Octagon base, rivet ring, rotating head, accent defense barrel.',
+    'HQ':'Fortified command block — walls, corner towers, crenellations, door, HQ.',
+    'Barracks':'Bunkhouse with half-round roof, framed door, windows (B).',
+    'Motor Pool':'Garage bay arch with panel lines and an overhead crane arm (M).',
+    'Airstrip':'Runway strip, dashed centerline, threshold chevrons, control box (A).',
+    'Tech Center':'Block topped by a tilted parabolic dish and antenna spikes (T).'
+  };
+
+  const KEYS = ['Basic infantry','Specialist infantry','Scout vehicle','Main battle tank',
+    'Advanced vehicle','Artillery','Aircraft','Structure','HQ','Barracks','Motor Pool',
+    'Airstrip','Tech Center'];
+  const RS = [8,16,28,40];
+  const TEAMS = [['#63a6e6','Player'],['#8bbf5a','Enemy']];
+  const DPR = Math.max(1, window.devicePixelRatio||1);
+
+  function drawInto(canvas, key, team, r){
+    const pad = r*1.35 + 6;          // leave room for over-length barrels / wings
+    const size = Math.ceil(pad*2);
+    canvas.width = size*DPR; canvas.height = size*DPR;
+    canvas.style.width = size+'px'; canvas.style.height = size+'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(DPR,DPR);
+    // grounded contact shadow (the game draws this; included so the gallery reads true)
+    ctx.fillStyle='rgba(0,0,0,.30)';
+    ctx.beginPath(); ctx.ellipse(size/2, size/2+r*0.6, r*0.95, r*0.5, 0, 0, 7); ctx.fill();
+    ctx.save();
+    ctx.translate(size/2, size/2);
+    const C = { team, dark:shade(team,-0.4), lite:shade(team,0.35), accent:ACCENT[key], outline:'#0b0e12' };
+    try { MODELS[key](ctx, r, C); } catch(e){ console.error(key, e); }
+    ctx.restore();
+  }
+
+  const grid = document.getElementById('grid');
+  for (const key of KEYS){
+    const card = document.createElement('div'); card.className='card';
+    const nm = document.createElement('div'); nm.className='name'; nm.textContent=key; card.appendChild(nm);
+    const ds = document.createElement('div'); ds.className='desc'; ds.textContent=DESC[key]||''; card.appendChild(ds);
+    const rows = document.createElement('div'); rows.className='rows';
+    TEAMS.forEach(([team,label],ti)=>{
+      const row = document.createElement('div'); row.className='teamrow'+(ti?' alt':'');
+      const tl = document.createElement('div'); tl.className='tlabel'; tl.textContent=label; row.appendChild(tl);
+      for (const r of RS){
+        const cell = document.createElement('div'); cell.className='cell';
+        const cv = document.createElement('canvas'); drawInto(cv, key, team, r); cell.appendChild(cv);
+        const rl = document.createElement('div'); rl.className='rl'; rl.textContent='r='+r; cell.appendChild(rl);
+        row.appendChild(cell);
+      }
+      rows.appendChild(row);
+    });
+    card.appendChild(rows); grid.appendChild(card);
+  }
+})();
+</script>
+</body>
+</html>
