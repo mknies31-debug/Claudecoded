@@ -24,7 +24,19 @@ const inject = (tag, obj) => {
   if (i<0 || j<0) throw new Error(`markers ${tag} not found`);
   html = html.slice(0, i+S.length) + JSON.stringify(obj) + html.slice(j);
 };
+// Raw-text injection (not JSON): inline the authored model kit so the game stays
+// a single offline file while models.js remains a reviewable, separately-verified
+// module (design/22 P1 "assembled source" seam — the model kit is the first module).
+const injectRaw = (tag, text) => {
+  const S = `/*${tag}_START*/`, E = `/*${tag}_END*/`;
+  const i = html.indexOf(S), j = html.indexOf(E);
+  if (i<0 || j<0) throw new Error(`markers ${tag} not found`);
+  html = html.slice(0, i+S.length) + '\n' + text.trim() + '\n' + html.slice(j);
+};
 inject('ROSTER', roster);
 inject('MAP', maps);
+const models = fs.readFileSync('rts/game/models.js','utf8');
+injectRaw('MODELS', models);
 fs.writeFileSync(path, html);
-console.log(`Injected ${Object.values(roster).reduce((a,v)=>a+v.length,0)} units + ${Object.keys(maps).length} map(s) [${Object.keys(maps).join(', ')}] into ${path}.`);
+const mLines = models.split('\n').length;
+console.log(`Injected ${Object.values(roster).reduce((a,v)=>a+v.length,0)} units + ${Object.keys(maps).length} map(s) [${Object.keys(maps).join(', ')}] + model kit (${mLines} lines) into ${path}.`);
