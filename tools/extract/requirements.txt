@@ -2,5 +2,5 @@ requests
 beautifulsoup4
 trafilatura
 yt-dlp[default,curl-cffi]
-# optional, for videos with no captions:
-# openai-whisper
+# speech-to-text for videos with no captions:
+faster-whisper

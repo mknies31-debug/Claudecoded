@@ -3,7 +3,7 @@
 North Star Extractor
 Pull everything useful out of a web page or a social video.
 
-  python extract.py <url> [<url> ...] [--frames 6] [--audio] [--out extracted]
+  python extract.py <url> [<url> ...] [--frames 6] [--comments] [--brief "1A 2C"] [--out extracted]
 
 Websites:  title, description, headings, main text, contact info, prices,
            VINs, mileage, structured data (schema.org), links, images.
@@ -189,6 +189,7 @@ def vtt_to_text(vtt):
 
 
 COOKIES = None  # set by --cookies
+WHISPER_MODEL = "small"  # tiny / base / small / medium: bigger = more accurate, slower
 
 
 def extract_video(url, folder, frames=0, audio=False, comments=False):
@@ -214,7 +215,7 @@ def extract_video(url, folder, frames=0, audio=False, comments=False):
             break
 
     media = None
-    if frames or audio:
+    if frames or (audio and not transcript):
         dl = {"quiet": True, "no_warnings": True,
               "format": "best[height<=720]/best", "outtmpl": str(folder / "media.%(ext)s"),
               **({"cookiefile": COOKIES} if COOKIES else {})}
@@ -255,7 +256,7 @@ def extract_video(url, folder, frames=0, audio=False, comments=False):
         "chapters": [{"start": c.get("start_time"), "title": c.get("title")}
                      for c in (info.get("chapters") or [])],
         "facts": find_facts(f"{info.get('title', '')}\n{desc}\n{transcript}"),
-        "transcript": transcript or "(no captions found — rerun with --audio to transcribe)",
+        "transcript": transcript or "(no captions found, and transcription was turned off)",
         "frames": frame_files,
         "top_comments": [{"author": c.get("author"), "likes": c.get("like_count"),
                           "text": c.get("text")}
@@ -267,15 +268,26 @@ def extract_video(url, folder, frames=0, audio=False, comments=False):
 
 
 def transcribe(media, folder):
-    """Speech-to-text with local Whisper if installed (pip install openai-whisper)."""
+    """Speech-to-text on this machine with faster-whisper (pip install faster-whisper)."""
     try:
-        import whisper
+        from faster_whisper import WhisperModel
     except ImportError:
-        return "(audio downloaded but Whisper isn't installed: pip install openai-whisper)"
-    model = whisper.load_model("base")
-    result = model.transcribe(str(media))
-    (folder / "transcript.txt").write_text(result["text"])
-    return result["text"].strip()
+        return "(no captions, and faster-whisper isn't installed: pip install faster-whisper)"
+    model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
+    # decode with ffmpeg (sturdier than the bundled reader): 16 kHz mono float audio
+    import numpy as np
+    pcm = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(media), "-f", "f32le",
+                          "-ac", "1", "-ar", "16000", "-"], capture_output=True, check=True).stdout
+    segments, info = model.transcribe(np.frombuffer(pcm, np.float32), vad_filter=True)
+    lines, plain = [], []
+    for seg in segments:
+        m, sec = divmod(int(seg.start), 60)
+        lines.append(f"[{m}:{sec:02d}] {seg.text.strip()}")
+        plain.append(seg.text.strip())
+    (folder / "transcript.txt").write_text("\n".join(lines))
+    if not plain:
+        return "(no speech found: music only or silent)"
+    return " ".join(plain) + f"\n\n_(transcribed from audio, {info.language}, model {WHISPER_MODEL})_"
 
 
 # =====================================================================
@@ -401,15 +413,17 @@ def main():
     ap = argparse.ArgumentParser(description="Extract everything from websites and social videos.")
     ap.add_argument("urls", nargs="+", help="web page, video link, or saved .html file")
     ap.add_argument("--frames", type=int, default=0, help="grab N still frames from a video")
-    ap.add_argument("--audio", action="store_true", help="download audio and transcribe if no captions")
+    ap.add_argument("--no-audio", dest="audio", action="store_false",
+                    help="don't transcribe the audio when a video has no captions")
+    ap.add_argument("--model", default="small", help="transcription model: tiny, base, small, medium")
     ap.add_argument("--comments", action="store_true", help="pull top comments (video)")
     ap.add_argument("--brief", help='questionnaire answers, e.g. "1A 2C 3B 4D 5 the price claim"')
     ap.add_argument("--cookies", help="cookies.txt from your browser (needed for YouTube here, IG/FB reels)")
     ap.add_argument("--out", default="extracted", help="output folder (default: extracted)")
     a = ap.parse_args()
 
-    global COOKIES
-    COOKIES = a.cookies
+    global COOKIES, WHISPER_MODEL
+    COOKIES, WHISPER_MODEL = a.cookies, a.model
     out = Path(a.out)
     fails = 0
     for u in a.urls:

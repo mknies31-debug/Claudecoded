@@ -9,7 +9,7 @@ ffmpeg is needed for still frames.
 ## Use
     python extract.py https://some-dealer.com/listing/123
     python extract.py "https://www.youtube.com/watch?v=..." --frames 6
-    python extract.py "https://www.tiktok.com/@user/video/..." --audio
+    python extract.py "https://www.tiktok.com/@user/video/..."
     python extract.py link1 link2 link3        # a whole batch
     python extract.py "<video>" --comments --frames 6 --brief "1A 2C 3B 4D 5 the price claim"
 
@@ -36,4 +36,4 @@ Each link gets a folder in `extracted/` with:
 - TikTok works with no login.
 - Sites that build the page with JavaScript may come back thin. Save the page
   (Ctrl+S) and run `python extract.py saved-page.html` instead.
-- No captions? `--audio` transcribes with Whisper (`pip install openai-whisper`).
+- No captions? It transcribes the audio automatically with faster-whisper (timestamped copy in `transcript.txt`). Turn off with `--no-audio`. Pick accuracy with `--model tiny|base|small|medium`.
